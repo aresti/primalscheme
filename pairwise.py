@@ -39,6 +39,8 @@ def fast_pairwise(record, pairs, number):
 	primer_3prime = aln_query[-1]
 	reference_complement = str(Seq.Seq(str(aln_reference)).complement())
 	template_3prime = reference_complement[-1]
+	setattr(pairs,'left_%i_3prime_mm' %number, False)
+	setattr(pairs,'left_%i_aln_score' %number, left_aln_score)
 
 	print 'primer           ', left_name
 	print 'sequence         ', left_seq
@@ -52,12 +54,12 @@ def fast_pairwise(record, pairs, number):
 	print 'aligned_reference', reference_complement
 	print '3\' pairing       ', '%s/%s' %(primer_3prime, template_3prime)
 
-	left_3prime_mm = False
 	for mismatch in mismatches:
 		if set([primer_3prime, template_3prime]) == mismatch:
 			print '3\' mismatch left ', '5\' %s 3\'' %aln_query 
 			print '                 ', '3\' %s 5\'' %reference_complement
-			left_3prime_mm = True
+			setattr(pairs,'left_%i_3prime_mm' %number, True)
+			
 	print
 
 	right_name = getattr(pairs,'right_%i_name' %number)
@@ -67,7 +69,7 @@ def fast_pairwise(record, pairs, number):
 	search_start = (right_start-50 if right_start-50 >= 0 else 0)
 	search_end = (right_end+50 if right_end+50 <= len(record) else len(record))
 	aln = pairwise2.align.localms(right_seq, record.seq[search_start:search_end].reverse_complement(), 2, -1, -1, -1)[0]
-	right_aln_score = aln[2] #needs fixing
+	right_aln_score = aln[2] #probably wrong
 	aln_start = aln[3]
 	aln_end = aln[4]
 	aln_length = aln_end - aln_start
@@ -79,6 +81,8 @@ def fast_pairwise(record, pairs, number):
 	primer_3prime = aln_query[-1]
 	reference_complement = str(Seq.Seq(str(aln_reference)).complement())
 	template_3prime = reference_complement[-1]
+	setattr(pairs,'left_%i_3prime_mm' %number, False)
+	setattr(pairs,'left_%i_aln_score' %number, left_aln_score)
 
 	print 'primer           ', right_name
 	print 'sequence         ', right_seq
@@ -92,14 +96,14 @@ def fast_pairwise(record, pairs, number):
 	print 'aligned_reference', reference_complement
 	print '3\' pairing       ', '%s/%s' %(primer_3prime, template_3prime)
 
-	right_3prime_mm = False
 	for mismatch in mismatches:
 		if set([primer_3prime, template_3prime]) == mismatch:
 			print '3\' mismatch right ', '5\' %s 3\'' %aln_query 
 			print '                 ', '3\' %s 5\'' %reference_complement
-			right_3prime_mm = True
+			setattr(pairs,'left_%i_3prime_mm' %number, True)
+	print
 
-	return (left_aln_score, left_3prime_mm, right_aln_score, right_3prime_mm)
+	return None
 
 # G/T OK
 # G/A, G/G NOT OK
