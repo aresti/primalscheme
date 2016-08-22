@@ -47,7 +47,7 @@ def fast_pairwise(record, pairs, number):
 	print 'reference        ', record.id
 	print 'length           ', len(left_seq)
 	print 'start            ', search_start + aln_start
-	print 'end              ', search_end + aln_end
+	print 'end              ', search_start + aln_end
 	print 'aligned_length   ', aln_length
 	print 'score            ', left_aln_score
 	print 'aligned_query    ', aln_query
@@ -89,7 +89,7 @@ def fast_pairwise(record, pairs, number):
 	print 'reference        ', record.id
 	print 'length           ', len(right_seq)
 	print 'start            ', search_start + aln_start
-	print 'end              ', search_end + aln_end
+	print 'end              ', search_start + aln_end
 	print 'aligned_length   ', aln_length
 	print 'score            ', right_aln_score
 	print 'aligned_query    ', aln_query

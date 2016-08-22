@@ -8,6 +8,7 @@ import pairwise
 from primerpair import primerpair
 from openpyxl import load_workbook
 from openpyxl.worksheet.datavalidation import DataValidation
+from operator import itemgetter
 
 def run(args):
 	#Use first record for primer picking
@@ -52,7 +53,7 @@ def multiplex(parser, args):
 	print 'Checking for 3\' mismatches'
 	pair_scores = {}
 	for region_pairs in outer_pairs:
-		for pair in range(3):
+		for pair in range(4):
 			total = 0
 			for record in records:
 				pairwise.fast_pairwise(record, region_pairs, pair)
@@ -68,19 +69,22 @@ def multiplex(parser, args):
 				pair_scores[region_pairs] = [(pair, total)]
 			else:
 				pair_scores[region_pairs].append((pair, total))
+	picked = []
 	for each in pair_scores:
-		print each
+		print pair_scores[each]
+		picked.append(sorted(pair_scores[each], key=itemgetter(1), reverse=True)[0])
 	print
-				
 
+	print picked
+				
 	#check for interactions
 	#print interactions.interactions(args, outer)
 
 	with open(args.o + '_sigma.csv', 'w') as fileout:
 		for i, each in enumerate(outer_pairs):
 			pool = str(['1' if i%2==0 else '2'][0])
-			print each.left_0_name, '\t', each.left_0_seq, '\t', pool
-			print each.right_0_name, '\t', each.right_0_seq, '\t', pool
+			print getattr(each, 'left_%s_name' %picked[i][0]), '\t', getattr(each, 'left_%s_seq' %picked[i][0]), '\t', pool
+			print getattr(each, 'right_%s_name' %picked[i][0]), '\t', getattr(each, 'right_%s_seq' %picked[i][0]), '\t', pool
 
 def nested_multiplex(parser, args):
         seq, seq_params = run(args)
