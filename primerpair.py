@@ -3,6 +3,7 @@ class primerpair():
 
 	def __init__(self, scheme, region, output):
 		
+		#antipattern refactor to use list of objects
 		self.left_0_name = '%i_%i_left_%s' %(scheme, region, 0)
 		self.left_0_start = output['PRIMER_LEFT_0'][0]
 		self.left_0_end = output['PRIMER_LEFT_0'][0] + output['PRIMER_LEFT_0'][1] 

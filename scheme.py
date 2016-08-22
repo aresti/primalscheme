@@ -50,23 +50,27 @@ def multiplex(parser, args):
 	#check for mismatches
 	print
 	print 'Checking for 3\' mismatches'
-	pair_scores = []
-	best_pair = []
+	pair_scores = {}
 	for region_pairs in outer_pairs:
 		for pair in range(3):
 			total = 0
 			for record in records:
-				left_name, left_score, left_3prime_mm, right_name, right_score, right_3prime_mm = pairwise.fast_pairwise(record, region_pairs, pair)
-				pair_scores.append((left_name, left_score, left_3prime_mm, right_name, right_score, right_3prime_mm))
+				pairwise.fast_pairwise(record, region_pairs, pair)
+				left_score = getattr(region_pairs,'left_%i_aln_score' %pair) 
+				right_score = getattr(region_pairs,'right_%i_aln_score' %pair)
+				left_3prime_mm = getattr(region_pairs,'left_%i_3prime_mm' %pair)
+				right_3prime_mm = getattr(region_pairs,'right_%i_3prime_mm' %pair)
 				total += (left_score + right_score)
-				if (left_3prime_mm or right_3prime_mm):
+				if (left_3prime_mm == True or right_3prime_mm == True):
+					print 'mismatch'
 					total = 0
-			best_pair.append((region_pairs, pair, total))
-	for each in best_pair:
-		print each
-	print
+			if region_pairs not in pair_scores:
+				pair_scores[region_pairs] = [(pair, total)]
+			else:
+				pair_scores[region_pairs].append((pair, total))
 	for each in pair_scores:
 		print each
+	print
 				
 
 	#check for interactions
