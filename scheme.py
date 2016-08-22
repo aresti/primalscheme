@@ -79,11 +79,13 @@ def multiplex(parser, args):
 	#check for interactions
 	#print interactions.interactions(args, outer)
 
-	with open(args.o + '_sigma.csv', 'w') as fileout:
-		for i, each in enumerate(outer_pairs):
-			pool = str(['1' if i%2==0 else '2'][0])
-			print getattr(each, 'left_%s_name' %picked[i][0]), '\t', getattr(each, 'left_%s_seq' %picked[i][0]), '\t', pool
-			print getattr(each, 'right_%s_name' %picked[i][0]), '\t', getattr(each, 'right_%s_seq' %picked[i][0]), '\t', pool
+	#return results as list
+	result = []
+	for i, each in enumerate(outer_pairs):
+		pool = str(['1' if i%2==0 else '2'][0])
+		result.append(getattr(each, 'left_%s_name' %picked[i][0]), '\t', getattr(each, 'left_%s_seq' %picked[i][0]), '\t', pool)
+		result.append(getattr(each, 'right_%s_name' %picked[i][0]), '\t', getattr(each, 'right_%s_seq' %picked[i][0]), '\t', pool)
+	return result
 
 def nested_multiplex(parser, args):
         seq, seq_params = run(args)
