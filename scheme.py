@@ -5,7 +5,7 @@ from pprint import pprint
 import settings
 import interactions
 import pairwise
-from primerpair import primerpair
+from primer_pair import region_object
 #from openpyxl import load_workbook
 #from openpyxl.worksheet.datavalidation import DataValidation
 from operator import itemgetter
@@ -44,47 +44,40 @@ def multiplex(args, parser=None):
 				output = primer3.bindings.designPrimers(seq_params, outer_params)
 
 		#pprint(output, width=1)
-		pair = primerpair(args.length, i+1, output)
-		#pprint(vars(pair), width=1)
-		outer_pairs.append(pair)
+		region = region_object(args.length, i+1, output)
+		#pprint(vars(region), width=1)
+		outer_pairs.append(region)
 
 	#check for mismatches
 	print
 	print 'Checking for 3\' mismatches'
-	pair_scores = []
 	totals = []
 	for region_pairs in outer_pairs:
 		sub_totals = []
-		for pair in range(4):
+		for pair in region_pairs.pairs:
 			scores = 0
 			for record in records:
-				pairwise.fast_pairwise(record, region_pairs, pair)
-				left_score = getattr(region_pairs,'left_%i_aln_score' %pair) 
-				right_score = getattr(region_pairs,'right_%i_aln_score' %pair)
-				left_3prime_mm = getattr(region_pairs,'left_%i_3prime_mm' %pair)
-				right_3prime_mm = getattr(region_pairs,'right_%i_3prime_mm' %pair)
-				scores += (left_score + right_score)
-				if (left_3prime_mm == True or right_3prime_mm == True):
+				pairwise.fast_pairwise(record, pair)
+				scores += (pair.left_aln_score + pair.right_aln_score)
+				if (pair.left_3prime_mm == True or pair.right_3prime_mm == True):
 					print 'mismatch'
-					scores = 0 #may not always be 0
-			sub_totals.append((pair, scores))
-		totals.append(sub_totals)
-
-	picked = []
-	for each in totals:
-		ordered = sorted(each, key=itemgetter(1), reverse=True)
-		print ordered
-		picked.append(ordered[0])
+					scores = 0 #should always be 0?
+			pair.sub_total = scores
+			#sub_totals.append((pair, scores))
+		#region_pairs.totals = sub_totals
+		#totals.append(sub_totals)
+	#pprint(vars(outer_pairs[0].pairs[0]), width=1)
 
 	#check for interactions
 	#print interactions.interactions(args, outer)
 
-	#return results as list
 	result = []
-	for i, each in enumerate(outer_pairs):
+	for i, region_pairs in enumerate(outer_pairs):
 		pool = str(['1' if i%2==0 else '2'][0])
-		result.append(((getattr(each, 'left_%s_name' %picked[i][0]), getattr(each, 'left_%s_seq' %picked[i][0]), pool), (getattr(each, 'right_%s_name' %picked[i][0]), getattr(each, 'right_%s_seq' %picked[i][0]), pool)))
+		region_pairs.pool = pool
+		result.append(sorted(region_pairs.pairs, key=lambda x: x.sub_total, reverse=True)[0])
 	return result
+	
 
 def nested_multiplex(parser, args):
         seq, seq_params = run(args)
