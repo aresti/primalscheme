@@ -6,9 +6,9 @@ import settings
 import interactions
 import pairwise
 from primerpair import primerpair
-from openpyxl import load_workbook
-from openpyxl.worksheet.datavalidation import DataValidation
-from operator import itemgetter
+#from openpyxl import load_workbook
+#from openpyxl.worksheet.datavalidation import DataValidation
+#from operator import itemgetter
 
 def run(args):
 	#Use first record for primer picking
