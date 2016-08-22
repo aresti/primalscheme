@@ -31,7 +31,7 @@ def fast_pairwise(record, pairs, number):
 	aln_start = aln[3]
 	aln_end = aln[4]
 	aln_length = aln_end - aln_start
-	if aln_length < len(left_seq):
+	if aln_length < len(left_seq): #in some cases this fails
 		print 'unexpected alignment length'
 		aln_end += 1
 	aln_query = aln[0][aln_start:aln_end]

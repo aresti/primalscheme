@@ -51,32 +51,31 @@ def multiplex(parser, args):
 	#check for mismatches
 	print
 	print 'Checking for 3\' mismatches'
-	pair_scores = {}
+	pair_scores = []
+	totals = []
 	for region_pairs in outer_pairs:
+		sub_totals = []
 		for pair in range(4):
-			total = 0
+			scores = 0
 			for record in records:
 				pairwise.fast_pairwise(record, region_pairs, pair)
 				left_score = getattr(region_pairs,'left_%i_aln_score' %pair) 
 				right_score = getattr(region_pairs,'right_%i_aln_score' %pair)
 				left_3prime_mm = getattr(region_pairs,'left_%i_3prime_mm' %pair)
 				right_3prime_mm = getattr(region_pairs,'right_%i_3prime_mm' %pair)
-				total += (left_score + right_score)
+				scores += (left_score + right_score)
 				if (left_3prime_mm == True or right_3prime_mm == True):
 					print 'mismatch'
-					total = 0
-			if region_pairs not in pair_scores:
-				pair_scores[region_pairs] = [(pair, total)]
-			else:
-				pair_scores[region_pairs].append((pair, total))
-	picked = []
-	for each in pair_scores:
-		print pair_scores[each]
-		picked.append(sorted(pair_scores[each], key=itemgetter(1), reverse=True)[0])
-	print
+					scores = 0 #may not always be 0
+			sub_totals.append((pair, scores))
+		totals.append(sub_totals)
 
-	print picked
-				
+	picked = []
+	for each in totals:
+		ordered = sorted(each, key=itemgetter(1), reverse=True)
+		print ordered
+		picked.append(ordered[0])
+
 	#check for interactions
 	#print interactions.interactions(args, outer)
 
