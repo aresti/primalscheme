@@ -6,7 +6,7 @@ import argparse
 def run_command(parser, args):
 	if args.command == 'scheme':
 		import scheme as command
-	command.multiplex(parser, args)
+	command.multiplex(args, parser=parser)
 
 def main():
 	parser = argparse.ArgumentParser(prog='primal', formatter_class=argparse.ArgumentDefaultsHelpFormatter)

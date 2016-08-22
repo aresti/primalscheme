@@ -8,7 +8,7 @@ import pairwise
 from primerpair import primerpair
 #from openpyxl import load_workbook
 #from openpyxl.worksheet.datavalidation import DataValidation
-#from operator import itemgetter
+from operator import itemgetter
 
 def run(args):
 	#Use first record for primer picking
@@ -22,7 +22,7 @@ def run(args):
 		     }
 	return records, seq, step, seq_params 
 
-def multiplex(parser, args):
+def multiplex(args, parser=None):
 	records, seq, step, seq_params = run(args)
 	outer_params = settings.outer_pair(args)
 	outer_pairs = []
