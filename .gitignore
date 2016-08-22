@@ -1,2 +1,6 @@
 *.pyc
 *.swp
+*.xls
+*.csv
+*.fasta
+*.fai
