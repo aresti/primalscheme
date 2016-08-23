@@ -1,31 +1,40 @@
 
-class primer_pair():
+class PrimerPair():
 
-	def __init__(self, scheme, region, output, n):
+	def __init__(self, left, right):
 
-		#stop using setattr
-		setattr(self, 'left_name', '%i_%i_left_%i' %(scheme, region, n))
-		setattr(self, 'left_start', output['PRIMER_LEFT_%i' %n][0])
-		setattr(self, 'left_end', output['PRIMER_LEFT_%i' %n][0] + output['PRIMER_LEFT_%i' %n][1])
-		setattr(self, 'left_length', output['PRIMER_LEFT_%i' %n][1])
-		setattr(self, 'left_seq', output['PRIMER_LEFT_%i_SEQUENCE' %n])
-		setattr(self, 'left_gc', output['PRIMER_LEFT_%i_GC_PERCENT' %n])
-		setattr(self, 'left_tm', output['PRIMER_LEFT_%i_TM' %n])
-		
-		setattr(self, 'right_name', '%i_%i_right_%i' %(scheme, region, 0))
-		setattr(self, 'right_start', output['PRIMER_RIGHT_%i' %n][0])
-		setattr(self, 'right_end', output['PRIMER_RIGHT_%i' %n][0] + output['PRIMER_RIGHT_%i' %n][1])
-		setattr(self, 'right_length', output['PRIMER_RIGHT_%i' %n][1])
-		setattr(self, 'right_seq', output['PRIMER_RIGHT_%i_SEQUENCE' %n])
-		setattr(self, 'right_gc', output['PRIMER_RIGHT_%i_GC_PERCENT' %n])
-		setattr(self, 'right_tm', output['PRIMER_RIGHT_%i_TM' %n])
+		self.left = left
+		self.right = right
+		self.total = 0
 
+class Primer():
+	
+	def __init__(self, scheme, region, output, n, direction):
 
-class region_object():
+		self.direction = direction
+		self.name = '%i_%i_left_%i' %(scheme, region, n)
+		self.start = output['PRIMER_%s_%i' %(direction, n)][0]
+		self.end = output['PRIMER_%s_%i' %(direction, n)][0] + (
+			output['PRIMER_%s_%i' %(direction, n)][1])
+		self.length = output['PRIMER_%s_%i' %(direction, n)][1]
+		self.seq = output['PRIMER_%s_%i_SEQUENCE' %(direction, n)]
+		self.gc = output['PRIMER_%s_%i_GC_PERCENT' %(direction, n)]
+		self.tm = output['PRIMER_%s_%i_TM' %(direction, n)]
+		self.sub_total = 0
+
+class Region():
 
 	def __init__(self, scheme, region, output):
 
+		self.scheme = scheme
+		self.region = region
+		self.pool = '1' if self.region%2==0 else '2'
 		self.pairs = []
 		for n in range(5):
-			self.pairs.append(primer_pair(scheme, region, output, n))
+			left = Primer(scheme, region, output, n, 'LEFT')
+			right = Primer(scheme, region, output, n, 'RIGHT')
+			self.pairs.append(PrimerPair(left, right))
 
+	def sort_pairs(self):
+		
+		self.pairs.sort(key=lambda x: x.total, reverse=True)

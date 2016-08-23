@@ -20,10 +20,10 @@ def fast_pairwise(record, pair):
 		set(['T', 'T'])
 		]
 
-	left_name = pair.left_name
-	left_seq = Seq.Seq(pair.left_seq)
-	left_start = pair.left_start
-	left_end = pair.left_end
+	left_name = pair.left.name
+	left_seq = Seq.Seq(pair.left.seq)
+	left_start = pair.left.start
+	left_end = pair.left.end
 	search_start = (left_start-50 if left_start-50 >= 0 else 0)
 	search_end = (left_end+50 if left_end+50 <= len(record) else len(record))
 	aln = pairwise2.align.localms(left_seq, record.seq[search_start:search_end], 2, -1, -1, -1)[0]
@@ -39,8 +39,8 @@ def fast_pairwise(record, pair):
 	primer_3prime = aln_query[-1]
 	reference_complement = str(Seq.Seq(str(aln_reference)).complement())
 	template_3prime = reference_complement[-1]
-	pair.left_3prime_mm = False
-	pair.left_aln_score = left_aln_score
+	pair.left.mm_3prime = False
+	pair.left.aln_score = left_aln_score
 
 	print 'primer           ', left_name
 	print 'sequence         ', left_seq
@@ -58,13 +58,13 @@ def fast_pairwise(record, pair):
 		if set([primer_3prime, template_3prime]) == mismatch:
 			print '3\' mismatch left ', '5\' %s 3\'' %aln_query 
 			print '                 ', '3\' %s 5\'' %reference_complement
-			pair.left_3prime_mm = True
+			pair.left.mm_3prime = True
 	print
 
-	right_name = pair.right_name
-	right_seq = Seq.Seq(pair.right_seq)
-	right_start = pair.right_start
-	right_end = pair.right_end
+	right_name = pair.right.name
+	right_seq = Seq.Seq(pair.right.seq)
+	right_start = pair.right.start
+	right_end = pair.right.end
 	search_start = (right_start-50 if right_start-50 >= 0 else 0)
 	search_end = (right_end+50 if right_end+50 <= len(record) else len(record))
 	aln = pairwise2.align.localms(right_seq, record.seq[search_start:search_end].reverse_complement(), 2, -1, -1, -1)[0]
@@ -80,8 +80,8 @@ def fast_pairwise(record, pair):
 	primer_3prime = aln_query[-1]
 	reference_complement = str(Seq.Seq(str(aln_reference)).complement())
 	template_3prime = reference_complement[-1]
-	pair.right_3prime_mm = False
-	pair.right_aln_score = right_aln_score
+	pair.right.mm_3prime = False
+	pair.right.aln_score = right_aln_score
 
 	print 'primer           ', right_name
 	print 'sequence         ', right_seq
@@ -99,7 +99,7 @@ def fast_pairwise(record, pair):
 		if set([primer_3prime, template_3prime]) == mismatch:
 			print '3\' mismatch right ', '5\' %s 3\'' %aln_query 
 			print '                 ', '3\' %s 5\'' %reference_complement
-			pair.right_3prime_mm = True
+			pair.right.mm_3prime = True
 	print
 
 	return None

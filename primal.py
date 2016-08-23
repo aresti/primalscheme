@@ -2,11 +2,12 @@
 
 import sys
 import argparse
+import pprint
 
 def run_command(parser, args):
 	if args.command == 'scheme':
 		import scheme as command
-	command.multiplex(args, parser=parser)
+	return command.multiplex(args, parser=parser)
 
 def main():
 	parser = argparse.ArgumentParser(prog='primal', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -22,7 +23,13 @@ def main():
 
 	#run
 	args = parser.parse_args()
-	args.func(parser, args)
+	result = args.func(parser, args)
+
+
+	for region in result:
+		print vars(region.pairs[0].left)
+		print vars(region.pairs[0].right)
+
 
 if __name__ == '__main__':
 	main()

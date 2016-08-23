@@ -5,7 +5,7 @@ from pprint import pprint
 import settings
 import interactions
 import pairwise
-from primer_pair import region_object
+from primer_pair import Region
 #from openpyxl import load_workbook
 #from openpyxl.worksheet.datavalidation import DataValidation
 from operator import itemgetter
@@ -44,38 +44,32 @@ def multiplex(args, parser=None):
 				output = primer3.bindings.designPrimers(seq_params, outer_params)
 
 		#pprint(output, width=1)
-		region = region_object(args.length, i+1, output)
+		region = Region(args.length, i+1, output)
 		#pprint(vars(region), width=1)
 		outer_pairs.append(region)
 
 	#check for mismatches
 	print
 	print 'Checking for 3\' mismatches'
-	totals = []
 	for region_pairs in outer_pairs:
-		sub_totals = []
 		for pair in region_pairs.pairs:
 			scores = 0
 			for record in records:
 				pairwise.fast_pairwise(record, pair)
-				scores += (pair.left_aln_score + pair.right_aln_score)
-				if (pair.left_3prime_mm == True or pair.right_3prime_mm == True):
+				scores += (pair.left.aln_score + pair.right.aln_score)
+				if (pair.left.mm_3prime == True or pair.right.mm_3prime == True):
 					print 'mismatch'
 					scores = 0 #should always be 0?
-			pair.sub_total = scores
-			#sub_totals.append((pair, scores))
-		#region_pairs.totals = sub_totals
-		#totals.append(sub_totals)
-	#pprint(vars(outer_pairs[0].pairs[0]), width=1)
+			pair.total = scores
+	#pprint(vars(outer_pairs[0]), width=1)
 
 	#check for interactions
 	#print interactions.interactions(args, outer)
 
 	result = []
-	for i, region_pairs in enumerate(outer_pairs):
-		pool = str(['1' if i%2==0 else '2'][0])
-		region_pairs.pool = pool
-		result.append(sorted(region_pairs.pairs, key=lambda x: x.sub_total, reverse=True)[0])
+	for region_pairs in outer_pairs:
+		region_pairs.sort_pairs()
+		result.append(region_pairs)
 	return result
 	
 
