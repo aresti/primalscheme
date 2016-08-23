@@ -12,7 +12,7 @@ class Primer():
 	def __init__(self, scheme, region, output, n, direction):
 
 		self.direction = direction
-		self.name = '%i_%i_left_%i' %(scheme, region, n)
+		self.name = '%i_%i_%s_%i' %(scheme, region, direction, n)
 		self.start = output['PRIMER_%s_%i' %(direction, n)][0]
 		self.end = output['PRIMER_%s_%i' %(direction, n)][0] + (
 			output['PRIMER_%s_%i' %(direction, n)][1])
