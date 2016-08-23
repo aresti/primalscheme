@@ -28,7 +28,7 @@ class Region():
 
 		self.scheme = scheme
 		self.region = region
-		self.pool = '1' if self.region%2==0 else '2'
+		self.pool = '2' if self.region%2==0 else '1'
 		self.pairs = []
 		for n in range(5):
 			left = Primer(scheme, region, output, n, 'LEFT')
