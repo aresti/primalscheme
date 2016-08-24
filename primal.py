@@ -26,10 +26,5 @@ def main():
 	result = args.func(parser, args)
 
 
-	for region in result:
-		print vars(region.pairs[0].left)
-		print vars(region.pairs[0].right)
-
-
 if __name__ == '__main__':
 	main()

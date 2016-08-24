@@ -1,3 +1,4 @@
+from pairwise import fast_pairwise
 
 class PrimerPair():
 
@@ -38,3 +39,11 @@ class Region():
 	def sort_pairs(self):
 		
 		self.pairs.sort(key=lambda x: x.total, reverse=True)
+
+class Alignment():
+	
+	def __init__(self, Primer):
+
+		fast_pairwise(Primer)
+
+
