@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-import pprint
+from pprint import pprint
 
 def run_command(parser, args):
 	if args.command == 'scheme':
@@ -24,6 +24,8 @@ def main():
 	#run
 	args = parser.parse_args()
 	result = args.func(parser, args)
+	for each in result:
+		print [pair.total for pair in each.pairs]
 
 
 if __name__ == '__main__':

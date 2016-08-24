@@ -22,10 +22,27 @@ def outer_pair(args):
 	return outer_params
 
 def inner_pair():
+
 	outer_params = outer_pair()
 	inner_params = outer_params.copy()
 	inner_params['PRIMER_PRODUCT_SIZE_RANGE'] = [[200, 300]]
 	return inner_params
+
+MATCHES = [
+	set(['A', 'T']),
+	set(['C', 'G']),
+	set(['G', 'T'])
+	 ],
+
+MISMATCHES = [
+	set(['A', 'A']),
+	set(['A', 'C']),
+	set(['C', 'C']),
+	set(['C', 'T']),
+	set(['G', 'A']),
+	set(['G', 'G']),
+	set(['T', 'T'])
+	]
 
 # Length 22, 30, 24.43
 # Tm 59.96, 62.72, 61.33
