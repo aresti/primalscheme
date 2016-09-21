@@ -1,5 +1,6 @@
 import sys
 from Bio import SeqIO
+from Bio import Seq
 import primer3
 from pprint import pprint
 import settings
@@ -10,7 +11,11 @@ from operator import itemgetter
 
 def run(args):
 	#Use first record for primer picking
-	references = list(SeqIO.parse(open(args.g, 'r'), 'fasta'))
+	references = []
+	dna_bases = 'ACGT'
+	for reference in SeqIO.parse(open(args.g, 'r'), 'fasta'):
+		reference.seq = Seq.Seq(''.join([base if base in dna_bases else 'N' for base in str(reference.seq).replace('U', 'T')]))
+		references.append(reference)
 	seq = str(references[0].seq)
 	step = args.length - 2*(args.overlap)
 	seq_params = {

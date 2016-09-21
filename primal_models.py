@@ -67,35 +67,37 @@ class Alignment():
 		self.fast_pairwise(primer, reference)
 
 	def fast_pairwise(self, primer, ref):
-	
+		
 		self.primer = primer.seq
 		self.primer_length = len(self.primer)
-		seq = Seq.Seq(primer.seq)		
 		search_start = primer.start-50 if primer.start-50 >= 0 else 0
 		search_end = primer.end+50 if primer.end+50 <= len(ref) else len(ref)
 		if primer.direction == 'LEFT':
-			aln = pairwise2.align.localms(seq, ref.seq[search_start:search_end], 2, -1, -1, -1, penalize_end_gaps=True)[0]
+			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end], 2, -1, -1, -1, penalize_end_gaps=True)
 		elif primer.direction == 'RIGHT':
-			aln = pairwise2.align.localms(seq, ref.seq[search_start:search_end].reverse_complement(), 2, -1, -1, -1, penalize_end_gaps=True)[0]
-		p = re.compile('(-*)([ACGT][ACGT\-]*[ACGT])(-*)')
-		for m in re.finditer(p, str(aln[0])):
-			self.start, self.end = m.span(2)
-		self.score = aln[2]
-		self.length = self.end - self.start
-		self.aln_query = aln[0][self.start:self.end]
-		self.aln_ref = aln[1][self.start:self.end]
-		self.primer_3prime = self.aln_query[-1]
-		self.aln_ref_comp = Seq.Seq(str(self.aln_ref)).complement()
-		self.template_3prime = self.aln_ref_comp[-1]
-		self.mm_3prime = False
+			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end].reverse_complement(), 2, -1, -1, -1, penalize_end_gaps=True)
+		if alns:
+			aln = alns[0]
+			p = re.compile('(-*)([ACGTN][ACGTN\-]*[ACGTN])(-*)')
+			for m in re.finditer(p, str(aln[0])):
+				self.start, self.end = m.span(2)
+			self.score = aln[2]
+			self.length = self.end - self.start
+			self.aln_query = aln[0][self.start:self.end]
+			self.aln_ref = aln[1][self.start:self.end]
+			self.primer_3prime = self.aln_query[-1]
+			self.aln_ref_comp = Seq.Seq(str(self.aln_ref)).complement()
+			self.template_3prime = self.aln_ref_comp[-1]
+			self.mm_3prime = False
 
-		#pprint(vars(self), width=1)
-		#print
+			#pprint(vars(self), width=1)
 
-		for mismatch in settings.MISMATCHES:
-			if set([self.primer_3prime, self.template_3prime]) == mismatch:
-				print '3\' mismatch left ', '5\' %s 3\'' %self.aln_query 
-				print '                 ', '3\' %s 5\'' %self.aln_ref_comp
-				self.mm_3prime = True
-				self.score = 0
+			for mismatch in settings.MISMATCHES:
+				if set([self.primer_3prime, self.template_3prime]) == mismatch:
+					print '3\' mismatch left ', '5\' %s 3\'' %self.aln_query 
+					print '                 ', '3\' %s 5\'' %self.aln_ref_comp
+					self.mm_3prime = True
+					self.score = 0
+		else:
+			self.score = 0
 
