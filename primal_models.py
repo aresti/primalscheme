@@ -52,11 +52,11 @@ class Primer():
 		self.sub_total = 0
 		self.alignments = []
 
-		pprint(vars(self), width=1)
+		#pprint(vars(self), width=1)
 		
 		for ref in references:
 			alignment = Alignment(self, ref)
-			pprint(vars(alignment), width=1)
+			#pprint(vars(alignment), width=1)
 			self.alignments.append(alignment)
 			self.sub_total += alignment.score
 
@@ -96,11 +96,13 @@ class Alignment():
 		
 		self.primer = primer.seq
 		self.primer_length = len(self.primer)
-		search_start = primer.start-50 if primer.start-50 >= 0 else 0
-		search_end = primer.end+50 if primer.end+50 <= len(ref) else len(ref)
 		if primer.direction == 'LEFT':
+			search_start = primer.start-40 if primer.start-40 >= 0 else 0
+			search_end = primer.end+40 if primer.end+40 <= len(ref) else len(ref)
 			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end], 2, -1, -1, -1, penalize_end_gaps=True)
 		elif primer.direction == 'RIGHT':
+			search_start = primer.start+40 if primer.start+40 <= len(ref) else len(ref)
+			search_end = primer.end-40 if primer.end-40 >= 0 else 0
 			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end].reverse_complement(), 2, -1, -1, -1, penalize_end_gaps=True)
 		if alns:
 			aln = alns[0]
