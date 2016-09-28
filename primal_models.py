@@ -5,6 +5,26 @@ import settings
 from pprint import pprint
 import re
 
+class Explain():
+
+	def __init__(self, string):
+		self.considered = 0
+		self.GC_content_failed = 0
+		self.low_tm = 0
+		self.high_tm = 0
+		self.not_in_any_ok_left_region = 0
+		self.not_in_any_ok_right_region = 0
+		self.ok = 0
+		self.explain(string)
+
+	def explain(self, string):
+		fields = ['considered', 'GC content failed', 'low tm', 'high tm', 'not in any ok left region', 'not in any ok right region', 'ok']
+		for field in fields:
+			pattern = field.replace(' ', '\s') + '\s(\d+)'
+			matches = re.search(pattern, string)
+			if matches:
+				setattr(self, field.replace('\s','_'), int(matches.group(1)))
+
 class PrimerPair():
 
 	def __init__(self, left, right):
