@@ -39,18 +39,24 @@ class Primer():
 
 		self.direction = direction
 		self.name = '%i_%i_%s_%i' %(scheme, region, direction, n)
-		self.start = output['PRIMER_%s_%i' %(direction, n)][0]
-		self.end = output['PRIMER_%s_%i' %(direction, n)][0] + (
-			output['PRIMER_%s_%i' %(direction, n)][1])
+		if self.direction == 'LEFT':
+			self.start = output['PRIMER_%s_%i' %(direction, n)][0]
+			self.end = self.start + (output['PRIMER_%s_%i' %(direction, n)][1])
+		elif self.direction == 'RIGHT':
+			self.start = output['PRIMER_%s_%i' %(direction, n)][0] + 1
+			self.end = self.start - (output['PRIMER_%s_%i' %(direction, n)][1])
 		self.length = output['PRIMER_%s_%i' %(direction, n)][1]
 		self.seq = output['PRIMER_%s_%i_SEQUENCE' %(direction, n)]
 		self.gc = output['PRIMER_%s_%i_GC_PERCENT' %(direction, n)]
 		self.tm = output['PRIMER_%s_%i_TM' %(direction, n)]
 		self.sub_total = 0
 		self.alignments = []
+
+		pprint(vars(self), width=1)
 		
 		for ref in references:
 			alignment = Alignment(self, ref)
+			pprint(vars(alignment), width=1)
 			self.alignments.append(alignment)
 			self.sub_total += alignment.score
 
