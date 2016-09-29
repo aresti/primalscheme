@@ -40,15 +40,15 @@ class Primer():
 		self.direction = direction
 		self.name = '%i_%i_%s_%i' %(scheme, region, direction, n)
 		if self.direction == 'LEFT':
-			self.start = output['PRIMER_%s_%i' %(direction, n)][0]
-			self.end = self.start + (output['PRIMER_%s_%i' %(direction, n)][1])
+			self.start = int(output['PRIMER_%s_%i' %(direction, n)][0])
+			self.end = int(self.start + output['PRIMER_%s_%i' %(direction, n)][1])
 		elif self.direction == 'RIGHT':
-			self.start = output['PRIMER_%s_%i' %(direction, n)][0] + 1
-			self.end = self.start - (output['PRIMER_%s_%i' %(direction, n)][1])
-		self.length = output['PRIMER_%s_%i' %(direction, n)][1]
-		self.seq = output['PRIMER_%s_%i_SEQUENCE' %(direction, n)]
-		self.gc = output['PRIMER_%s_%i_GC_PERCENT' %(direction, n)]
-		self.tm = output['PRIMER_%s_%i_TM' %(direction, n)]
+			self.start = int(output['PRIMER_%s_%i' %(direction, n)][0] + 1)
+			self.end = int(self.start - output['PRIMER_%s_%i' %(direction, n)][1])
+		self.length = int(output['PRIMER_%s_%i' %(direction, n)][1])
+		self.seq = str(output['PRIMER_%s_%i_SEQUENCE' %(direction, n)])
+		self.gc = float(output['PRIMER_%s_%i_GC_PERCENT' %(direction, n)])
+		self.tm = float(output['PRIMER_%s_%i_TM' %(direction, n)])
 		self.sub_total = 0
 		self.alignments = []
 

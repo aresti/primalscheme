@@ -30,18 +30,25 @@ def multiplex(args, parser=None):
 	result = []
 	key = 'SEQUENCE_PRIMER_PAIR_OK_REGION_LIST'
 	print 'Running primer3'
+
 	for i, region in enumerate(range(0, len(seq), step)[:-1]):
 		print 'Region %i, position %i' %(i+1, region)
-		left_start = region
-		left_end = right_end = args.overlap
+		if i == 0:
+			max_left_end = region
+		else:
+			max_left_end = result[-1].pairs[0].right.end-(args.overlap+20)
+		left_start = max_left_end
+		left_end = args.overlap
 		right_start = region+args.length-args.overlap
+		right_end = args.overlap
 		if i+1 == regions:
 			right_end = 25
 			right_start = len(seq)-right_end
-		for j in range(4):
+		for j in range(5):
 			seq_params[key] = [left_start, left_end, right_start, right_end]
 			print seq_params[key]
 			output = primer3.bindings.designPrimers(seq_params, outer_params)
+			#pprint(output, width=1)
 			left_ok = Explain(output['PRIMER_LEFT_EXPLAIN']).ok
 			right_ok = Explain(output['PRIMER_RIGHT_EXPLAIN']).ok
 			if left_ok < 3:
@@ -63,6 +70,7 @@ def multiplex(args, parser=None):
 		
 
 		region = Region(args.length, i+1, output, references)
+		#print vars(region.pairs[0].left)
 		result.append(region)
 		#pprint(output, width=1)
 		#pprint(vars(region), width=1)
