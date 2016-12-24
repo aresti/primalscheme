@@ -15,7 +15,7 @@ def main():
 	parser_scheme = subparsers.add_parser('scheme', help='Tiling amplicons designer')
 	parser_scheme.add_argument('-g', help='FASTA file', metavar='STRING', required=True)
 	parser_scheme.add_argument('-o', help='Prefix', metavar='STRING', required=True)
-	parser_scheme.add_argument('--length', help='Amplicon length', type=int, default=400)
+	parser_scheme.add_argument('--amplicon-length', help='Amplicon length', type=int, default=400)
 	parser_scheme.add_argument('--overlap', help='Overlap length', type=int, default=75)
 	parser_scheme.add_argument('--verbose', help='Verbose mode', action="store_true")
 	parser_scheme.set_defaults(func=multiplex)

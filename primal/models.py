@@ -1,9 +1,11 @@
+import settings
+import re
+import sys
+
 from Bio import pairwise2
 from Bio import Seq
-import sys
-import settings
 from pprint import pprint
-import re
+
 
 class Explain():
 	def __init__(self, string):
@@ -25,6 +27,7 @@ class Explain():
 			if matches:
 				setattr(self, field.replace('\s','_'), int(matches.group(1)))
 
+
 class Primitive_primer():
 	def __init__(self, direction, name, seq):
 		self.direction = direction
@@ -34,11 +37,13 @@ class Primitive_primer():
 		self.end = 10440 #For zika
 		self.alignment = primal_models.Alignment(self, ref)
 
+
 class PrimerPair():
 	def __init__(self, left, right):
 		self.left = left
 		self.right = right
 		self.total = left.sub_total + right.sub_total
+
 
 class Primer():
 	def __init__(self, scheme, region, output, n, direction, references):
@@ -57,12 +62,13 @@ class Primer():
 		self.sub_total = 0
 		self.alignments = []
 		#pprint(vars(self), width=1)
-		
+
 		for ref in references:
 			alignment = Alignment(self, ref)
 			#pprint(vars(alignment), width=1)
 			self.alignments.append(alignment)
 			self.sub_total += alignment.score
+
 
 class Region():
 	def __init__(self, scheme, region_num, output, references, position):
@@ -76,13 +82,13 @@ class Region():
 			if lenkey not in output:
 				break
 			output[lenkey] = (output[lenkey][0] + position, output[lenkey][1])
-			print output[lenkey]
+			#print output[lenkey]
 			left = Primer(scheme, region_num, output, cand_num, 'LEFT', references)
 			right = Primer(scheme, region_num, output, cand_num, 'RIGHT', references)
 			self.pairs.append(PrimerPair(left, right))
 		self.pairs.sort(key=lambda x: x.total, reverse=True)
 
-class Alignment():	
+class Alignment():
 	def __init__(self, primer, reference):
 		self.start = 0
 		self.end = 0
@@ -123,14 +129,13 @@ class Alignment():
 			self.template_3prime = self.aln_ref_comp[-1]
 			self.mm_3prime = False
 			#pprint(vars(self), width=1)
-			
+
 			#check this is left
 			for mismatch in settings.MISMATCHES:
 				if set([self.primer_3prime, self.template_3prime]) == mismatch:
-					print '3\' mismatch left ', '5\' %s 3\'' %self.aln_query 
+					print '3\' mismatch left ', '5\' %s 3\'' %self.aln_query
 					print '                 ', '3\' %s 5\'' %self.aln_ref_comp
 					self.mm_3prime = True
 					self.score = 0
 		else:
 			self.score = 0
-
