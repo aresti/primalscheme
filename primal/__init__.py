@@ -8,7 +8,7 @@ from primal.models import Region, Explain
 import primal.settings
 
 
-def find_primers(amplicon_length, overlap, window_size, references, seq, region_num, start, verbose=False):
+def find_primers(amplicon_length, overlap, window_size, references, seq, region_num, start, verbose=False, very_verbose=False):
 	"""
 	Given a list of biopython SeqRecords (references), and a string representation
 	of the pimary reference (seq), return a list of Region objects containing candidate
@@ -20,40 +20,44 @@ def find_primers(amplicon_length, overlap, window_size, references, seq, region_
 	region_key = 'SEQUENCE_PRIMER_PAIR_OK_REGION_LIST'
 	p3_seq_args = {
 		region_key: [
-			start,
-			start + window_size,
-			start + amplicon_length - window_size,
-			start + amplicon_length],
+			min(start, len(seq)-amplicon_length),
+			window_size,
+			min(start+amplicon_length-window_size, len(seq)-window_size),
+			window_size],
 		'SEQUENCE_TEMPLATE': seq,
-		'SEQUENCE_INCLUDED_REGION': [0, len(seq) - 1],
+		'SEQUENCE_INCLUDED_REGION': [0, len(seq)-1],
 	}
-	p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [[amplicon_length-(2*window_size), amplicon_length]]
+	# Product size does not include primer sequences
+	p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [[amplicon_length-(2*window_size)+(2*22), amplicon_length+(2*22)]]
 
 	if verbose:
-		print "Primer3 Settings:"
+		print "\nPrimer3 Settings:"
 		pprint(p3_seq_args, width=1)
 		pprint(p3_global_args, width=1)
 
-	# make some decision based on remaining seq length
-
 	while True:
 		p3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
-
+		if very_verbose:
+			pprint(p3_output, width=1)
+	
 		left_ok = Explain(p3_output['PRIMER_LEFT_EXPLAIN']).ok
 		right_ok = Explain(p3_output['PRIMER_RIGHT_EXPLAIN']).ok
+		if verbose:
+			print 'ok', left_ok, right_ok
 		if left_ok > 0 and right_ok > 0:
 			break
 
 		# Step right and try again
-		print "Stepping right +10"
-		p3_seq_args[region_key] = [min(x+10, len(seq)) for x in p3_seq_args[region_key]]
+		print "Stepping left -10"
+		p3_seq_args[region_key][0] -= 10
+		p3_seq_args[region_key][2] -= 10
+	
+		# Handle total failure
+		#if p3_seq_args[region_key][0][0] >= overlap:
+		#	print "Total failure!"
+		#	sys.exit()
 
-		if p3_seq_args[region_key][0] >= overlap:
-			print "Total failure!"
-			sys.exit()
-
-	position = 0
-	return Region(amplicon_length, region_num, p3_output, references, position)
+	return Region(amplicon_length, region_num, p3_output, references)
 
 
 def multiplex(args, parser=None):
@@ -61,16 +65,28 @@ def multiplex(args, parser=None):
 	results =[]
 	start = 0
 	region_num = 0
+	window_size = 50
+	overlap = 0
 
 	while True:
 		region_num += 1
-		print "Region {}".format(region_num)
-		print "Start: {}".format(start)
-		region = find_primers(args.amplicon_length, args.overlap, 50, references,
-					   str(references[0].seq), region_num, start, verbose=args.verbose)
-		print "Right end = {}".format(region.pairs[0].right.end)
-		print "Right start = {}".format(region.pairs[0].right.start)
+		region = find_primers(args.amplicon_length, args.overlap, window_size, 
+			references, str(references[0].seq), region_num, start, 
+			verbose=args.verbose, very_verbose=args.very_verbose)
+		print "Region %i, %i:%i" %( region_num, region.pairs[0].left.start, 
+			region.pairs[0].right.start)
+		if results:
+			overlap = results[-1].pairs[0].right.start - region.pairs[0].left.start
+		print "Product length %i, overlap %i" %(region.pairs[0].right.start - 
+			region.pairs[0].left.start, overlap)
+		if args.verbose:
+			pprint(vars(region.pairs[0].left))
+			pprint(vars(region.pairs[0].right))
 		start = region.pairs[0].right.end - args.overlap
 		results.append(region)
+		if region.pairs[0].right.start >= len(references[0].seq)-window_size:
+			print 'Finished!'
+			break
+		
 
 	return results

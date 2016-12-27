@@ -18,13 +18,6 @@ outer_params = {
 	'PRIMER_PAIR_MAX_COMPL_END': 47,
 }
 
-def inner_pair():
-
-	outer_params = outer_pair()
-	inner_params = outer_params.copy()
-	inner_params['PRIMER_PRODUCT_SIZE_RANGE'] = [[200, 300]]
-	return inner_params
-
 MATCHES = [
 	set(['A', 'T']),
 	set(['C', 'G']),

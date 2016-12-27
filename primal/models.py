@@ -71,18 +71,16 @@ class Primer():
 
 
 class Region():
-	def __init__(self, scheme, region_num, output, references, position):
+	def __init__(self, scheme, region_num, output, references):
 		self.scheme = scheme
 		self.region_num = region_num
 		self.pool = '2' if self.region_num % 2 == 0 else '1'
 		self.pairs = []
-		#should pass number of candidates to function
 		for cand_num in range(5):
 			lenkey = 'PRIMER_LEFT_%s' %cand_num
 			if lenkey not in output:
+				print 'Only %s candidate primers' %cand_num
 				break
-			output[lenkey] = (output[lenkey][0] + position, output[lenkey][1])
-			#print output[lenkey]
 			left = Primer(scheme, region_num, output, cand_num, 'LEFT', references)
 			right = Primer(scheme, region_num, output, cand_num, 'RIGHT', references)
 			self.pairs.append(PrimerPair(left, right))
