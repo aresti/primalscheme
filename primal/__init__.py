@@ -5,6 +5,7 @@ import primal.settings
 from Bio import SeqIO
 from pprint import pprint
 from primal.models import Region, Explain
+from plot
 
 
 class PoolOverlapException(Exception):
@@ -69,6 +70,10 @@ def write_bed(prefix, results, reference_id):
 		for r in results:
 			print >>bedhandle, '\t'.join(map(str, [reference_id, r.candidate_pairs[0].left.start, r.candidate_pairs[0].left.end, r.candidate_pairs[0].left.name, r.pool]))
 			print >>bedhandle, '\t'.join(map(str, [reference_id, r.candidate_pairs[0].right.end, r.candidate_pairs[0].right.start, r.candidate_pairs[0].right.name, r.pool]))
+
+
+def plot(prefix, results, reference):
+	
 
 
 def multiplex(args, parser=None):
