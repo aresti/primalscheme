@@ -17,8 +17,8 @@ def main():
 	parser_scheme.add_argument('-o', help='Prefix', metavar='STRING', required=True)
 	parser_scheme.add_argument('--amplicon-length', help='Amplicon length', type=int, default=400)
 	parser_scheme.add_argument('--overlap', help='Overlap length', type=int, default=75)
-	parser_scheme.add_argument('--verbose', help='Verbose mode', action="store_true")
-	parser_scheme.add_argument('--very_verbose', help='Very verbose mode', action="store_true")
+	parser_scheme.add_argument('--v', help='Verbose mode', action="store_true")
+	parser_scheme.add_argument('--vvv', help='Very verbose mode', action="store_true")
 	parser_scheme.set_defaults(func=multiplex)
 
 	#run

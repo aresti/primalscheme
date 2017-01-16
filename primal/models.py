@@ -154,7 +154,7 @@ class Alignment():
 			ref_name, query_name, result = test_cssw.nucl_align(primer.seq, ref.seq.reverse_complement(), primer.name, ref.id)
 		else:
 			ref_name, query_name, result = test_cssw.nucl_align(primer.seq, ref.seq, primer.name, ref.id)
-		print result
+		#print result
 		self.score = result[0]
 		self.start = result[2] + 1 if primer.direction == 'LEFT' else len(ref.seq) - result[3]
 		self.end = result[3] + 1 if primer.direction == 'LEFT' else len(ref.seq) - result[2]
