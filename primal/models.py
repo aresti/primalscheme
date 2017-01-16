@@ -5,6 +5,7 @@ import sys
 from Bio import pairwise2
 from Bio import Seq
 from pprint import pprint
+import test_cssw 
 
 
 class Explain():
@@ -59,10 +60,10 @@ class Primer():
 		self.seq = str(output['PRIMER_%s_%i_SEQUENCE' %(direction, n)])
 		self.gc = float(output['PRIMER_%s_%i_GC_PERCENT' %(direction, n)])
 		self.tm = float(output['PRIMER_%s_%i_TM' %(direction, n)])
+		
 		self.sub_total = 0
 		self.alignments = []
 		#pprint(vars(self), width=1)
-
 		for ref in references:
 			alignment = Alignment(self, ref)
 			#pprint(vars(alignment), width=1)
@@ -85,6 +86,7 @@ class Region():
 			right = Primer(scheme, region_num, output, cand_num, 'RIGHT', references)
 			self.pairs.append(PrimerPair(left, right))
 		self.pairs.sort(key=lambda x: x.total, reverse=True)
+
 
 class Alignment():
 	def __init__(self, primer, reference):
@@ -116,24 +118,51 @@ class Alignment():
 			p = re.compile('(-*)([ACGTN][ACGTN\-]*[ACGTN])(-*)')
 			m = list(re.finditer(p, str(aln[0])))[0]
 			self.score = aln[2]
-			self.start = (search_start + m.span(2)[0] if primer.direction == 'LEFT' else search_end - m.span(2)[0])
-			self.end = (search_start + m.span(2)[1] if primer.direction == 'LEFT' else search_end - m.span(2)[1])
-			self.length = (self.end - self.start if primer.direction == 'LEFT' else self.start - self.end)
-			#print self.start, self.end, self.length, self.score
+			self.start = (search_start + m.span(2)[0] if primer.direction == 'LEFT' 
+				else search_end - m.span(2)[0])
+			self.end = (search_start + m.span(2)[1] if primer.direction == 'LEFT' 
+				else search_end - m.span(2)[1])
+			self.length = (self.end - self.start if primer.direction == 'LEFT' else 
+				self.start - self.end)
 			self.aln_query = aln[0][m.span(2)[0]:m.span(2)[1]]
 			self.aln_ref = aln[1][m.span(2)[0]:m.span(2)[1]]
-			self.primer_3prime = self.aln_query[-1]
 			self.aln_ref_comp = Seq.Seq(str(self.aln_ref)).complement()
-			self.template_3prime = self.aln_ref_comp[-1]
+			self.cigar = ''
 			self.mm_3prime = False
-			#pprint(vars(self), width=1)
-
-			#check this is left
-			for mismatch in settings.MISMATCHES:
-				if set([self.primer_3prime, self.template_3prime]) == mismatch:
-					print '3\' mismatch left ', '5\' %s 3\'' %self.aln_query
-					print '                 ', '3\' %s 5\'' %self.aln_ref_comp
-					self.mm_3prime = True
-					self.score = 0
+			for a, b in zip(self.aln_query, self.aln_ref):
+				if a == '-' or b == '-':
+					self.cigar += ' '
+					continue
+				if a != b:
+					self.cigar += '*'
+					continue
+				else:
+					self.cigar += '|'
+			if set([self.aln_query[-1], self.aln_ref_comp[-1]]) in settings.MISMATCHES:
+				#pprint(vars(self), width=1)
+				print '3\' mismatch'
+				print "{: <16}".format(primer.name), '5\'-%s-3\'' %self.aln_query
+				print "{: <16}".format(''), '   %s' %self.cigar
+				print "{: <16}".format(ref.id), '3\'-%s-5\'' %self.aln_ref_comp
+				self.mm_3prime = True
+				self.score = 0
 		else:
 			self.score = 0
+
+	def fast_cssw(self, primer, ref):
+		if primer.direction == 'RIGHT':
+			ref_name, query_name, result = test_cssw.nucl_align(primer.seq, ref.seq.reverse_complement(), primer.name, ref.id)
+		else:
+			ref_name, query_name, result = test_cssw.nucl_align(primer.seq, ref.seq, primer.name, ref.id)
+		print result
+		self.score = result[0]
+		self.start = result[2] + 1 if primer.direction == 'LEFT' else len(ref.seq) - result[3]
+		self.end = result[3] + 1 if primer.direction == 'LEFT' else len(ref.seq) - result[2]
+		self.length = self.end - self.start + 1
+		if self.length != len(primer.seq):
+			sys.exit()
+		print 'start', self.start
+		print 'end', self.end
+		print 'length', self.length
+		#pprint(vars(self))
+		

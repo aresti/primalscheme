@@ -8,7 +8,7 @@ from primal.models import Region, Explain
 import primal.settings
 
 
-def find_primers(amplicon_length, overlap, window_size, references, seq, region_num, start, verbose=False, very_verbose=False):
+def find_primers(amplicon_length, overlap, window_size, references, seq, region_num, start, same_pool_limit, verbose=False, very_verbose=False):
 	"""
 	Given a list of biopython SeqRecords (references), and a string representation
 	of the pimary reference (seq), return a list of Region objects containing candidate
@@ -30,7 +30,7 @@ def find_primers(amplicon_length, overlap, window_size, references, seq, region_
 	# Product size does not include primer sequences
 	p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [[amplicon_length-(2*window_size)+(2*22), amplicon_length+(2*22)]]
 
-	if verbose:
+	if very_verbose:
 		print "\nPrimer3 Settings:"
 		pprint(p3_seq_args, width=1)
 		pprint(p3_global_args, width=1)
@@ -51,11 +51,11 @@ def find_primers(amplicon_length, overlap, window_size, references, seq, region_
 		print "Stepping left -10"
 		p3_seq_args[region_key][0] -= 10
 		p3_seq_args[region_key][2] -= 10
-	
-		# Handle total failure
-		#if p3_seq_args[region_key][0][0] >= overlap:
-		#	print "Total failure!"
-		#	sys.exit()
+
+		# Check if overlap is too large
+		if p3_seq_args[region_key][0] < same_pool_limit:
+			print "Failure! Please try different settings"
+			sys.exit()
 
 	return Region(amplicon_length, region_num, p3_output, references)
 
@@ -67,19 +67,22 @@ def multiplex(args, parser=None):
 	region_num = 0
 	window_size = 50
 	overlap = 0
+	same_pool_limit = 0
 
 	while True:
 		region_num += 1
+		if len(results) > 2:
+			same_pool_limit = results[-2].pairs[0].right.start
 		region = find_primers(args.amplicon_length, args.overlap, window_size, 
-			references, str(references[0].seq), region_num, start, 
+			references, str(references[0].seq), region_num, start, same_pool_limit, 
 			verbose=args.verbose, very_verbose=args.very_verbose)
 		print "Region %i, %i:%i" %( region_num, region.pairs[0].left.start, 
 			region.pairs[0].right.start)
 		if results:
-			overlap = results[-1].pairs[0].right.start - region.pairs[0].left.start
+			overlap = results[-1].pairs[0].right.start - region.pairs[0].left.end
 		print "Product length %i, overlap %i" %(region.pairs[0].right.start - 
 			region.pairs[0].left.start, overlap)
-		if args.verbose:
+		if args.very_verbose:
 			pprint(vars(region.pairs[0].left))
 			pprint(vars(region.pairs[0].right))
 		start = region.pairs[0].right.end - args.overlap

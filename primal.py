@@ -18,11 +18,17 @@ def main():
 	parser_scheme.add_argument('--amplicon-length', help='Amplicon length', type=int, default=400)
 	parser_scheme.add_argument('--overlap', help='Overlap length', type=int, default=75)
 	parser_scheme.add_argument('--verbose', help='Verbose mode', action="store_true")
+	parser_scheme.add_argument('--very_verbose', help='Very verbose mode', action="store_true")
 	parser_scheme.set_defaults(func=multiplex)
 
 	#run
 	args = parser.parse_args()
 	result = args.func(args)
+	
+	with open(args.o + '.bed', 'w') as bedhandle:
+		for line in result:
+			print >>bedhandle, '\t'.join(map(str, ['KU707826.1', line.pairs[0].left.start, line.pairs[0].left.end, line.pairs[0].left.name, line.pool]))
+			print >>bedhandle, '\t'.join(map(str, ['KU707826.1', line.pairs[0].right.end, line.pairs[0].right.start, line.pairs[0].right.name, line.pool]))
 
 if __name__ == '__main__':
 	main()
