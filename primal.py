@@ -13,8 +13,8 @@ def main():
 
 	#scheme
 	parser_scheme = subparsers.add_parser('scheme', help='Tiling amplicons designer')
-	parser_scheme.add_argument('-g', help='FASTA file', metavar='STRING', required=True)
-	parser_scheme.add_argument('-o', help='Prefix', metavar='STRING', required=True)
+	parser_scheme.add_argument('-f', help='FASTA file', metavar='STRING', required=True)
+	parser_scheme.add_argument('-p', help='Prefix', metavar='STRING', required=True)
 	parser_scheme.add_argument('--amplicon-length', help='Amplicon length', type=int, default=400)
 	parser_scheme.add_argument('--overlap', help='Overlap length', type=int, default=75)
 	parser_scheme.add_argument('--v', help='Verbose mode', action="store_true")
@@ -23,12 +23,7 @@ def main():
 
 	#run
 	args = parser.parse_args()
-	result = args.func(args)
-	
-	with open(args.o + '.bed', 'w') as bedhandle:
-		for line in result:
-			print >>bedhandle, '\t'.join(map(str, ['KU707826.1', line.pairs[0].left.start, line.pairs[0].left.end, line.pairs[0].left.name, line.pool]))
-			print >>bedhandle, '\t'.join(map(str, ['KU707826.1', line.pairs[0].right.end, line.pairs[0].right.start, line.pairs[0].right.name, line.pool]))
+	args.func(args)
 
 if __name__ == '__main__':
 	main()

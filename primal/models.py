@@ -5,10 +5,9 @@ import sys
 from Bio import pairwise2
 from Bio import Seq
 from pprint import pprint
-import test_cssw 
 
 
-class Explain():
+class Explain(object):
 	def __init__(self, string):
 		self.considered = 0
 		self.GC_content_failed = 0
@@ -29,106 +28,113 @@ class Explain():
 				setattr(self, field.replace('\s','_'), int(matches.group(1)))
 
 
-class Primitive_primer():
+class Primer(object):
 	def __init__(self, direction, name, seq):
+		# TODO: Validate direction is LEFT or RIGHT
 		self.direction = direction
 		self.name = name
 		self.seq = seq
-		self.start = 0
-		self.end = 10440 #For zika
-		self.alignment = primal_models.Alignment(self, ref)
+
+	@property
+	def length(self):
+		return len(self.seq)
 
 
-class PrimerPair():
+class CandidatePrimer(Primer):
+	def __init__(self, direction, name, seq, start, gc, tm, references):
+		super(CandidatePrimer, self).__init__(direction, name, seq)
+		self.start = start
+		self.gc = gc
+		self.tm = tm
+
+		self.sub_total = 0
+		self.alignments = []
+
+		for ref in references:
+			alignment = Alignment(self, ref)
+			self.alignments.append(alignment)
+			self.sub_total += alignment.score
+
+	@property
+	def end(self):
+		if self.direction == 'LEFT':
+			return self.start + self.length
+		else:
+			return self.start - self.length
+
+
+class CandidatePrimerPair(object):
 	def __init__(self, left, right):
 		self.left = left
 		self.right = right
 		self.total = left.sub_total + right.sub_total
 
 
-class Primer():
-	def __init__(self, scheme, region, output, n, direction, references):
-		self.direction = direction
-		self.name = '%i_%i_%s_%i' %(scheme, region, direction, n)
-		self.length = int(output['PRIMER_%s_%i' %(direction, n)][1])
-		if self.direction == 'LEFT':
-			self.start = int(output['PRIMER_%s_%i' %(direction, n)][0])
-			self.end = int(self.start + self.length)
-		elif self.direction == 'RIGHT':
-			self.start = int(output['PRIMER_%s_%i' %(direction, n)][0] + 1)
-			self.end = int(self.start - self.length)
-		self.seq = str(output['PRIMER_%s_%i_SEQUENCE' %(direction, n)])
-		self.gc = float(output['PRIMER_%s_%i_GC_PERCENT' %(direction, n)])
-		self.tm = float(output['PRIMER_%s_%i_TM' %(direction, n)])
-		
-		self.sub_total = 0
-		self.alignments = []
-		#pprint(vars(self), width=1)
-		for ref in references:
-			alignment = Alignment(self, ref)
-			#pprint(vars(alignment), width=1)
-			self.alignments.append(alignment)
-			self.sub_total += alignment.score
-
-
-class Region():
-	def __init__(self, scheme, region_num, output, references):
-		self.scheme = scheme
+class Region(object):
+	def __init__(self, prefix, region_num, primer3_output, references):
 		self.region_num = region_num
 		self.pool = '2' if self.region_num % 2 == 0 else '1'
-		self.pairs = []
+		self.candidate_pairs = []
+
 		for cand_num in range(5):
-			lenkey = 'PRIMER_LEFT_%s' %cand_num
-			if lenkey not in output:
-				print 'Only %s candidate primers' %cand_num
+			lenkey = 'PRIMER_LEFT_%s' % (cand_num)
+			left_name = '%s_%i_%s_%i' % (prefix, region_num, 'LEFT', cand_num)
+			right_name = '%s_%i_%s_%i' % (prefix, region_num, 'RIGHT', cand_num)
+			if lenkey not in primer3_output:
+				print 'Only %s candidate primers' % (cand_num)
 				break
-			left = Primer(scheme, region_num, output, cand_num, 'LEFT', references)
-			right = Primer(scheme, region_num, output, cand_num, 'RIGHT', references)
-			self.pairs.append(PrimerPair(left, right))
-		self.pairs.sort(key=lambda x: x.total, reverse=True)
+
+			left_seq = str(primer3_output['PRIMER_LEFT_%i_SEQUENCE' % (cand_num)])
+			right_seq = str(primer3_output['PRIMER_RIGHT_%i_SEQUENCE' % (cand_num)])
+
+			left_start = int(primer3_output['PRIMER_LEFT_%i' % (cand_num)][0])
+			right_start = int(primer3_output['PRIMER_RIGHT_%i' % (cand_num)][0] + 1)
+
+			left_gc = float(primer3_output['PRIMER_LEFT_%i_GC_PERCENT' % (cand_num)])
+			right_gc = float(primer3_output['PRIMER_RIGHT_%i_GC_PERCENT' % (cand_num)])
+
+			left_tm = float(primer3_output['PRIMER_LEFT_%i_TM' % (cand_num)])
+			right_tm = float(primer3_output['PRIMER_RIGHT_%i_TM' % (cand_num)])
+
+			left = CandidatePrimer('LEFT', left_name, left_seq, left_start, left_gc, left_tm, references)
+			right = CandidatePrimer('RIGHT', right_name, right_seq, right_start, right_gc, right_tm, references)
+
+			self.candidate_pairs.append(CandidatePrimerPair(left, right))
+		self.candidate_pairs.sort(key=lambda x: x.total, reverse=True)
 
 
 class Alignment():
-	def __init__(self, primer, reference):
-		self.start = 0
-		self.end = 0
-		self.length = 0
-		self.score = 0
-		self.aln_query = ''
-		self.aln_ref = ''
-		self.aln_ref_comp = ''
-		self.template_3prime = ''
-		self.primer_3prime = ''
-		self.mm_3prime = False
-		self.fast_pairwise(primer, reference)
-
-	def fast_pairwise(self, primer, ref):
-		self.primer = primer.seq
-		self.primer_length = len(self.primer)
+	def __init__(self, primer, ref):
 		if primer.direction == 'LEFT':
-			search_start = primer.start-50 if primer.start >= 0 else 0
-			search_end = primer.end+50 if primer.end+50 <= len(ref) else len(ref)
+			search_start = primer.start - 50 if primer.start > 50 else 0
+			search_end = primer.end + 50 if primer.end + 50 <= len(ref) else len(ref)
 			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end], 2, -1, -1, -1, penalize_end_gaps=True)
 		elif primer.direction == 'RIGHT':
-			search_start = primer.start-50
-			search_end = primer.end+50 if primer.end+50 <= len(ref) else len(ref)
+			search_start = primer.start - 50
+			search_end = primer.end + 50 if primer.end + 50 <= len(ref) else len(ref)
 			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end].reverse_complement(), 2, -1, -1, -1, penalize_end_gaps=True)
+
 		if alns:
 			aln = alns[0]
 			p = re.compile('(-*)([ACGTN][ACGTN\-]*[ACGTN])(-*)')
 			m = list(re.finditer(p, str(aln[0])))[0]
 			self.score = aln[2]
-			self.start = (search_start + m.span(2)[0] if primer.direction == 'LEFT' 
-				else search_end - m.span(2)[0])
-			self.end = (search_start + m.span(2)[1] if primer.direction == 'LEFT' 
-				else search_end - m.span(2)[1])
-			self.length = (self.end - self.start if primer.direction == 'LEFT' else 
-				self.start - self.end)
+
+			if primer.direction == 'LEFT':
+				self.start = search_start + m.span(2)[0]
+				self.end = search_start + m.span(2)[1]
+				self.length = self.end - self.start
+			else:
+				self.start = search_end - m.span(2)[0]
+				self.end = search_end - m.span(2)[1]
+				self.length = self.start - self.end
+
 			self.aln_query = aln[0][m.span(2)[0]:m.span(2)[1]]
 			self.aln_ref = aln[1][m.span(2)[0]:m.span(2)[1]]
 			self.aln_ref_comp = Seq.Seq(str(self.aln_ref)).complement()
 			self.cigar = ''
 			self.mm_3prime = False
+
 			for a, b in zip(self.aln_query, self.aln_ref):
 				if a == '-' or b == '-':
 					self.cigar += ' '
@@ -138,31 +144,14 @@ class Alignment():
 					continue
 				else:
 					self.cigar += '|'
+
 			if set([self.aln_query[-1], self.aln_ref_comp[-1]]) in settings.MISMATCHES:
 				#pprint(vars(self), width=1)
 				print '3\' mismatch'
-				print "{: <16}".format(primer.name), '5\'-%s-3\'' %self.aln_query
-				print "{: <16}".format(''), '   %s' %self.cigar
-				print "{: <16}".format(ref.id), '3\'-%s-5\'' %self.aln_ref_comp
+				print "{: <20}".format(primer.name), '5\'-%s-3\'' %self.aln_query
+				print "{: <20}".format(''), '   %s' %self.cigar
+				print "{: <20}".format(ref.id), '3\'-%s-5\'' %self.aln_ref_comp
 				self.mm_3prime = True
 				self.score = 0
 		else:
 			self.score = 0
-
-	def fast_cssw(self, primer, ref):
-		if primer.direction == 'RIGHT':
-			ref_name, query_name, result = test_cssw.nucl_align(primer.seq, ref.seq.reverse_complement(), primer.name, ref.id)
-		else:
-			ref_name, query_name, result = test_cssw.nucl_align(primer.seq, ref.seq, primer.name, ref.id)
-		#print result
-		self.score = result[0]
-		self.start = result[2] + 1 if primer.direction == 'LEFT' else len(ref.seq) - result[3]
-		self.end = result[3] + 1 if primer.direction == 'LEFT' else len(ref.seq) - result[2]
-		self.length = self.end - self.start + 1
-		if self.length != len(primer.seq):
-			sys.exit()
-		print 'start', self.start
-		print 'end', self.end
-		print 'length', self.length
-		#pprint(vars(self))
-		
