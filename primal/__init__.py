@@ -4,7 +4,7 @@ import primal.settings
 
 from Bio import SeqIO
 from pprint import pprint
-from primal.models import Region, Explain
+from .models import Region, Explain
 from plot import plot_schemeadelica
 
 
