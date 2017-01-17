@@ -4,3 +4,7 @@
 *.csv
 *.fasta
 *.fai
+*.png
+*.pdf
+*.bed
+venv/
