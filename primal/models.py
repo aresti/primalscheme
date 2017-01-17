@@ -110,8 +110,8 @@ class Alignment():
 			search_end = primer.end + 50 if primer.end + 50 <= len(ref) else len(ref)
 			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end], 2, -1, -1, -1, penalize_end_gaps=True)
 		elif primer.direction == 'RIGHT':
-			search_start = primer.start - 50
-			search_end = primer.end + 50 if primer.end + 50 <= len(ref) else len(ref)
+			search_start = primer.end - 50
+			search_end = primer.start + 50 if primer.start + 50 <= len(ref) else len(ref)
 			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end].reverse_complement(), 2, -1, -1, -1, penalize_end_gaps=True)
 
 		if alns:
