@@ -5,7 +5,7 @@ import primal.settings
 from Bio import SeqIO
 from pprint import pprint
 from primal.models import Region, Explain
-from plot
+from plot import plot_schemeadelica
 
 
 class PoolOverlapException(Exception):
@@ -72,10 +72,6 @@ def write_bed(prefix, results, reference_id):
 			print >>bedhandle, '\t'.join(map(str, [reference_id, r.candidate_pairs[0].right.end, r.candidate_pairs[0].right.start, r.candidate_pairs[0].right.name, r.pool]))
 
 
-def plot(prefix, results, reference):
-	
-
-
 def multiplex(args, parser=None):
 	# Check for sensible parameters
 	if args.amplicon_length < 100 or args.amplicon_length > 2000:
@@ -119,6 +115,9 @@ def multiplex(args, parser=None):
 			print 'Finished!'
 			break
 
-	write_bed(args.p, results, references[0].id)
+	# write bed and image files
+	filename = args.filename if args.filename else args.p
+	write_bed(filename, results, references[0].id)
+	plot_schemeadelica(filename, references[0], results)
 
 	return results

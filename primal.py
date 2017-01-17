@@ -13,10 +13,11 @@ def main():
 
 	#scheme
 	parser_scheme = subparsers.add_parser('scheme', help='Tiling amplicons designer')
-	parser_scheme.add_argument('-f', help='FASTA file', metavar='STRING', required=True)
-	parser_scheme.add_argument('-p', help='Prefix', metavar='STRING', required=True)
+	parser_scheme.add_argument('-f', help='FASTA file', required=True)
+	parser_scheme.add_argument('-p', help='Prefix', required=True)
 	parser_scheme.add_argument('--amplicon-length', help='Amplicon length', type=int, default=400)
 	parser_scheme.add_argument('--overlap', help='Overlap length', type=int, default=75)
+	parser_scheme.add_argument('--filename', help='Filename for bed and image files')
 	parser_scheme.add_argument('--v', help='Verbose mode', action="store_true")
 	parser_scheme.add_argument('--vvv', help='Very verbose mode', action="store_true")
 	parser_scheme.set_defaults(func=multiplex)
