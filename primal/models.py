@@ -148,9 +148,9 @@ class Alignment():
 			if set([self.aln_query[-1], self.aln_ref_comp[-1]]) in settings.MISMATCHES:
 				#pprint(vars(self), width=1)
 				print '3\' mismatch'
-				print "{: <20}".format(primer.name), '5\'-%s-3\'' %self.aln_query
-				print "{: <20}".format(''), '   %s' %self.cigar
-				print "{: <20}".format(ref.id), '3\'-%s-5\'' %self.aln_ref_comp
+				print "{: <30}".format(primer.name), '5\'-%s-3\'' %self.aln_query
+				print "{: <30}".format(''), '   %s' %self.cigar
+				print "{: <30}".format(ref.id), '3\'-%s-5\'' %self.aln_ref_comp
 				self.mm_3prime = True
 				self.score = 0
 		else:
