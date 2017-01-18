@@ -63,7 +63,7 @@ def find_primers(prefix, amplicon_length, overlap, window_size, references, seq,
 		if p3_seq_args[region_key][0] < same_pool_limit:
 			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --overlap and/or --amplicon-length.".format(region_num))
 
-	return Region('{}_{}'.format(prefix, amplicon_length), region_num, primer3_output, references)
+	return Region(prefix, region_num, primer3_output, references)
 
 
 def write_bed(prefix, results, reference_id, path='./'):
