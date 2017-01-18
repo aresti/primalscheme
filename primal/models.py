@@ -78,8 +78,8 @@ class Region(object):
 
 		for cand_num in range(5):
 			lenkey = 'PRIMER_LEFT_%s' % (cand_num)
-			left_name = '%s_%i_%s_%i' % (prefix, region_num, 'LEFT', cand_num)
-			right_name = '%s_%i_%s_%i' % (prefix, region_num, 'RIGHT', cand_num)
+			left_name = '%s_%i_%s' % (prefix, region_num, 'LEFT')
+			right_name = '%s_%i_%s' % (prefix, region_num, 'RIGHT')
 			if lenkey not in primer3_output:
 				print 'Only %s candidate primers' % (cand_num)
 				break
