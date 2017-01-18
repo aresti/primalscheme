@@ -1,3 +1,4 @@
+import os
 import sys
 import primer3
 import primal.settings
@@ -65,8 +66,9 @@ def find_primers(prefix, amplicon_length, overlap, window_size, references, seq,
 	return Region('{}_{}'.format(prefix, amplicon_length), region_num, primer3_output, references)
 
 
-def write_bed(prefix, results, reference_id):
-	with open('{}.bed'.format(prefix), 'w') as bedhandle:
+def write_bed(prefix, results, reference_id, path='./'):
+	filepath = os.path.join(path, '{}.bed'.format(prefix))
+	with open(filepath, 'w') as bedhandle:
 		for r in results:
 			print >>bedhandle, '\t'.join(map(str, [reference_id, r.candidate_pairs[0].left.start, r.candidate_pairs[0].left.end, r.candidate_pairs[0].left.name, r.pool]))
 			print >>bedhandle, '\t'.join(map(str, [reference_id, r.candidate_pairs[0].right.end, r.candidate_pairs[0].right.start, r.candidate_pairs[0].right.name, r.pool]))
@@ -116,8 +118,7 @@ def multiplex(args, parser=None):
 			break
 
 	# write bed and image files
-	filename = args.filename if args.filename else args.p
-	write_bed(filename, results, references[0].id)
-	plot_schemeadelica(filename, references[0], results)
+	write_bed(args.p, results, references[0].id, args.output_path)
+	plot_schemeadelica(args.p, results, references[0], args.output_path)
 
 	return results

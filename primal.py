@@ -17,7 +17,7 @@ def main():
 	parser_scheme.add_argument('-p', help='Prefix', required=True)
 	parser_scheme.add_argument('--amplicon-length', help='Amplicon length', type=int, default=400)
 	parser_scheme.add_argument('--overlap', help='Overlap length', type=int, default=75)
-	parser_scheme.add_argument('--filename', help='Filename for bed and image files')
+	parser_scheme.add_argument('--output-path', help='Output path (dir) for bed and image files', default='./')
 	parser_scheme.add_argument('--v', help='Verbose mode', action="store_true")
 	parser_scheme.add_argument('--vvv', help='Very verbose mode', action="store_true")
 	parser_scheme.set_defaults(func=multiplex)
