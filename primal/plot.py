@@ -20,7 +20,7 @@ def plot_schemeadelica(prefix, results, reference, path='./'):
 	for r in results:
 		cols1 = [reference.id, r.candidate_pairs[0].left.start, r.candidate_pairs[0].left.end, r.candidate_pairs[0].left.name, r.pool]
 		cols2 = [reference.id, r.candidate_pairs[0].right.end, r.candidate_pairs[0].right.start, r.candidate_pairs[0].right.name, r.pool]
-		region = cols1[3].split('_')[2]
+		region = str(r.region_num)
 		print cols1
 		print cols2
 		fwd_feature = SeqFeature(FeatureLocation(int(cols1[1]), int(cols1[2]), strand=0))
@@ -45,7 +45,6 @@ def plot_schemeadelica(prefix, results, reference, path='./'):
 	gd_diagram.add_track(primer_track, 6)
 
 	rows = int(round(len(reference)/5000))
-	print dir(gd_diagram)
 	gd_diagram.draw(format='linear', pagesize=(1000, 250 * rows), fragments=rows, start=0, end=len(reference))
 
 	png_filepath = os.path.join(path, '{}.png'.format(prefix))
