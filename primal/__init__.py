@@ -15,7 +15,7 @@ class PoolOverlapException(Exception):
 	pass
 
 
-def find_primers(prefix, amplicon_length, overlap, window_size, references, seq, region_num, start, same_pool_limit, v=False, vvv=False):
+def find_primers(prefix, amplicon_length, overlap, window_size, references, seq, region_num, start, same_pool_limit, diff_pool_limit, v=False, vvv=False):
 	"""
 	Given a list of biopython SeqRecords (references), and a string representation
 	of the pimary reference (seq), return a list of Region objects containing candidate
@@ -42,6 +42,7 @@ def find_primers(prefix, amplicon_length, overlap, window_size, references, seq,
 		pprint(p3_seq_args, width=1)
 		pprint(p3_global_args, width=1)
 
+	i = 1
 	while True:
 		primer3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
 		if vvv:
@@ -50,18 +51,28 @@ def find_primers(prefix, amplicon_length, overlap, window_size, references, seq,
 		left_ok = Explain(primer3_output['PRIMER_LEFT_EXPLAIN']).ok
 		right_ok = Explain(primer3_output['PRIMER_RIGHT_EXPLAIN']).ok
 		if v:
-			print 'ok', left_ok, right_ok
+			print 'Left OK %i, Right OK %i' %(left_ok, right_ok)
 		if left_ok > 0 and right_ok > 0:
 			break
 
-		# Step right and try again
-		print "Stepping left -10"
-		p3_seq_args[region_key][0] -= 10
-		p3_seq_args[region_key][2] -= 10
+		# Step side-to-side
+		step_distance = 10 * i
+		if i % 2 == 0:
+			p3_seq_args[region_key][0] -= step_distance
+			p3_seq_args[region_key][2] -= step_distance
+			print "Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0], same_pool_limit)
+		else:
+			p3_seq_args[region_key][0] += step_distance
+			p3_seq_args[region_key][2] += step_distance
+			print "Stepping right, position %i, limit %i" %(p3_seq_args[region_key][0] + p3_seq_args[region_key][1], diff_pool_limit)
+		i += 1
 
-		# Check if overlap is too large
+
+		# Check if overlap gets too large
 		if p3_seq_args[region_key][0] < same_pool_limit:
-			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --overlap and/or --amplicon-length.".format(region_num))
+			return None
+		if p3_seq_args[region_key][0] + p3_seq_args[region_key][1] > diff_pool_limit:
+			return None
 
 	return Region(prefix, region_num, primer3_output, references)
 
@@ -85,35 +96,47 @@ def multiplex(args, parser=None):
 	region_num = 0
 	window_size = 50
 	same_pool_limit = 0
+	diff_pool_limit = 0
 
 	while True:
 		region_num += 1
+
+		# Different pool limit based on the previous region (-1)
+		if region_num > 1:
+			diff_pool_limit = results[-1].candidate_pairs[0].right.end
 
 		# Same pool limit based on the previous region in this pool (-2)
 		if region_num > 2:
 			same_pool_limit = results[-2].candidate_pairs[0].right.start
 
 		# Find primers for this region
-		region = find_primers(args.p, args.amplicon_length, args.overlap, window_size,
-				references, str(references[0].seq), region_num, start, same_pool_limit,
-				v=args.v, vvv=args.vvv)
-		results.append(region)
+		region = find_primers(args.p, args.amplicon_length, args.overlap, window_size, references, str(references[0].seq), region_num, start, same_pool_limit, diff_pool_limit, v=args.v, vvv=args.vvv)
+		if region:
+			results.append(region)
 
-		# Reporting
-		print "\nRegion %i, %i:%i" %( region_num, region.candidate_pairs[0].left.start,
-			region.candidate_pairs[0].right.start)
-		if region_num > 1:
-			# Remember, results now include this one, so -2 is the other pool
-			overlap = results[-2].candidate_pairs[0].right.start - region.candidate_pairs[0].left.end
-			print "Product length %i, overlap %i" % (region.candidate_pairs[0].product_length, overlap)
+			# Reporting
+			print "\nRegion %i, %i:%i" %( region_num, results[-1].candidate_pairs[0].left.start,
+				results[-1].candidate_pairs[0].right.start)
+			if region_num > 1:
+				# Remember, results now include this one, so -2 is the other pool
+				overlap = results[-2].candidate_pairs[0].right.start - results[-1].candidate_pairs[0].left.start
+				print "Product length %i, overlap %i" % (results[-1].candidate_pairs[0].product_length, overlap)
+			else:
+				print "Product length %i" % (results[-1].candidate_pairs[0].product_length)
+			if args.vvv:
+				pprint(vars(results[-1].candidate_pairs[0].left))
+				pprint(vars(results[-1].candidate_pairs[0].right))
+
+			# Update position
+			start = region.candidate_pairs[0].right.end - args.overlap
+
+			# Handle the end
+			if results[-1].candidate_pairs[0].right.start - args.overlap > len(references[0]) - args.amplicon_length:
+				print 'Finished!'
+				break
+
 		else:
-			print "Product length %i" % (region.candidate_pairs[0].product_length)
-		if args.v:
-			pprint(vars(region.candidate_pairs[0].left))
-			pprint(vars(region.candidate_pairs[0].right))
-		start = region.candidate_pairs[0].right.end - args.overlap
-		if region.candidate_pairs[0].right.start >= len(references[0].seq)-window_size:
-			print 'Finished!'
+			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --overlap and/or --amplicon-length.".format(region_num))
 			break
 
 	# write bed and image files
