@@ -102,13 +102,12 @@ def multiplex(args, parser=None):
 		# Reporting
 		print "\nRegion %i, %i:%i" %( region_num, region.candidate_pairs[0].left.start,
 			region.candidate_pairs[0].right.start)
-		product_length = region.candidate_pairs[0].right.start - region.candidate_pairs[0].left.start
 		if region_num > 1:
 			# Remember, results now include this one, so -2 is the other pool
 			overlap = results[-2].candidate_pairs[0].right.start - region.candidate_pairs[0].left.end
-			print "Product length %i, overlap %i" % (product_length, overlap)
+			print "Product length %i, overlap %i" % (region.candidate_pairs[0].product_length, overlap)
 		else:
-			print "Product length %i" % (product_length)
+			print "Product length %i" % (region.candidate_pairs[0].product_length)
 		if args.v:
 			pprint(vars(region.candidate_pairs[0].left))
 			pprint(vars(region.candidate_pairs[0].right))
