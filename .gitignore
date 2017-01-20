@@ -7,4 +7,6 @@
 *.png
 *.pdf
 *.bed
+*.svg
 venv/
+test_outputs/
