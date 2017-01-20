@@ -69,6 +69,10 @@ class CandidatePrimerPair(object):
 		self.right = right
 		self.total = left.sub_total + right.sub_total
 
+	@property
+	def product_length(self):
+		return self.right.start - self.left.start
+
 
 class Region(object):
 	def __init__(self, prefix, region_num, primer3_output, references):

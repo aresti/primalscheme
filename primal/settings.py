@@ -34,9 +34,10 @@ MISMATCHES = [
 	set(['G', 'G']),
 	]
 
+STEP_DISTANCE = 10
+
 # Length 22, 30, 24.43
 # Tm 59.96, 62.72, 61.33
 # GC 33.33, 54.55, 45.71
 # Longest homopolymer 5
 # Ambiguous 0
-
