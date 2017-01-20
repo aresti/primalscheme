@@ -33,15 +33,16 @@ def find_primers(prefix, amplicon_length, overlap, window_size, references, regi
 		'SEQUENCE_TEMPLATE': seq,
 		'SEQUENCE_INCLUDED_REGION': [0, len(seq) - 1],
 	}
+
+
 	p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [[amplicon_length - window_size/2, amplicon_length + window_size/2]]
-	print p3_global_args['PRIMER_PRODUCT_SIZE_RANGE']
+	#print p3_global_args['PRIMER_PRODUCT_SIZE_RANGE']
 
 	if vvv:
 		print "\nPrimer3 Settings:"
 		pprint(p3_seq_args, width=1)
 		pprint(p3_global_args, width=1)
 
-	i = 1
 	while True:
 		primer3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
 		if vvv:
@@ -53,7 +54,6 @@ def find_primers(prefix, amplicon_length, overlap, window_size, references, regi
 
 		# Step left (increase overlap)
 		p3_seq_args[region_key][0] -= settings.STEP_DISTANCE
-		p3_seq_args[region_key][2] -= settings.STEP_DISTANCE
 		print "Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0], start_limits[0])
 
 		# Check if we've run into the left limit

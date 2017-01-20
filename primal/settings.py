@@ -34,7 +34,7 @@ MISMATCHES = [
 	set(['G', 'G']),
 	]
 
-STEP_DISTANCE = 10
+STEP_DISTANCE = 20
 
 # Length 22, 30, 24.43
 # Tm 59.96, 62.72, 61.33
