@@ -115,10 +115,11 @@ def multiplex(args, parser=None):
 		# Update position
 		start = region.candidate_pairs[0].right.end - args.overlap
 
-		# Handle the end
-		if results[-1].candidate_pairs[0].right.start - args.overlap > len(references[0]) - args.amplicon_length:
-			print 'Finished!'
-			break
+		# Handle the end so maximum uncovered genome is one overlaps length
+		if region_num > 2:
+			if len(references[0]) - results[-2].candidate_pairs[0].right.start < args.amplicon_length:
+				print 'Finished!'
+				break
 
 	# write bed and image files
 	write_bed(args.p, results, references[0].id, args.output_path)
