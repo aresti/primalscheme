@@ -79,6 +79,7 @@ class Region(object):
 		self.region_num = region_num
 		self.pool = '2' if self.region_num % 2 == 0 else '1'
 		self.candidate_pairs = []
+		self.overlap = 0
 
 		for cand_num in range(5):
 			lenkey = 'PRIMER_LEFT_%s' % (cand_num)
