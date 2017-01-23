@@ -82,15 +82,18 @@ def multiplex(args, parser=None):
 	region_num = 0
 	window_size = 50
 
+	# Check there are enough regions to allow limits and end logic to work
+	if len(references[0]) < (3 * args.amplicon_length - 2 * args.overlap):
+		raise ValueError("length of reference must be at least ")
 
 	while True:
 		region_num += 1
 
 		# Left limit prevents crashing into the previous primer in this pool
-		left_start_limit = 0 if region_num < 3 else results[-2].candidate_pairs[0].right.start
+		left_start_limit = 0 if not region_num > 2 else results[-2].candidate_pairs[0].right.start
 
 		# Right limit maintains a minimum overlap of 0 (no gap)
-		right_start_limit = 0 if region_num < 2 else results[-1].candidate_pairs[0].right.end
+		right_start_limit = 0 if not region_num > 1 else results[-1].candidate_pairs[0].right.end
 
 		# Find primers for this region
 		region = find_primers(args.p, args.amplicon_length, args.overlap, window_size, references, region_num, start, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
