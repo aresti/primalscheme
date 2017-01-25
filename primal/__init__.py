@@ -71,6 +71,17 @@ def write_bed(prefix, results, reference_id, path='./'):
 			print >>bedhandle, '\t'.join(map(str, [reference_id, r.candidate_pairs[0].right.end, r.candidate_pairs[0].right.start, r.candidate_pairs[0].right.name, r.pool]))
 
 
+def write_tsv(prefix, results, path='./'):
+	filepath = os.path.join(path, '{}.tsv'.format(prefix))
+	with open(filepath, 'w') as tsvhandle:
+		print >>tsvhandle, '\t'.join(['name', 'seq', 'length', '%gc', 'tm (use 65)'])
+		for r in results:
+			left = r.candidate_pairs[0].left
+			right = r.candidate_pairs[0].right
+			print >>tsvhandle, '\t'.join(map(str, [left.name, left.seq, left.length, left.gc, left.tm]))
+			print >>tsvhandle, '\t'.join(map(str, [right.name, right.seq, right.length, right.gc, right.tm]))
+
+
 def multiplex(args, parser=None):
 	# Check for sensible parameters
 	if args.amplicon_length < 100 or args.amplicon_length > 2000:
@@ -123,6 +134,7 @@ def multiplex(args, parser=None):
 
 	# write bed and image files
 	write_bed(args.p, results, references[0].id, args.output_path)
+	write_tsv(args.p, results, args.output_path)
 	plot_schemeadelica(args.p, results, references[0], args.output_path)
 
 	return results
