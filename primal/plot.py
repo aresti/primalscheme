@@ -44,7 +44,7 @@ def plot_schemeadelica(prefix, results, reference, path='./'):
 	primer_track.add_set(primer_feature_set_2)
 	gd_diagram.add_track(primer_track, 6)
 
-	rows = int(round(len(reference)/5000))
+	rows = max(1, int(round(len(reference)/5000)))
 	gd_diagram.draw(format='linear', pagesize=(1000, 250 * rows), fragments=rows, start=0, end=len(reference))
 
 	png_filepath = os.path.join(path, '{}.png'.format(prefix))
