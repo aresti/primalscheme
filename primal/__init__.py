@@ -53,8 +53,14 @@ def find_primers(prefix, amplicon_length, overlap, window_size, references, regi
 			break
 
 		# Step left (increase overlap)
-		p3_seq_args[region_key][0] -= settings.STEP_DISTANCE
-		print "Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0], start_limits[0])
+		if p3_seq_args[region_key][0]:
+			p3_seq_args[region_key][0] -= settings.STEP_DISTANCE
+			print "Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0], start_limits[0])
+
+		# Step right only if no primers in region 1
+		if region_num == 1:
+			p3_seq_args[region_key][1] += settings.STEP_DISTANCE
+			print "Stepping right, position %i, limit %s" %(p3_seq_args[region_key][1], 'none')
 
 		# Check if we've run into the left limit
 		if p3_seq_args[region_key][0] < start_limits[0]:
