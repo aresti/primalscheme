@@ -93,6 +93,9 @@ def multiplex(args, parser=None):
 	if args.amplicon_length < 100 or args.amplicon_length > 2000:
 		raise ValueError("--amplicon-length must be within the range 100 to 2000")
 
+	# User expects to input trimmed overlap value
+	args.overlap =  args.overlap + settings.outer_params['PRIMER_MAX_SIZE']
+
 	references = list(SeqIO.parse(open(args.f, 'r'), 'fasta'))
 	results =[]
 	start = 0
@@ -121,8 +124,8 @@ def multiplex(args, parser=None):
 			results[-1].candidate_pairs[0].right.start)
 		if region_num > 1:
 			# Remember, results now include this one, so -2 is the other pool
-			overlap = results[-2].candidate_pairs[0].right.start - results[-1].candidate_pairs[0].left.start
-			print "Product length %i, overlap %i" % (results[-1].candidate_pairs[0].product_length, overlap)
+			trimmed_overlap = results[-2].candidate_pairs[0].right.end - results[-1].candidate_pairs[0].left.end
+			print "Product length %i, trimmed overlap %i" % (results[-1].candidate_pairs[0].product_length, trimmed_overlap)
 		else:
 			print "Product length %i" % (results[-1].candidate_pairs[0].product_length)
 		if args.vvv:
@@ -130,7 +133,7 @@ def multiplex(args, parser=None):
 			pprint(vars(results[-1].candidate_pairs[0].right))
 
 		# Update position
-		start = region.candidate_pairs[0].right.end - args.overlap
+		start = results[-1].candidate_pairs[0].right.end - args.overlap
 
 		# Handle the end so maximum uncovered genome is one overlaps length
 		if region_num > 2:
