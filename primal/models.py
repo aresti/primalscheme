@@ -71,7 +71,7 @@ class CandidatePrimerPair(object):
 
 	@property
 	def product_length(self):
-		return self.right.start - self.left.start
+		return self.right.start - self.left.start + 1
 
 
 class Region(object):

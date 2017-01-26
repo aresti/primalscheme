@@ -110,10 +110,10 @@ def multiplex(args, parser=None):
 		region_num += 1
 
 		# Left limit prevents crashing into the previous primer in this pool
-		left_start_limit = 0 if not region_num > 2 else results[-2].candidate_pairs[0].right.start
+		left_start_limit = 0 if not region_num > 2 else results[-2].candidate_pairs[0].right.start + 1
 
 		# Right limit maintains a minimum overlap of 0 (no gap)
-		right_start_limit = 0 if not region_num > 1 else results[-1].candidate_pairs[0].right.end
+		right_start_limit = 0 if not region_num > 1 else results[-1].candidate_pairs[0].right.end - 1
 
 		# Find primers for this region
 		region = find_primers(args.p, args.amplicon_length, args.overlap, window_size, references, region_num, start, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
@@ -124,8 +124,8 @@ def multiplex(args, parser=None):
 			results[-1].candidate_pairs[0].right.start)
 		if region_num > 1:
 			# Remember, results now include this one, so -2 is the other pool
-			trimmed_overlap = results[-2].candidate_pairs[0].right.end - results[-1].candidate_pairs[0].left.end
-			print "Product length %i, trimmed overlap %i" % (results[-1].candidate_pairs[0].product_length, trimmed_overlap)
+			trimmed_overlap = results[-2].candidate_pairs[0].right.end - results[-1].candidate_pairs[0].left.end - 1
+ 			print "Product length %i, trimmed overlap %i" % (results[-1].candidate_pairs[0].product_length, trimmed_overlap)
 		else:
 			print "Product length %i" % (results[-1].candidate_pairs[0].product_length)
 		if args.vvv:
@@ -133,7 +133,7 @@ def multiplex(args, parser=None):
 			pprint(vars(results[-1].candidate_pairs[0].right))
 
 		# Update position
-		start = results[-1].candidate_pairs[0].right.end - args.overlap
+		start = results[-1].candidate_pairs[0].right.end - args.overlap - 1
 
 		# Handle the end so maximum uncovered genome is one overlaps length
 		if region_num > 2:
