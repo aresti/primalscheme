@@ -10,12 +10,12 @@ from plot import plot_schemeadelica
 
 
 class PoolOverlapException(Exception):
-	"""No suitable primer found between --overlap and right edge of last primer
+	"""No suitable primer found between --min_overlap and right edge of last primer
 	primer in the same pool"""
 	pass
 
 
-def find_primers(prefix, amplicon_length, overlap, window_size, references, region_num, start, start_limits, v=False, vvv=False):
+def find_primers(prefix, amplicon_length, min_overlap, search_space, references, region_num, start_limits, v=False, vvv=False):
 	"""
 	Given a list of biopython SeqRecords (references), and a string representation
 	of the pimary reference (seq), return a list of Region objects containing candidate
@@ -29,14 +29,15 @@ def find_primers(prefix, amplicon_length, overlap, window_size, references, regi
 	p3_global_args = settings.outer_params
 	region_key = 'SEQUENCE_PRIMER_PAIR_OK_REGION_LIST'
 	p3_seq_args = {
-		region_key: [min(start, len(seq) - amplicon_length), window_size, -1, -1],
+		region_key: [min(start_limits[1] - search_space, len(seq) - amplicon_length), search_space, -1, -1],
 		'SEQUENCE_TEMPLATE': seq,
 		'SEQUENCE_INCLUDED_REGION': [0, len(seq) - 1],
 	}
 
 
-	p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [[amplicon_length - window_size/2, amplicon_length + window_size/2]]
-	#print p3_global_args['PRIMER_PRODUCT_SIZE_RANGE']
+	allowed_variation = amplicon_length * 0.1
+	p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [[amplicon_length - allowed_variation, amplicon_length + allowed_variation]]
+
 
 	if vvv:
 		print "\nPrimer3 Settings:"
@@ -64,7 +65,7 @@ def find_primers(prefix, amplicon_length, overlap, window_size, references, regi
 
 		# Check if we've run into the left limit
 		if p3_seq_args[region_key][0] < start_limits[0]:
-			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --overlap and/or --amplicon-length.".format(region_num))
+			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --min_overlap and/or --amplicon-length.".format(region_num))
 
 	return Region(prefix, region_num, primer3_output, references)
 
@@ -93,30 +94,26 @@ def multiplex(args, parser=None):
 	if args.amplicon_length < 100 or args.amplicon_length > 2000:
 		raise ValueError("--amplicon-length must be within the range 100 to 2000")
 
-	# User expects to input trimmed overlap value
-	args.overlap =  args.overlap + settings.outer_params['PRIMER_MAX_SIZE']
-
 	references = list(SeqIO.parse(open(args.f, 'r'), 'fasta'))
 	results =[]
-	start = 0
 	region_num = 0
 	window_size = 50
 
 	# Check there are enough regions to allow limits and end logic to work
-	if len(references[0]) < (3 * args.amplicon_length - 2 * args.overlap):
+	if len(references[0]) < (3 * args.amplicon_length - 2 * args.min_overlap):
 		raise ValueError("length of reference must be at least ")
 
 	while True:
 		region_num += 1
 
 		# Left limit prevents crashing into the previous primer in this pool
-		left_start_limit = 0 if not region_num > 2 else results[-2].candidate_pairs[0].right.start + 1
+		left_start_limit = results[-2].candidate_pairs[0].right.start + 1 if region_num > 2 else 0
 
 		# Right limit maintains a minimum overlap of 0 (no gap)
-		right_start_limit = 0 if not region_num > 1 else results[-1].candidate_pairs[0].right.end - 1
+		right_start_limit = results[-1].candidate_pairs[0].right.end - args.min_overlap - 1 if region_num > 1 else 0
 
 		# Find primers for this region
-		region = find_primers(args.p, args.amplicon_length, args.overlap, window_size, references, region_num, start, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
+		region = find_primers(args.p, args.amplicon_length, args.min_overlap, args.search_space, references, region_num, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
 		results.append(region)
 
 		# Reporting
@@ -131,9 +128,6 @@ def multiplex(args, parser=None):
 		if args.vvv:
 			pprint(vars(results[-1].candidate_pairs[0].left))
 			pprint(vars(results[-1].candidate_pairs[0].right))
-
-		# Update position
-		start = results[-1].candidate_pairs[0].right.end - args.overlap - 1
 
 		# Handle the end so maximum uncovered genome is one overlaps length
 		if region_num > 2:
