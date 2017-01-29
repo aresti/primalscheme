@@ -75,7 +75,7 @@ class CandidatePrimerPair(object):
 
 
 class Region(object):
-	def __init__(self, prefix, region_num, primer3_output, references):
+	def __init__(self, prefix, region_num, start_limits, primer3_output, references):
 		self.region_num = region_num
 		self.pool = '2' if self.region_num % 2 == 0 else '1'
 		self.candidate_pairs = []
@@ -91,8 +91,8 @@ class Region(object):
 			left_seq = str(primer3_output['PRIMER_LEFT_%i_SEQUENCE' % (cand_num)])
 			right_seq = str(primer3_output['PRIMER_RIGHT_%i_SEQUENCE' % (cand_num)])
 
-			left_start = int(primer3_output['PRIMER_LEFT_%i' % (cand_num)][0])
-			right_start = int(primer3_output['PRIMER_RIGHT_%i' % (cand_num)][0] + 1)
+			left_start = int(primer3_output['PRIMER_LEFT_%i' % (cand_num)][0] + start_limits[0])
+			right_start = int(primer3_output['PRIMER_RIGHT_%i' % (cand_num)][0] + start_limits[0] + 1)
 
 			left_gc = float(primer3_output['PRIMER_LEFT_%i_GC_PERCENT' % (cand_num)])
 			right_gc = float(primer3_output['PRIMER_RIGHT_%i_GC_PERCENT' % (cand_num)])

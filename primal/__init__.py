@@ -22,14 +22,17 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, references,
 	primer pairs sorted by an alignment score summed over all references.
 	"""
 
-	# Primary reference
-	seq = str(references[0].seq)
+	# Slice primary reference to speed up Primer3 on long sequences
+	chunk_end = len(references[0]) if region_num == 1 else start_limits[1] + amplicon_length
+	seq = str(references[0].seq)[start_limits[0]:chunk_end]
+
 
 	# Primer3 setup
 	p3_global_args = settings.outer_params
 	region_key = 'SEQUENCE_PRIMER_PAIR_OK_REGION_LIST'
+	start = start_limits[1] if region_num == 1 else start_limits[1] - start_limits[0] - search_space
 	p3_seq_args = {
-		region_key: [min(start_limits[1] - search_space, len(seq) - amplicon_length), search_space, -1, -1],
+		region_key: [min(start, len(seq) - amplicon_length), search_space, -1, -1],
 		'SEQUENCE_TEMPLATE': seq,
 		'SEQUENCE_INCLUDED_REGION': [0, len(seq) - 1],
 	}
@@ -39,37 +42,37 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, references,
 	p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [[amplicon_length - allowed_variation, amplicon_length + allowed_variation]]
 
 
-	if vvv:
-		print "\nPrimer3 Settings:"
-		pprint(p3_seq_args, width=1)
-		pprint(p3_global_args, width=1)
-
 	while True:
-		primer3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
 		if vvv:
-			pprint(primer3_output, width=1)
+			print "\nPrimer3 Settings:"
+			pprint(p3_seq_args, width=1)
+			pprint(p3_global_args, width=1)
+
+		primer3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
+		#if vvv:
+		#	pprint(primer3_output, width=1)
 
 		num_pairs_returned = primer3_output['PRIMER_PAIR_NUM_RETURNED']
 		if num_pairs_returned:
 			break
 
+
 		# Step right only if no primers in region 1
 		if region_num == 1:
 			p3_seq_args[region_key][1] += settings.STEP_DISTANCE
 			print "Stepping right, position %i, limit %s" %(p3_seq_args[region_key][1], 'none')
-
 		# Step left (increase overlap)
 		else:
 			p3_seq_args[region_key][0] -= settings.STEP_DISTANCE
 			p3_seq_args[region_key][1] += settings.STEP_DISTANCE
-			print "Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0], start_limits[0])
+			print "Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0] + start_limits[0], start_limits[0])
 
 
 		# Check if we've run into the left limit
-		if p3_seq_args[region_key][0] < start_limits[0]:
+		if p3_seq_args[region_key][0] < 0:
 			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --min-overlap and/or --amplicon-length.".format(region_num))
 
-	return Region(prefix, region_num, primer3_output, references)
+	return Region(prefix, region_num, start_limits, primer3_output, references)
 
 
 def write_bed(prefix, results, reference_id, path='./'):
