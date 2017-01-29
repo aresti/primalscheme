@@ -10,7 +10,7 @@ from plot import plot_schemeadelica
 
 
 class PoolOverlapException(Exception):
-	"""No suitable primer found between --min_overlap and right edge of last primer
+	"""No suitable primer found between --min-overlap and right edge of last primer
 	primer in the same pool"""
 	pass
 
@@ -67,7 +67,7 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, references,
 
 		# Check if we've run into the left limit
 		if p3_seq_args[region_key][0] < start_limits[0]:
-			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --min_overlap and/or --amplicon-length.".format(region_num))
+			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --min-overlap and/or --amplicon-length.".format(region_num))
 
 	return Region(prefix, region_num, primer3_output, references)
 
