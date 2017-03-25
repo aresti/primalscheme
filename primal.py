@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+from Bio import SeqIO
 
 from pprint import pprint
 from primal import multiplex
@@ -25,6 +26,7 @@ def main():
 
 	#run
 	args = parser.parse_args()
+	args.references = list(SeqIO.parse(open(args.f, 'r'), 'fasta'))
 	args.func(args)
 
 if __name__ == '__main__':
