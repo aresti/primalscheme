@@ -24,9 +24,13 @@ def main():
 	parser_scheme.add_argument('--vvv', help='Very verbose mode', action="store_true")
 	parser_scheme.set_defaults(func=multiplex)
 
-	#run
+	#generate args
 	args = parser.parse_args()
-	args.references = list(SeqIO.parse(open(args.f, 'r'), 'fasta'))
+	args.references = []
+	for record in SeqIO.parse(open(args.f, 'r'), 'fasta'):
+		args.references.append(record.upper())
+
+	#run
 	args.func(args)
 
 if __name__ == '__main__':

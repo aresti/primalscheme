@@ -99,7 +99,6 @@ def multiplex(args, parser=None):
 	if args.amplicon_length < 100 or args.amplicon_length > 2000:
 		raise ValueError("--amplicon-length must be within the range 100 to 2000")
 
-	#references = list(SeqIO.parse(open(args.f, 'r'), 'fasta'))
 	references = args.references
 	results =[]
 	region_num = 0
