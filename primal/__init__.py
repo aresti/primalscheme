@@ -34,7 +34,7 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, references,
 	p3_seq_args = {
 		region_key: [min(start, len(seq) - amplicon_length), search_space, -1, -1],
 		'SEQUENCE_TEMPLATE': seq,
-		'SEQUENCE_INCLUDED_REGION': [0, len(seq) - 1],
+		'SEQUENCE_INCLUDED_REGION': [0, len(seq) - 1]
 	}
 
 

@@ -3,6 +3,7 @@ import re
 import sys
 
 from Bio import pairwise2
+from Bio.pairwise2 import format_alignment
 from Bio import Seq
 from pprint import pprint
 
@@ -109,16 +110,17 @@ class Region(object):
 
 class Alignment():
 	def __init__(self, primer, ref):
+		#get alignments
 		if primer.direction == 'LEFT':
 			search_start = primer.start - 50 if primer.start > 50 else 0
 			search_end = primer.end + 50 if primer.end + 50 <= len(ref) else len(ref)
-			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end], 2, -1, -1, -1, penalize_end_gaps=True)
+			alns = pairwise2.align.globalms(str(primer.seq), str(ref.seq[search_start:search_end]), 2, -1, -1, -1, penalize_end_gaps=False, one_alignment_only=True)
 		elif primer.direction == 'RIGHT':
 			search_start = primer.end - 50
 			search_end = primer.start + 50 if primer.start + 50 <= len(ref) else len(ref)
-			alns = pairwise2.align.localms(primer.seq, ref.seq[search_start:search_end].reverse_complement(), 2, -1, -1, -1, penalize_end_gaps=True)
-
+			alns = pairwise2.align.globalms(primer.seq, ref.seq[search_start:search_end].reverse_complement(), 2, -1, -1, -1, penalize_end_gaps=False, one_alignment_only=True)
 		if alns:
+			#print(format_alignment(*alns[0]))
 			aln = alns[0]
 			p = re.compile('(-*)([ACGTN][ACGTN\-]*[ACGTN])(-*)')
 			m = list(re.finditer(p, str(aln[0])))[0]
@@ -139,6 +141,7 @@ class Alignment():
 			self.cigar = ''
 			self.mm_3prime = False
 
+			#make cigar
 			for a, b in zip(self.aln_query, self.aln_ref):
 				if a == '-' or b == '-':
 					self.cigar += ' '
@@ -149,13 +152,18 @@ class Alignment():
 				else:
 					self.cigar += '|'
 
+			#check 3' mismatches
 			if set([self.aln_query[-1], self.aln_ref_comp[-1]]) in settings.MISMATCHES:
-				#pprint(vars(self), width=1)
-				print '3\' mismatch'
-				print "{: <30}".format(primer.name), '5\'-%s-3\'' %self.aln_query
-				print "{: <30}".format(''), '   %s' %self.cigar
-				print "{: <30}".format(ref.id), '3\'-%s-5\'' %self.aln_ref_comp
 				self.mm_3prime = True
 				self.score = 0
+
+				#pprint(vars(self), width=1)
+				#print
+				#print '3\' mismatch'
+				#short_primer = primer.name[:50] if len(primer.name) > 50 else primer.name
+				#short_ref = ref.id[:50] if len(ref.id) > 50 else ref.id
+				#print "{: <50}".format(short_primer), '5\'-%s-3\'' %self.aln_query
+				#print "{: <50}".format(''), '   %s' %self.cigar
+				#print "{: <50}".format(short_ref), '3\'-%s-5\'' %self.aln_ref_comp
 		else:
 			self.score = 0
