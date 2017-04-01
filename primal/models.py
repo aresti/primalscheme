@@ -81,7 +81,7 @@ class Region(object):
 		self.pool = '2' if self.region_num % 2 == 0 else '1'
 		self.candidate_pairs = []
 
-		for cand_num in range(5):
+		for cand_num in range(settings.MAX_CANDIDATES):
 			lenkey = 'PRIMER_LEFT_%s' % (cand_num)
 			left_name = '%s_%i_%s' % (prefix, region_num, 'LEFT')
 			right_name = '%s_%i_%s' % (prefix, region_num, 'RIGHT')
