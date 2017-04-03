@@ -119,7 +119,17 @@ def multiplex(args, parser=None):
 		right_start_limit = results[-1].candidate_pairs[0].right.end - args.min_overlap - 1 if region_num > 1 else 0
 
 		# Find primers for this region
-		region = find_primers(args.p, args.amplicon_length, args.min_overlap, args.search_space, references, region_num, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
+		region = find_primers(args.p, args.amplicon_length, args.min_overlap, args.search_space, args.max_candidates, references, region_num, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
+		left_align = region.candidate_pairs[0].left.alignments[3]
+		right_align = region.candidate_pairs[0].right.alignments[3]
+		if args.v:
+			print left_align.formatted_alignment
+			print right_align.formatted_alignment
+		#print the number of returned primers here rather than in models
+		#exit()
+
+		if left_align.score < 40 or right_align.score < 40:
+			print "Top scoring candidates for region %s are %s/%s" %(region.region_num, left_align.score, right_align.score)
 		results.append(region)
 
 		# Reporting
