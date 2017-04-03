@@ -20,6 +20,7 @@ def main():
 	parser_scheme.add_argument('-p', help='Prefix', required=True)
 	parser_scheme.add_argument('--amplicon-length', help='Amplicon length', type=int, default=400)
 	parser_scheme.add_argument('--min-overlap', help='Minimum overlap length', type=int, default=20)
+	parser_scheme.add_argument('--max-candidates', help='Maximum candidate primers', type=int, default=5)
 	parser_scheme.add_argument('--search-space', help='Initial primer search space', type=int, default=40)
 	parser_scheme.add_argument('--output-path', help='Output path (dir) for bed and image files', default='./')
 	parser_scheme.add_argument('--v', help='Verbose mode', action="store_true")

@@ -15,7 +15,7 @@ class PoolOverlapException(Exception):
 	pass
 
 
-def find_primers(prefix, amplicon_length, min_overlap, search_space, references, region_num, start_limits, v=False, vvv=False):
+def find_primers(prefix, amplicon_length, min_overlap, search_space, max_candidates, references, region_num, start_limits, v=False, vvv=False):
 	"""
 	Given a list of biopython SeqRecords (references), and a string representation
 	of the pimary reference (seq), return a list of Region objects containing candidate
@@ -40,6 +40,7 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, references,
 
 	allowed_variation = amplicon_length * 0.1
 	p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [[amplicon_length - allowed_variation, amplicon_length + allowed_variation]]
+	p3_global_args['PRIMER_NUM_RETURN'] = max_candidates
 
 
 	while True:
@@ -72,7 +73,7 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, references,
 		if p3_seq_args[region_key][0] < 0:
 			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --min-overlap and/or --amplicon-length.".format(region_num))
 
-	return Region(prefix, region_num, start_limits, primer3_output, references)
+	return Region(prefix, region_num, max_candidates, start_limits, primer3_output, references)
 
 
 def write_bed(prefix, results, reference_id, path='./'):

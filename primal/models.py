@@ -76,17 +76,16 @@ class CandidatePrimerPair(object):
 
 
 class Region(object):
-	def __init__(self, prefix, region_num, start_limits, primer3_output, references):
+	def __init__(self, prefix, region_num, max_candidates, start_limits, primer3_output, references):
 		self.region_num = region_num
 		self.pool = '2' if self.region_num % 2 == 0 else '1'
 		self.candidate_pairs = []
 
-		for cand_num in range(settings.MAX_CANDIDATES):
+		for cand_num in range(max_candidates):
 			lenkey = 'PRIMER_LEFT_%s' % (cand_num)
 			left_name = '%s_%i_%s' % (prefix, region_num, 'LEFT')
 			right_name = '%s_%i_%s' % (prefix, region_num, 'RIGHT')
 			if lenkey not in primer3_output:
-				print 'Only %s candidate primers' % (cand_num)
 				break
 
 			left_seq = str(primer3_output['PRIMER_LEFT_%i_SEQUENCE' % (cand_num)])
