@@ -3,6 +3,8 @@
 import sys
 import argparse
 from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 from pprint import pprint
 from primal import multiplex
@@ -28,7 +30,7 @@ def main():
 	args = parser.parse_args()
 	args.references = []
 	for record in SeqIO.parse(open(args.f, 'r'), 'fasta'):
-		args.references.append(record.upper())
+		args.references.append(SeqRecord(Seq(str(record.seq).replace('-', '').upper()), id=record.id, description=record.id))
 
 	#run
 	args.func(args)
