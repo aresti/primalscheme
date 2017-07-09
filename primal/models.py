@@ -144,8 +144,8 @@ class Alignment():
 			self.ref_id = ref.id
 			self.mm_3prime = False
 
-			self.cigar = ''
 			#make cigar
+			self.cigar = ''
 			for a, b in zip(self.aln_query, self.aln_ref):
 				if a == '-' or b == '-':
 					self.cigar += ' '
@@ -169,3 +169,4 @@ class Alignment():
 
 		else:
 			self.score = 0
+			self.formatted_alignment = 'None found'
