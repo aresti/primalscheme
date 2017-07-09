@@ -115,15 +115,14 @@ class Alignment():
 			search_end = primer.end + 50 if primer.end + 50 <= len(ref) else len(ref)
 			alns = pairwise2.align.globalms(str(primer.seq), str(ref.seq[search_start:search_end]), 2, -1, -2, -1, penalize_end_gaps=False, one_alignment_only=True)
 		elif primer.direction == 'RIGHT':
-			search_start = primer.end - 50
+			search_start = primer.end - 50 if primer.start > 50 else 0
 			search_end = primer.start + 50 if primer.start + 50 <= len(ref) else len(ref)
 			alns = pairwise2.align.globalms(str(primer.seq), str(ref.seq[search_start:search_end].reverse_complement()), 2, -1, -2, -1, penalize_end_gaps=False, one_alignment_only=True)
 		if alns:
 			aln = alns[0]
 			#print(format_alignment(*aln))
 
-			#this is bias longer alignments
-			self.score = aln[2]
+
 
 			p = re.compile('(-*)([ACGTN][ACGTN\-]*[ACGTN])(-*)')
 			m = list(re.finditer(p, str(aln[0])))[0]
