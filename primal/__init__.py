@@ -106,8 +106,9 @@ def multiplex(args, parser=None):
 	window_size = 50
 
 	# Check there are enough regions to allow limits and end logic to work
-	if len(references[0]) < (3 * args.amplicon_length - 2 * args.min_overlap):
-		raise ValueError("length of reference must be at least ")
+	if len(references[0]) < (2 * args.amplicon_length):
+		# This needs validating
+		raise ValueError("length of reference must be at least 2 * amplicon length")
 
 	while True:
 		region_num += 1
