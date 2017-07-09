@@ -122,7 +122,8 @@ class Alignment():
 			aln = alns[0]
 			#print(format_alignment(*aln))
 
-
+			# This will favour longer alignments
+			self.score = aln[2]
 
 			p = re.compile('(-*)([ACGTN][ACGTN\-]*[ACGTN])(-*)')
 			m = list(re.finditer(p, str(aln[0])))[0]
