@@ -120,7 +120,6 @@ def multiplex(args, parser=None):
 
 		# Find primers for this region
 		is_last_region = (region_num > 1 and len(references[0]) - results[-1].candidate_pairs[0].right.start < args.amplicon_length)
-		print is_last_region
 		try:
 			region = find_primers(args.p, args.amplicon_length, args.min_overlap, args.search_space, args.max_candidates, references, region_num, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
 		except PoolOverlapException as e:
@@ -160,7 +159,7 @@ def multiplex(args, parser=None):
 			break
 
 
-	# write bed and image files
+	# Write bed and image files
 	write_bed(args.p, results, references[0].id, args.output_path)
 	write_tsv(args.p, results, args.output_path)
 	plot_schemeadelica(args.p, results, references[0], args.output_path)
