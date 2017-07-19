@@ -68,7 +68,6 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, max_candida
 			p3_seq_args[region_key][1] += settings.STEP_DISTANCE
 			print "Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0] + start_limits[0], start_limits[0])
 
-
 		# Check if we've run into the left limit
 		if p3_seq_args[region_key][0] < 0:
 			raise PoolOverlapException("No suitable primers found for region {} with current parameters. Try adjusting --min-overlap and/or --amplicon-length.".format(region_num))
@@ -106,7 +105,7 @@ def multiplex(args, parser=None):
 	window_size = 50
 
 	# Check there are enough regions to allow limits and end logic to work
-	if len(references[0]) < (2 * args.amplicon_length):
+	if len(references[0]) < 2 * args.amplicon_length:
 		# This needs validating
 		raise ValueError("length of reference must be at least 2 * amplicon length")
 
