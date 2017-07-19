@@ -122,9 +122,6 @@ class Alignment():
 			aln = alns[0]
 			#print(format_alignment(*aln))
 
-			# This will favour longer alignments
-			self.score = aln[2]
-
 			p = re.compile('(-*)([ACGTN][ACGTN\-]*[ACGTN])(-*)')
 			m = list(re.finditer(p, str(aln[0])))[0]
 
@@ -137,6 +134,8 @@ class Alignment():
 				self.end = search_end - m.span(2)[1]
 				self.length = self.start - self.end
 
+			# Normalise alignment score by length
+			self.score = aln[2] / self.length
 
 			self.aln_query = aln[0][m.span(2)[0]:m.span(2)[1]]
 			self.aln_ref = aln[1][m.span(2)[0]:m.span(2)[1]]
