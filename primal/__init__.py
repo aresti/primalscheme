@@ -120,7 +120,13 @@ def multiplex(args, parser=None):
 		right_start_limit = results[-1].candidate_pairs[0].right.end - args.min_overlap - 1 if region_num > 1 else 0
 
 		# Find primers for this region
-		region = find_primers(args.p, args.amplicon_length, args.min_overlap, args.search_space, args.max_candidates, references, region_num, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
+		is_last_region = (region_num > 1 and len(references[0]) - results[-1].candidate_pairs[0].right.start < args.amplicon_length)
+		print is_last_region
+		try:
+			region = find_primers(args.p, args.amplicon_length, args.min_overlap, args.search_space, args.max_candidates, references, region_num, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
+		except PoolOverlapException as e:
+			if not is_last_region:
+				raise e
 
 		if args.v:
 			num = len(region.candidate_pairs[0].left.alignments)
@@ -151,10 +157,9 @@ def multiplex(args, parser=None):
 			pprint(vars(results[-1].candidate_pairs[0].right))
 
 		# Handle the end so maximum uncovered genome is one overlaps length
-		if region_num > 2:
-			if len(references[0]) - results[-2].candidate_pairs[0].right.start < args.amplicon_length:
-				print 'Finished!'
-				break
+		if is_last_region:
+			break
+
 
 	# write bed and image files
 	write_bed(args.p, results, references[0].id, args.output_path)
