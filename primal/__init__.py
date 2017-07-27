@@ -23,14 +23,14 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, max_candida
 	"""
 
 	# Slice primary reference to speed up Primer3 on long sequences
-	chunk_end = len(references[0]) if region_num == 1 else start_limits[1] + amplicon_length
+	chunk_end = amplicon_length if region_num == 1 else start_limits[1] + amplicon_length
 	seq = str(references[0].seq)[start_limits[0]:chunk_end]
 
 
 	# Primer3 setup
 	p3_global_args = settings.outer_params
 	region_key = 'SEQUENCE_PRIMER_PAIR_OK_REGION_LIST'
-	start = start_limits[1] if region_num == 1 else start_limits[1] - start_limits[0] - search_space
+	start = 0 if region_num == 1 else start_limits[1] - start_limits[0] - search_space
 	p3_seq_args = {
 		region_key: [min(start, len(seq) - amplicon_length), search_space, -1, -1],
 		'SEQUENCE_TEMPLATE': seq,
@@ -67,7 +67,6 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, max_candida
 			p3_seq_args[region_key][0] -= settings.STEP_DISTANCE
 			p3_seq_args[region_key][1] += settings.STEP_DISTANCE
 			print "Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0] + start_limits[0], start_limits[0])
-
 
 		# Check if we've run into the left limit
 		if p3_seq_args[region_key][0] < 0:
@@ -106,7 +105,7 @@ def multiplex(args, parser=None):
 	window_size = 50
 
 	# Check there are enough regions to allow limits and end logic to work
-	if len(references[0]) < (2 * args.amplicon_length):
+	if len(references[0]) < 2 * args.amplicon_length:
 		# This needs validating
 		raise ValueError("length of reference must be at least 2 * amplicon length")
 
@@ -120,8 +119,7 @@ def multiplex(args, parser=None):
 		right_start_limit = results[-1].candidate_pairs[0].right.end - args.min_overlap - 1 if region_num > 1 else 0
 
 		# Find primers for this region
-		is_last_region = region_num > 1 and
-						 len(references[0]) - results[-1].candidate_pairs[0].right.start < args.amplicon_length
+		is_last_region = (region_num > 1 and len(references[0]) - results[-1].candidate_pairs[0].right.start < args.amplicon_length)
 		try:
 			region = find_primers(args.p, args.amplicon_length, args.min_overlap, args.search_space, args.max_candidates, references, region_num, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
 		except PoolOverlapException as e:
@@ -155,11 +153,12 @@ def multiplex(args, parser=None):
 			pprint(vars(results[-1].candidate_pairs[0].left))
 			pprint(vars(results[-1].candidate_pairs[0].right))
 
-		# Handle the end
+		# Handle the end so maximum uncovered genome is one overlaps length
 		if is_last_region:
 			break
 
-	# write bed and image files
+
+	# Write bed and image files
 	write_bed(args.p, results, references[0].id, args.output_path)
 	write_tsv(args.p, results, args.output_path)
 	plot_schemeadelica(args.p, results, references[0], args.output_path)
