@@ -23,9 +23,8 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, max_candida
 	"""
 
 	# Slice primary reference to speed up Primer3 on long sequences
-	chunk_end = amplicon_length if region_num == 1 else start_limits[1] + amplicon_length
+	chunk_end = 2 * amplicon_length if region_num == 1 else start_limits[1] + amplicon_length
 	seq = str(references[0].seq)[start_limits[0]:chunk_end]
-
 
 	# Primer3 setup
 	p3_global_args = settings.outer_params
