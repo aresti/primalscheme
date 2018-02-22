@@ -111,12 +111,12 @@ class Alignment():
 	def __init__(self, primer, ref):
 		# Do alignments
 		if primer.direction == 'LEFT':
-			search_start = primer.start - 50 if primer.start > 50 else 0
-			search_end = primer.end + 50 if primer.end + 50 <= len(ref) else len(ref)
+			search_start = primer.start - 100 if primer.start > 100 else 0
+			search_end = primer.end + 100 if primer.end + 100 <= len(ref) else len(ref)
 			alns = pairwise2.align.globalms(str(primer.seq), str(ref.seq[search_start:search_end]), 2, -1, -2, -1, penalize_end_gaps=False, one_alignment_only=True)
 		elif primer.direction == 'RIGHT':
-			search_start = primer.end - 50 if primer.start > 50 else 0
-			search_end = primer.start + 50 if primer.start + 50 <= len(ref) else len(ref)
+			search_start = primer.end - 100 if primer.start > 100 else 0
+			search_end = primer.start + 100 if primer.start + 100 <= len(ref) else len(ref)
 			alns = pairwise2.align.globalms(str(primer.seq), str(ref.seq[search_start:search_end].reverse_complement()), 2, -1, -2, -1, penalize_end_gaps=False, one_alignment_only=True)
 		if alns:
 			aln = alns[0]
