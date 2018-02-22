@@ -23,8 +23,10 @@ def main():
 	parser_scheme.add_argument('--max-candidates', help='Maximum candidate primers', type=int, default=10)
 	parser_scheme.add_argument('--search-space', help='Initial primer search space', type=int, default=40)
 	parser_scheme.add_argument('--output-path', help='Output path (dir) for bed and image files', default='./')
+	parser_scheme.add_argument('--force', help='Force overwrite', action="store_true")
 	parser_scheme.add_argument('--v', help='Verbose mode', action="store_true")
-	parser_scheme.add_argument('--vvv', help='Very verbose mode', action="store_true")
+	parser_scheme.add_argument('--vv', help='Very Verbose mode', action="store_true")
+	parser_scheme.add_argument('--vvv', help='Very very verbose mode', action="store_true")
 	parser_scheme.set_defaults(func=multiplex)
 
 	#generate args

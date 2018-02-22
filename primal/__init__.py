@@ -157,8 +157,15 @@ def multiplex(args, parser=None):
 
 
 	# Write bed and image files
+	if os.path.isdir(args.output_path) and not args.force:
+		print 'Directory exists add --force to overwrite'
+		sys.exit()
+	if not os.path.isdir(args.output_path):
+		os.mkdir(args.output_path)
+	print references[0].id
 	write_bed(args.p, results, references[0].id, args.output_path)
 	write_tsv(args.p, results, args.output_path)
+	write_refs(args.p, references, args.output_path)
 	plot_schemeadelica(args.p, results, references[0], args.output_path)
 
 	return results
