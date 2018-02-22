@@ -17,23 +17,23 @@ def main():
 	parser = argparse.ArgumentParser(prog='primal', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	subparsers = parser.add_subparsers(title='[sub-commands]', dest='command')
 
-	#scheme
+	#Scheme
 	parser_scheme = subparsers.add_parser('scheme', help='Tiling amplicons designer')
-	parser_scheme.add_argument('-f', help='FASTA file', required=True)
-	parser_scheme.add_argument('-p', help='Prefix', required=True)
+	parser_scheme.add_argument('fasta', help='FASTA file')
+	parser_scheme.add_argument('prefix', help='Prefix')
 	parser_scheme.add_argument('--amplicon-length', help='Amplicon length', type=int, default=400)
 	parser_scheme.add_argument('--min-overlap', help='Minimum overlap length', type=int, default=20)
 	parser_scheme.add_argument('--max-candidates', help='Maximum candidate primers', type=int, default=10)
 	parser_scheme.add_argument('--search-space', help='Initial primer search space', type=int, default=40)
-	parser_scheme.add_argument('--output-path', help='Output path (dir) for bed and image files', default='./')
+	parser_scheme.add_argument('--output-path', help='Output directory to save files', default='./')
 	parser_scheme.add_argument('--force', help='Force overwrite', action="store_true")
 	parser_scheme.add_argument('--debug', help='Verbose logging', action="store_true")
 	parser_scheme.set_defaults(func=multiplex)
 
-	#generate args
+	#Generate args
 	args = parser.parse_args()
 	args.references = []
-	for record in SeqIO.parse(open(args.f, 'r'), 'fasta'):
+	for record in SeqIO.parse(open(args.fasta, 'r'), 'fasta'):
 		args.references.append(SeqRecord(Seq(str(record.seq).replace('-', '').upper()), id=record.id, description=record.id))
 
 	#Log
