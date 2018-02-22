@@ -130,7 +130,7 @@ def multiplex(args, parser=None):
 		is_last_region = (region_num > 1 and len(references[0]) - results[-1].candidate_pairs[0].right.start < args.amplicon_length)
 		try:
 			region = find_primers(args.p, args.amplicon_length, args.min_overlap, args.search_space, args.max_candidates, references, region_num, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
-		except PoolOverlapException as e:
+		except PoolOverlapException("Ran into previous region in pool") as e:
 			if not is_last_region:
 				raise e
 
