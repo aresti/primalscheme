@@ -96,6 +96,11 @@ def write_tsv(prefix, results, path='./'):
 			print >>tsvhandle, '\t'.join(map(str, [left.name, left.seq, left.length, left.gc, left.tm]))
 			print >>tsvhandle, '\t'.join(map(str, [right.name, right.seq, right.length, right.gc, right.tm]))
 
+def write_refs(prefix, refs, path='./'):
+	filepath = os.path.join(path, '{}.fasta'.format(prefix))
+	with open(filepath, 'w') as refhandle:
+		#for ref in refs:
+		SeqIO.write(refs, filepath, 'fasta')
 
 def multiplex(args, parser=None):
 	# Check for sensible parameters
