@@ -1,7 +1,10 @@
 #!/usr/bin/env python2.7
+# Primal scheme by Josh Quick and Andy Smith 2016
+# www.github.com/aresti/primalrefactor.git
 
 import sys
 import argparse
+import logging
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -24,9 +27,7 @@ def main():
 	parser_scheme.add_argument('--search-space', help='Initial primer search space', type=int, default=40)
 	parser_scheme.add_argument('--output-path', help='Output path (dir) for bed and image files', default='./')
 	parser_scheme.add_argument('--force', help='Force overwrite', action="store_true")
-	parser_scheme.add_argument('--v', help='Verbose mode', action="store_true")
-	parser_scheme.add_argument('--vv', help='Very Verbose mode', action="store_true")
-	parser_scheme.add_argument('--vvv', help='Very very verbose mode', action="store_true")
+	parser_scheme.add_argument('--debug', help='Verbose logging', action="store_true")
 	parser_scheme.set_defaults(func=multiplex)
 
 	#generate args
@@ -35,8 +36,19 @@ def main():
 	for record in SeqIO.parse(open(args.f, 'r'), 'fasta'):
 		args.references.append(SeqRecord(Seq(str(record.seq).replace('-', '').upper()), id=record.id, description=record.id))
 
-	#run
-	args.func(args)
+	#Log
+	logger = logging.getLogger(__name__)
+	handler = logging.FileHandler(args.output_path + '/primal.log')
+	logger.addHandler(handler)
+	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	handler.setFormatter(formatter)
+	logger.setLevel(logging.DEBUG)
+	logger.debug('Logging started...')
+	for arg in vars(args):
+		logger.info('%s:%s' %(arg, str(vars(args)[arg])))
+
+	#Run
+	args.func(args, logger)
 
 if __name__ == '__main__':
 	main()

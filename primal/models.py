@@ -156,9 +156,9 @@ class Alignment():
 					self.cigar += '|'
 
 			# Format alignment
-			short_primer = primer.name[:50] if len(primer.name) > 50 else primer.name
-			short_ref = ref.id[:50] if len(ref.id) > 50 else ref.id
-			self.formatted_alignment = "{: <50}5\'-{}-3\'\n{: <53}{}\n{: <50}3\'-{}-5\'".format(short_primer, self.aln_query, '', self.cigar, short_ref, self.aln_ref_comp)
+			short_primer = primer.name[:30] if len(primer.name) > 30 else primer.name
+			short_ref = ref.id[:30] if len(ref.id) > 30 else ref.id
+			self.formatted_alignment = "\n{: <30}5\'-{}-3\'\n{: <33}{}\n{: <30}3\'-{}-5\'".format(short_primer, self.aln_query, '', self.cigar, short_ref, self.aln_ref_comp)
 
 			# Check 3' mismatches
 			if set([self.aln_query[-1], self.aln_ref_comp[-1]]) in settings.MISMATCHES:

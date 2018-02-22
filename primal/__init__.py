@@ -18,7 +18,7 @@ class NoSuitableException(Exception):
 	pass
 
 
-def find_primers(prefix, amplicon_length, min_overlap, search_space, max_candidates, references, region_num, start_limits, v=False, vvv=False):
+def find_primers(prefix, logger, amplicon_length, min_overlap, search_space, max_candidates, references, region_num, start_limits, debug):
 	"""
 	Given a list of biopython SeqRecords (references), and a string representation
 	of the pimary reference (seq), return a list of Region objects containing candidate
@@ -46,29 +46,28 @@ def find_primers(prefix, amplicon_length, min_overlap, search_space, max_candida
 
 
 	while True:
-		if vvv:
-			print "\nPrimer3 Settings:"
-			pprint(p3_seq_args, width=1)
-			pprint(p3_global_args, width=1)
+		if debug:
+			pass
+			logger.debug('Primer3 Settings:')
+			logger.debug(p3_seq_args)
+			logger.debug(p3_global_args)
 
 		primer3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
-		#if vvv:
-		#	pprint(primer3_output, width=1)
+		#logger.debug(vars(primer3_output))
 
 		num_pairs_returned = primer3_output['PRIMER_PAIR_NUM_RETURNED']
 		if num_pairs_returned:
 			break
 
-
 		# Step right only if no primers in region 1
 		if region_num == 1:
 			p3_seq_args[region_key][1] += settings.STEP_DISTANCE
-			print "Stepping right, position %i, limit %s" %(p3_seq_args[region_key][1], 'none')
+			logger.info("Stepping right, position %i, limit %s" %(p3_seq_args[region_key][1], 'none'))
 		# Step left (increase overlap)
 		else:
 			p3_seq_args[region_key][0] -= settings.STEP_DISTANCE
 			p3_seq_args[region_key][1] += settings.STEP_DISTANCE
-			print "Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0] + start_limits[0], start_limits[0])
+			logger.info("Stepping left, position %i, limit %i" %(p3_seq_args[region_key][0] + start_limits[0], start_limits[0]))
 
 		# Check if we've run into the left limit
 		if p3_seq_args[region_key][0] < 0:
@@ -99,13 +98,13 @@ def write_tsv(prefix, results, path='./'):
 def write_refs(prefix, refs, path='./'):
 	filepath = os.path.join(path, '{}.fasta'.format(prefix))
 	with open(filepath, 'w') as refhandle:
-		#for ref in refs:
 		SeqIO.write(refs, filepath, 'fasta')
 
-def multiplex(args, parser=None):
+def multiplex(args, logger, parser=None):
 	# Check for sensible parameters
 	if args.amplicon_length < 100 or args.amplicon_length > 2000:
-		raise ValueError("--amplicon-length must be within the range 100 to 2000")
+		logger.error("--amplicon-length set to %s, must be within the range 100 to 2000" %(args.amplicon_length))
+		raise ValueError("--amplicon-length set to %s, must be within the range 100 to 2000" %(args.amplicon_length))
 
 	references = args.references
 	results =[]
@@ -115,7 +114,8 @@ def multiplex(args, parser=None):
 	# Check there are enough regions to allow limits and end logic to work
 	if len(references[0]) < 2 * args.amplicon_length:
 		# This needs validating
-		raise ValueError("Length of reference must be at least 2 * amplicon length")
+		logger.error("Reference length %s, must be twice amplicon length" %(len(references[0])))
+		raise ValueError("Reference length %s, must be twice amplicon length" %(len(references[0])))
 
 	while True:
 		region_num += 1
@@ -129,37 +129,33 @@ def multiplex(args, parser=None):
 		# Find primers for this region
 		is_last_region = (region_num > 1 and len(references[0]) - results[-1].candidate_pairs[0].right.start < args.amplicon_length)
 		try:
-			region = find_primers(args.p, args.amplicon_length, args.min_overlap, args.search_space, args.max_candidates, references, region_num, (left_start_limit, right_start_limit), v=args.v, vvv=args.vvv)
+			region = find_primers(args.prefix, logger, args.amplicon_length, args.min_overlap, args.search_space, args.max_candidates, references, region_num, (left_start_limit, right_start_limit), args.debug)
 		except PoolOverlapException("Ran into previous region in pool") as e:
 			if not is_last_region:
+				logger.error("Ran into previous region in pool")
 				raise e
 
-		if args.v:
+		if args.debug:
 			num = len(region.candidate_pairs[0].left.alignments)
 			for i in range(num):
-				print region.candidate_pairs[0].left.alignments[i].formatted_alignment
-				print region.candidate_pairs[0].left.alignments[i].score
-				print region.candidate_pairs[0].right.alignments[i].formatted_alignment
-				print region.candidate_pairs[0].right.alignments[i].score
-
-		#	if left_align.score < 40 or right_align.score < 40:
-		#		print "Top scoring candidates for region %s are %s/%s" %(region.region_num, left_align.score, right_align.score)
-		#print the number of returned primers here rather than in models
+				logger.debug(region.candidate_pairs[0].left.alignments[i].formatted_alignment)
+				logger.debug('Score:%i' %(region.candidate_pairs[0].left.alignments[i].score))
+				logger.debug(region.candidate_pairs[0].right.alignments[i].formatted_alignment)
+				logger.debug('Score:%i' %(region.candidate_pairs[0].right.alignments[i].score))
 
 		results.append(region)
 
 		# Reporting
-		print "\nRegion %i, %i:%i" %( region_num, results[-1].candidate_pairs[0].left.start,
-			results[-1].candidate_pairs[0].right.start)
+		logger.info("Region %i, %i:%i" %(region_num, results[-1].candidate_pairs[0].left.start, results[-1].candidate_pairs[0].right.start))
 		if region_num > 1:
 			# Remember, results now include this one, so -2 is the other pool
 			trimmed_overlap = results[-2].candidate_pairs[0].right.end - results[-1].candidate_pairs[0].left.end - 1
- 			print "Product length %i, trimmed overlap %i" % (results[-1].candidate_pairs[0].product_length, trimmed_overlap)
+			logger.info("Product length %i, trimmed overlap %i" % (results[-1].candidate_pairs[0].product_length, trimmed_overlap))
 		else:
-			print "Product length %i" % (results[-1].candidate_pairs[0].product_length)
-		if args.vvv:
-			pprint(vars(results[-1].candidate_pairs[0].left))
-			pprint(vars(results[-1].candidate_pairs[0].right))
+			logger.info("Product length %i" % (results[-1].candidate_pairs[0].product_length))
+		if args.debug:
+			logger.debug(vars(results[-1].candidate_pairs[0].left))
+			logger.debug(vars(results[-1].candidate_pairs[0].right))
 
 		# Handle the end so maximum uncovered genome is one overlaps length
 		if is_last_region:
@@ -168,14 +164,19 @@ def multiplex(args, parser=None):
 
 	# Write bed and image files
 	if os.path.isdir(args.output_path) and not args.force:
-		print 'Directory exists add --force to overwrite'
+		logger.error('Directory exists add --force to overwrite')
+		raise IOError('Directory exists add --force to overwrite')
 		sys.exit()
 	if not os.path.isdir(args.output_path):
 		os.mkdir(args.output_path)
-	print references[0].id
-	write_bed(args.p, results, references[0].id, args.output_path)
-	write_tsv(args.p, results, args.output_path)
-	write_refs(args.p, references, args.output_path)
-	plot_schemeadelica(args.p, results, references[0], args.output_path)
+	write_bed(args.prefix, results, references[0].id, args.output_path)
+	logger.info('BED written')
+	write_tsv(args.prefix, results, args.output_path)
+	logger.info('TSV written')
+	write_refs(args.prefix, references, args.output_path)
+	logger.info('FASTA written')
+	plot_schemeadelica(args.prefix, logger, results, references[0], args.output_path)
+	logger.info('PDF written')
+	logger.info('Complete')
 
 	return results
