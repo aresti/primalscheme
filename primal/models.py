@@ -104,7 +104,8 @@ class Region(object):
 			right = CandidatePrimer('RIGHT', right_name, right_seq, right_start, right_gc, right_tm, references)
 
 			self.candidate_pairs.append(CandidatePrimerPair(left, right))
-		self.candidate_pairs.sort(key=lambda x: x.total, reverse=True)
+        #Select the highest scoring pair with the rightmost position
+		self.candidate_pairs.sort(key=lambda x: (x.total, x.right.end), reverse=True)
 
 
 class Alignment():

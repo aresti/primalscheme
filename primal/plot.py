@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 
 from Bio import SeqIO
 from reportlab.lib import colors
@@ -9,7 +10,7 @@ from Bio.Graphics import GenomeDiagram
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 
-def plot_schemeadelica(prefix, logger, results, reference, path='./'):
+def plot_schemeadelica(prefix, results, reference, path='./'):
     gd_diagram = GenomeDiagram.Diagram("Primer Scheme", track_size=1)
     scale_track = GenomeDiagram.Track(
         name='scale', scale=True, scale_fontsize=10, scale_largetick_interval=1000, height=0.1)
@@ -53,8 +54,9 @@ def plot_schemeadelica(prefix, logger, results, reference, path='./'):
     primer_track.add_set(primer_feature_set_2)
     gd_diagram.add_track(primer_track, 6)
 
-    rows = max(1, int(round(len(reference) / 5000)))
-    gd_diagram.draw(format='linear', pagesize=(1000, 250 * rows),
+    rows = max(2, int(round(len(reference) / 10000.0)))
+    print rows
+    gd_diagram.draw(format='linear', pagesize=(300 * rows, 200 * rows),
                     fragments=rows, start=0, end=len(reference))
 
     png_filepath = os.path.join(path, '{}.png'.format(prefix))
