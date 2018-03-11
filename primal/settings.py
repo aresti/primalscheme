@@ -1,5 +1,3 @@
-STEP_DISTANCE = 20
-
 outer_params = {
     'PRIMER_OPT_SIZE': 22,
     'PRIMER_MIN_SIZE': 22,

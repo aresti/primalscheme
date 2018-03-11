@@ -6,20 +6,30 @@ import sys
 import os
 import argparse
 import logging
+
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from pprint import pprint
-from primal import multiplex
-from primal import smart
+from primal.models import MultiplexScheme
+
+
+def multiplex(args):
+    scheme = MultiplexScheme(args.references, args.amplicon_length, min_overlap=args.min_overlap, max_gap=args.max_gap,
+                             search_space=args.search_space, max_candidates=args.max_candidates, prefix=args.prefix)
+    scheme.write_bed(args.output_path)
+    scheme.write_pickle(args.output_path)
+    scheme.write_tsv(args.output_path)
+    scheme.write_refs(args.output_path)
+    scheme.write_schemadelica_plot(args.output_path)
 
 
 def main():
+    logger = logging.getLogger('Primal Log')
     parser = argparse.ArgumentParser(prog='primal', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers(title='[sub-commands]', dest='command')
 
-    #Standard scheme
+    # Standard scheme
     parser_scheme = subparsers.add_parser('scheme', help='Tiling amplicons designer')
     parser_scheme.add_argument('fasta', help='FASTA file')
     parser_scheme.add_argument('prefix', help='Prefix')
@@ -33,13 +43,7 @@ def main():
     parser_scheme.add_argument('--debug', help='Verbose logging', action="store_true")
     parser_scheme.set_defaults(func=multiplex)
 
-    #Smart scheme
-    parser_smart = subparsers.add_parser('smart', help='Multiplex Smart designer')
-    parser_smart.add_argument('fasta', help='FASTA file')
-    parser_smart.add_argument('prefix', help='Prefix')
-    parser_smart.set_defaults(func=smart)
-
-    #Generate args
+    # Generate args
     args = parser.parse_args()
     args.references = []
     for record in SeqIO.parse(open(args.fasta, 'r'), 'fasta'):
@@ -53,19 +57,31 @@ def main():
     if not os.path.isdir(args.output_path):
         os.mkdir(args.output_path)
 
-    #Log
-    logger = logging.getLogger(__name__)
-    handler = logging.FileHandler(os.path.join(args.output_path, '{}.log'.format(args.prefix)))
-    logger.addHandler(handler)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.setLevel(logging.DEBUG)
-    logger.debug('Logging started...')
-    for arg in vars(args):
-        logger.info('%s:%s' %(arg, str(vars(args)[arg])))
+    # Logging
+    logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
 
-    #Run
-    args.func(args, logger)
+    fh = logging.FileHandler(os.path.join(args.output_path, '{}.log'.format(args.prefix)))
+    fh.setLevel(logging.DEBUG)
+    fh_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(fh_formatter)
+    logger.addHandler(fh)
+
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.DEBUG)
+    sh_formatter = logging.Formatter('%(message)s')
+    sh.setFormatter(sh_formatter)
+    logger.addHandler(sh)
+
+    logger.info('Primal scheme started...)')
+    for arg in vars(args):
+        logger.debug('{}: {}'.format(arg, str(vars(args)[arg])))
+
+    for r in args.references:
+        logger.info('Reference: {}'.format(r.id))
+
+    # Run
+    args.func(args)
+
 
 if __name__ == '__main__':
     main()
