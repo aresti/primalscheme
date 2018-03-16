@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import pickle
 import primer3
 import re
@@ -11,6 +12,9 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
 
 from exceptions import NoSuitableException
+
+sys.path.append('Porechop/porechop')
+from cpp_function_wrappers import adapter_alignment
 
 
 logger = logging.getLogger('Primal Log')
@@ -43,7 +47,7 @@ class CandidatePrimer(Primer):
         self.alignments = []
 
         for ref in references:
-            alignment = Alignment(self, ref)
+            alignment = CAlignment(self, ref)
             self.alignments.append(alignment)
             self.sub_total += alignment.score
 
@@ -71,7 +75,7 @@ class CandidatePrimerPair(object):
 class Region(object):
     """A region that forms part of a scheme."""
 
-    def __init__(self, prefix, region_num, max_candidates, start_limits, primer3_output, references):
+    def __init__(self, prefix, region_num, max_candidates, chunk_start, primer3_output, references):
         self.region_num = region_num
         self.pool = '2' if self.region_num % 2 == 0 else '1'
         self.candidate_pairs = []
@@ -86,8 +90,8 @@ class Region(object):
             left_seq = str(primer3_output['PRIMER_LEFT_%i_SEQUENCE' % (cand_num)])
             right_seq = str(primer3_output['PRIMER_RIGHT_%i_SEQUENCE' % (cand_num)])
 
-            left_start = int(primer3_output['PRIMER_LEFT_%i' % (cand_num)][0] + start_limits[0])
-            right_start = int(primer3_output['PRIMER_RIGHT_%i' % (cand_num)][0] + start_limits[0] + 1)
+            left_start = int(primer3_output['PRIMER_LEFT_%i' % (cand_num)][0] + chunk_start)
+            right_start = int(primer3_output['PRIMER_RIGHT_%i' % (cand_num)][0] + chunk_start + 1)
 
             left_gc = float(primer3_output['PRIMER_LEFT_%i_GC_PERCENT' % (cand_num)])
             right_gc = float(primer3_output['PRIMER_RIGHT_%i_GC_PERCENT' % (cand_num)])
@@ -105,6 +109,44 @@ class Region(object):
     @property
     def top_pair(self):
         return self.candidate_pairs[0]
+
+class CAlignment(object):
+    """An alignment of a primer against a reference."""
+    def __init__(self, primer, ref):
+        if primer.direction == 'LEFT':
+            alignment_result = adapter_alignment(str(ref.seq), str(primer.seq), [2, -1, -2, -1])
+        elif primer.direction == 'RIGHT':
+            alignment_result = adapter_alignment(str(ref.seq.reverse_complement()), str(primer.seq), [2, -1, -2, -1])
+        result_parts = alignment_result.split(',')
+        ref_start = int(result_parts[0])
+
+        # If the read start is -1, that indicates that the alignment failed completely.
+        if ref_start == -1:
+            self.score = 0.0
+            self.formatted_alignment = 'None'
+        else:
+            ref_end = int(result_parts[1]) + 1
+            aligned_region_percent_identity = float(result_parts[5])
+            full_primer_percent_identity = float(result_parts[6])
+
+            if primer.direction == 'LEFT':
+                self.start = ref_start
+                self.end = ref_end
+                self.length = self.end - self.start
+            else:
+                self.start = len(ref) - ref_start
+                self.end = len(ref) - (int(result_parts[1]) + 1)
+                self.length = self.start - self.end
+
+            # Percentage identity for glocal alignment
+            self.score = full_primer_percent_identity
+
+            # Get alignment strings
+            self.aln_query = ''
+            self.aln_ref = ref.seq[self.start:self.end]
+            self.aln_ref_comp = ''
+            self.ref_id = ref.id
+            self.mm_3prime = False
 
 
 class Alignment(object):
@@ -175,8 +217,8 @@ class Alignment(object):
 class MultiplexScheme(object):
     """A complete multiplex primer scheme."""
 
-    def __init__(self, references, amplicon_length, min_overlap=20, max_gap=100, window_size=50, search_space=40,
-                 max_candidates=10, step_size=20, prefix='PRIMAL_SCHEME'):
+    def __init__(self, references, amplicon_length, min_overlap=20, max_gap=100, window_size=50, search_space=30,
+                 max_candidates=10, step_size=1, prefix='PRIMAL_SCHEME'):
         self.references = references
         self.amplicon_length = amplicon_length
         self.min_overlap = min_overlap
@@ -207,24 +249,41 @@ class MultiplexScheme(object):
             if prev_pair_same_pool:
                 # Left limit prevents crashing into the previous primer in this pool
                 if prev_pair.left.start > prev_pair_same_pool.right.start:
-                    # Where there is a gap, we need to change left_start_limit
-                    left_start_limit = prev_pair.left.end + 1
+                    # Where there is a gap, we need to change left_primer_left_limit
+                    left_primer_left_limit = prev_pair.left.end + 1
                 else:
-                    left_start_limit = prev_pair_same_pool.right.start + 1
+                    left_primer_left_limit = prev_pair_same_pool.right.start + 1
             else:
-                left_start_limit = 0
+                left_primer_left_limit = 0
 
             # Right start limit; maintains a minimum overlap of 0 (no gap)
-            right_start_limit = prev_pair.right.end - self.min_overlap - 1 if prev_pair else 0
+            left_primer_right_limit = prev_pair.right.end - self.min_overlap - 1 if prev_pair else 0
 
-            if prev_pair_same_pool and right_start_limit <= left_start_limit:
-                raise ValueError("Amplicon length too short for specified overlap")
+            #if prev_pair_same_pool and left_primer_right_limit <= left_primer_left_limit:
+            #    raise ValueError("Amplicon length too short for specified overlap")
 
             is_last_region = (region_num > 1 and len(self.primary_reference) - prev_pair.right.start < self.amplicon_length)
 
+            #Log limits
+            logger.debug('Region {}: forward primer limits {}:{}'.format(region_num, left_primer_left_limit, left_primer_right_limit))
+
+            # Slice primary reference to constrain primer positions to where we want them
+            max_variation = 0.1
+            if region_num == 1:
+                chunk_start = 0
+                chunk_end = (1 + max_variation/2) * self.amplicon_length
+            elif is_last_region:
+                # Last time work backwards
+                chunk_end = len(self.primary_reference)
+                chunk_start = len(self.primary_reference) - ((1 + max_variation/2) * self.amplicon_length)
+            else:
+                # right limit - min overlap - diff max min product length - max primer length
+                chunk_start = left_primer_right_limit - (0.1 * self.amplicon_length) - settings.global_args['PRIMER_MAX_SIZE']
+                chunk_end = chunk_start + ((1 + max_variation/2) * self.amplicon_length)
+
             # Find primers
             try:
-                region = self._find_primers(region_num, left_start_limit, right_start_limit, is_last_region)
+                region = self._find_primers_only(region_num, left_primer_left_limit, left_primer_right_limit, chunk_start, chunk_end, self.min_overlap)
                 regions.append(region)
             except NoSuitableException:
                 pass
@@ -233,7 +292,17 @@ class MultiplexScheme(object):
             if prev_pair and len(self.primary_reference) - prev_pair.right.start < self.amplicon_length:
                 break
 
+            if region_num > 1:
+            # Remember, results now include this one, so -2 is the other pool
+                trimmed_overlap = regions[-2].candidate_pairs[0].right.end - regions[-1].candidate_pairs[0].left.end - 1
+                logger.info("Region %i: highest scoring product %i:%i, length %i, trimmed overlap %i" % (region_num, regions[-1].candidate_pairs[0].left.start, regions[-1].candidate_pairs[0].right.start, regions[-1].candidate_pairs[0].product_length, trimmed_overlap))
+            else:
+                logger.info("Region %i: highest scoring product %i:%i, length %i" % (region_num, regions[-1].candidate_pairs[0].left.start, regions[-1].candidate_pairs[0].right.start, regions[-1].candidate_pairs[0].product_length))
+
         self.regions = regions
+        print regions
+        if regions[-1] == None:
+            del regions[-1]
 
     def write_bed(self, path='./'):
         logger.info('Writing BED')
@@ -326,6 +395,63 @@ class MultiplexScheme(object):
         gd_diagram.write(png_filepath, 'PNG', dpi=300)
         gd_diagram.write(pdf_filepath, 'PDF', dpi=300)
         gd_diagram.write(svg_filepath, 'SVG', dpi=300)
+
+    def _find_primers_only(self, region_num, left_limit, right_limit, chunk_start, chunk_end, overlap):
+        """
+        Find primers for a given region.
+
+        Given a list of biopython SeqRecords (references), and a string representation
+        of the pimary reference (seq), return a list of Region objects containing candidate
+        primer pairs sorted by an alignment score summed over all references.
+        """
+
+        # Primer3 setup
+        p3_global_args = settings.global_args
+        p3_seq_args = settings.seq_args
+        max_variation = 0.1
+        p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [
+            [int(self.amplicon_length * (1-max_variation/2)), int(self.amplicon_length * (1+max_variation/2))]]
+        p3_global_args['PRIMER_NUM_RETURN'] = self.max_candidates
+
+
+        # Run Primer3 until primers are found
+        hit_left_limit = False
+        while True:
+            chunk_end = int(chunk_end)
+            chunk_start = int(chunk_start)
+            seq = str(self.primary_reference.seq[chunk_start:chunk_end])
+            p3_seq_args['SEQUENCE_TEMPLATE'] = seq
+            p3_seq_args['SEQUENCE_INCLUDED_REGION'] = [0, len(seq) - 1]
+            logger.debug("Region %i: reference chunk %i:%i, length %i" %(region_num, chunk_start, chunk_end, len(seq)))
+            primer3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
+            num_returned = primer3_output['PRIMER_PAIR_NUM_RETURNED']
+            logger.debug("Region %i: current settings returned %i pairs" %(region_num, num_returned))
+            if num_returned:
+                break
+
+            #Move right if first region or if hit left limit
+            if region_num == 1 or hit_left_limit:
+                logger.debug("Region %i: stepping right, position %i, limit %s" %(region_num, chunk_start, 'none'))
+                chunk_start += self.step_size
+                chunk_end += self.step_size
+            #Move left for all other regions
+            else:
+                logger.debug("Region %i: stepping left, position %i, limit %s" %(region_num, chunk_start, left_limit))
+                chunk_start -= self.step_size
+                chunk_end -= self.step_size
+                if chunk_start <= left_limit:
+                    #This is correct for a step size of 1
+                    logger.debug("Region %i: hit left limit moving right" %(region_num))
+                    chunk_start = right_limit - (0.1 * self.amplicon_length) - settings.global_args['PRIMER_MAX_SIZE']
+                    chunk_end = chunk_start + ((1 + max_variation/2) * self.amplicon_length)
+                    chunk_end = int(chunk_end)
+                    hit_left_limit = True
+
+
+        # right_limit not used by region so could be removed
+        return Region(self.prefix, region_num, self.max_candidates, chunk_start, primer3_output,
+                      self.references)
+
 
     def _find_primers(self, region_num, left_limit, right_limit, is_last_region):
         """
