@@ -126,7 +126,7 @@ class CAlignment(object):
             self.formatted_alignment = 'None'
         else:
             ref_end = int(result_parts[1]) + 1
-            aligned_region_percent_identity = float(result_parts[5])
+            #aligned_region_percent_identity = float(result_parts[5])
             full_primer_percent_identity = float(result_parts[6])
 
             if primer.direction == 'LEFT':
@@ -142,11 +142,33 @@ class CAlignment(object):
             self.score = full_primer_percent_identity
 
             # Get alignment strings
-            self.aln_query = ''
-            self.aln_ref = ref.seq[self.start:self.end]
-            self.aln_ref_comp = ''
+            self.aln_query = result_parts[8][ref_start:ref_end]
+            self.aln_ref = result_parts[7][ref_start:ref_end]
+            self.aln_ref_comp = Seq.Seq(str(self.aln_ref)).complement()
             self.ref_id = ref.id
             self.mm_3prime = False
+
+            # Make cigar
+            self.cigar = ''
+            for a, b in zip(self.aln_query, self.aln_ref):
+                if a == '-' or b == '-':
+                    self.cigar += ' '
+                    continue
+                if a != b:
+                    self.cigar += '*'
+                    continue
+                else:
+                    self.cigar += '|'
+
+            # Format alignment
+            short_primer = primer.name[:30] if len(primer.name) > 30 else primer.name
+            short_ref = ref.id[:30] if len(ref.id) > 30 else ref.id
+            self.formatted_alignment = "\n{: <30}5\'-{}-3\'\n{: <33}{}\n{: <30}3\'-{}-5\'".format(short_primer, self.aln_query, '', self.cigar, short_ref, self.aln_ref_comp)
+
+            # Check 3' mismatches
+            if set([self.aln_query[-1], self.aln_ref_comp[-1]]) in settings.MISMATCHES:
+                self.mm_3prime = True
+                self.score = 0
 
 
 class Alignment(object):
@@ -292,6 +314,18 @@ class MultiplexScheme(object):
             if prev_pair and len(self.primary_reference) - prev_pair.right.start < self.amplicon_length:
                 break
 
+            #Report scores and alignments
+            #Don't report aligment to primary reference
+            for i in range(1, len(self.references)):
+                logger.debug(regions[-1].candidate_pairs[0].left.alignments[i].formatted_alignment)
+                logger.debug('Subtotal: %i' % (regions[-1].candidate_pairs[0].left.alignments[i].score))
+                logger.debug(regions[-1].candidate_pairs[0].right.alignments[i].formatted_alignment)
+                logger.debug('Subtotal: %i' % (regions[-1].candidate_pairs[0].right.alignments[i].score))
+                logger.debug('Totals for sorted candidates: ' + ','.join(['%.2f' %each.total for each in regions[-1].candidate_pairs]))
+                logger.debug('Right start for sorted candidates: ' + ','.join(['%i' %each.right.start for each in regions[-1].candidate_pairs]))
+                logger.debug('Right end for sorted candidates: ' + ','.join(['%i' %each.right.end for each in regions[-1].candidate_pairs]))
+                logger.debug('Length for sorted candidates: ' + ','.join(['%i' %each.right.length for each in regions[-1].candidate_pairs]))
+
             if region_num > 1:
             # Remember, results now include this one, so -2 is the other pool
                 trimmed_overlap = regions[-2].candidate_pairs[0].right.end - regions[-1].candidate_pairs[0].left.end - 1
@@ -431,7 +465,7 @@ class MultiplexScheme(object):
 
             #Move right if first region or if hit left limit
             if region_num == 1 or hit_left_limit:
-                logger.debug("Region %i: stepping right, position %i, limit %s" %(region_num, chunk_start, 'none'))
+                logger.debug("Region %i: stepping right, position %i" %(region_num, chunk_start))
                 chunk_start += self.step_size
                 chunk_end += self.step_size
             #Move left for all other regions
@@ -441,7 +475,7 @@ class MultiplexScheme(object):
                 chunk_end -= self.step_size
                 if chunk_start <= left_limit:
                     #This is correct for a step size of 1
-                    logger.debug("Region %i: hit left limit moving right" %(region_num))
+                    logger.debug("Region %i: hit left limit" %(region_num))
                     chunk_start = right_limit - (0.1 * self.amplicon_length) - settings.global_args['PRIMER_MAX_SIZE']
                     chunk_end = chunk_start + ((1 + max_variation/2) * self.amplicon_length)
                     chunk_end = int(chunk_end)
