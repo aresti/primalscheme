@@ -1,0 +1,3 @@
+[submodule "Porechop"]
+	path = Porechop
+	url = https://github.com/joshquick/Porechop.git
