@@ -67,7 +67,7 @@ def main():
     logger.addHandler(fh)
 
     sh = logging.StreamHandler(sys.stdout)
-    sh.setLevel(logging.DEBUG)
+    sh.setLevel(logging.INFO)
     sh_formatter = logging.Formatter('%(message)s')
     sh.setFormatter(sh_formatter)
     logger.addHandler(sh)
