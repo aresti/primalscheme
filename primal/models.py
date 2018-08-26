@@ -423,10 +423,8 @@ class MultiplexScheme(object):
         gd_diagram.draw(format='linear', pagesize=(300 * rows, 200 * rows),
                         fragments=rows, start=0, end=len(self.primary_reference))
 
-        png_filepath = os.path.join(path, '{}.png'.format(self.prefix))
         pdf_filepath = os.path.join(path, '{}.pdf'.format(self.prefix))
         svg_filepath = os.path.join(path, '{}.svg'.format(self.prefix))
-        gd_diagram.write(png_filepath, 'PNG', dpi=300)
         gd_diagram.write(pdf_filepath, 'PDF', dpi=300)
         gd_diagram.write(svg_filepath, 'SVG', dpi=300)
 
