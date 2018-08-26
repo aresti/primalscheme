@@ -1,4 +1,4 @@
-outer_params = {
+global_args = {
     'PRIMER_OPT_SIZE': 22,
     'PRIMER_MIN_SIZE': 22,
     'PRIMER_MAX_SIZE': 30,
@@ -17,6 +17,10 @@ outer_params = {
     'PRIMER_PAIR_MAX_COMPL_END': 47,
     'PRIMER_PICK_INTERNAL_OLIGO': 0,
 }
+
+seq_args = {
+    'SEQUENCE_PRIMER_PAIR_OK_REGION_LIST': [-1, -1, -1, -1],
+    }
 
 MATCHES = [
     set(['A', 'T']),
