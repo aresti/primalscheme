@@ -1,5 +1,17 @@
 # primal
 A primer3 wrapper for designing multiplex primer schemes
+
+# installation
+git clone https://github.com/aresti/primalrefactor.git
+cd primalrefactor
+virtualenv -r requirements.txt venv
+source venv/bin/activate
+make
+
+# usage
+python primal.py scheme test_references/CHIKV_demo.50ca2db6b3ff.fa test --output-path test
+
+# about
 Primal scheme is a tool for designing multiplex PCR primers for generating tiling amplicons. It was developed for sequencing large numbers of viral isolates of known lineages e.g. outbreak strains. It requires only two PCR reactions to generate the products which should cover at least 80% of the target region without optimisation. Higher coverage is possible with balancing of individial primer concentrations.
 
 The primal scheme software is a wrapper for primer3 which is used to generate candidate primers from the primary reference (the first reference in the FASTA file). It then scores the primers based on pairwise alignment to all additional reference genomes before selecting the most universal. The input FASTA file should contain complete genomes representative of the lineages you would expect to find in your samples. The first genome in the fasta file is used to generate the candidates so it is the most important, see guidelines below.
