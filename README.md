@@ -2,11 +2,11 @@
 A primer3 wrapper for designing multiplex primer schemes
 
 # installation
-git clone https://github.com/aresti/primalrefactor.git
-cd primalrefactor
-virtualenv -r requirements.txt venv
-source venv/bin/activate
-make
+git clone https://github.com/aresti/primalrefactor.git  
+cd primalrefactor  
+virtualenv -r requirements.txt venv  
+source venv/bin/activate  
+make  
 
 # usage
 python primal.py scheme test_references/CHIKV_demo.50ca2db6b3ff.fa test --output-path test
