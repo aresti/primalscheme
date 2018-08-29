@@ -5,7 +5,8 @@ A primer3 wrapper for designing multiplex primer schemes
 ```bash
 git clone https://github.com/aresti/primalrefactor.git  
 cd primalrefactor  
-virtualenv -r requirements.txt venv  
+virtualenv -p python2.7 venv
+pip install -r requirements.txt 
 source venv/bin/activate  
 make  
 ```
