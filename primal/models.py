@@ -111,7 +111,7 @@ class Region(object):
         return self.candidate_pairs[0]
 
 class CAlignment(object):
-    """An alignment of a primer against a reference."""
+    """An seqan alignment of a primer against a reference."""
     def __init__(self, primer, ref):
         if primer.direction == 'LEFT':
             alignment_result = adapter_alignment(str(ref.seq), str(primer.seq), [2, -1, -2, -1])
@@ -169,71 +169,6 @@ class CAlignment(object):
             if set([self.aln_query[-1], self.aln_ref_comp[-1]]) in settings.MISMATCHES:
                 self.mm_3prime = True
                 self.score = 0
-
-
-class Alignment(object):
-    """An alignment of a primer against a reference."""
-
-    def __init__(self, primer, ref):
-        # Do alignments
-        if primer.direction == 'LEFT':
-            search_start = primer.start - 100 if primer.start > 100 else 0
-            search_end = primer.end + 100 if primer.end + 100 <= len(ref) else len(ref)
-            alns = pairwise2.align.globalms(str(primer.seq), str(ref.seq[search_start:search_end]), 2, -1, -2, -1, penalize_end_gaps=False, one_alignment_only=True)
-        elif primer.direction == 'RIGHT':
-            search_start = primer.end - 100 if primer.start > 100 else 0
-            search_end = primer.start + 100 if primer.start + 100 <= len(ref) else len(ref)
-            alns = pairwise2.align.globalms(str(primer.seq), str(ref.seq[search_start:search_end].reverse_complement()), 2, -1, -2, -1, penalize_end_gaps=False, one_alignment_only=True)
-        if alns:
-            aln = alns[0]
-
-            p = re.compile('(-*)([ACGTN][ACGTN\-]*[ACGTN])(-*)')
-            m = list(re.finditer(p, str(aln[0])))[0]
-
-            if primer.direction == 'LEFT':
-                self.start = search_start + m.span(2)[0]
-                self.end = search_start + m.span(2)[1]
-                self.length = self.end - self.start
-            else:
-                self.start = search_end - m.span(2)[0]
-                self.end = search_end - m.span(2)[1]
-                self.length = self.start - self.end
-
-            # Normalise alignment score by length
-            self.score = aln[2] / self.length
-
-            # Get alignment strings
-            self.aln_query = aln[0][m.span(2)[0]:m.span(2)[1]]
-            self.aln_ref = aln[1][m.span(2)[0]:m.span(2)[1]]
-            self.aln_ref_comp = Seq.Seq(str(self.aln_ref)).complement()
-            self.ref_id = ref.id
-            self.mm_3prime = False
-
-            # Make cigar
-            self.cigar = ''
-            for a, b in zip(self.aln_query, self.aln_ref):
-                if a == '-' or b == '-':
-                    self.cigar += ' '
-                    continue
-                if a != b:
-                    self.cigar += '*'
-                    continue
-                else:
-                    self.cigar += '|'
-
-            # Format alignment
-            short_primer = primer.name[:30] if len(primer.name) > 30 else primer.name
-            short_ref = ref.id[:30] if len(ref.id) > 30 else ref.id
-            self.formatted_alignment = "\n{: <30}5\'-{}-3\'\n{: <33}{}\n{: <30}3\'-{}-5\'".format(short_primer, self.aln_query, '', self.cigar, short_ref, self.aln_ref_comp)
-
-            # Check 3' mismatches
-            if set([self.aln_query[-1], self.aln_ref_comp[-1]]) in settings.MISMATCHES:
-                self.mm_3prime = True
-                self.score = 0
-
-        else:
-            self.score = 0
-            self.formatted_alignment = 'None found'
 
 
 class MultiplexScheme(object):
@@ -305,7 +240,7 @@ class MultiplexScheme(object):
 
             # Find primers
             try:
-                region = self._find_primers_only(region_num, left_primer_left_limit, left_primer_right_limit, chunk_start, chunk_end, self.min_overlap)
+                region = self._find_primers(region_num, left_primer_left_limit, left_primer_right_limit, chunk_start, chunk_end, self.min_overlap)
                 regions.append(region)
             except NoSuitableException:
                 pass
@@ -428,7 +363,7 @@ class MultiplexScheme(object):
         gd_diagram.write(pdf_filepath, 'PDF', dpi=300)
         gd_diagram.write(svg_filepath, 'SVG', dpi=300)
 
-    def _find_primers_only(self, region_num, left_limit, right_limit, chunk_start, chunk_end, overlap):
+    def _find_primers(self, region_num, left_limit, right_limit, chunk_start, chunk_end, overlap):
         """
         Find primers for a given region.
 
@@ -482,77 +417,4 @@ class MultiplexScheme(object):
 
         # right_limit not used by region so could be removed
         return Region(self.prefix, region_num, self.max_candidates, chunk_start, primer3_output,
-                      self.references)
-
-
-    def _find_primers(self, region_num, left_limit, right_limit, is_last_region):
-        """
-        Find primers for a given region.
-
-        Given a list of biopython SeqRecords (references), and a string representation
-        of the pimary reference (seq), return a list of Region objects containing candidate
-        primer pairs sorted by an alignment score summed over all references.
-        """
-        logger.info('Processing region {}'.format(region_num))
-        logger.debug('Region {}: forward primer limits {}:{}'.format(region_num, left_limit, right_limit))
-
-        # Slice primary reference to speed up Primer3 on long sequences
-        if region_num == 1:
-            chunk_end = min(len(self.primary_reference), 1.1 * (self.amplicon_length + self.max_gap))
-        else:
-            chunk_end = min(len(self.primary_reference), right_limit + 1.1 * (self.amplicon_length + self.max_gap))
-        chunk_end = int(chunk_end)
-        seq = str(self.primary_reference.seq)[left_limit:chunk_end]
-
-        # Primer3 setup
-        p3_global_args = settings.outer_params
-        region_key = 'SEQUENCE_PRIMER_PAIR_OK_REGION_LIST'
-
-        # Reset to 0 to prevent invalid region key
-        region_end = self.search_space
-        if region_num == 1:
-            region_start = 0
-        elif is_last_region:
-            region_start = len(seq) - self.amplicon_length
-        else:
-            if right_limit - left_limit - self.search_space < 0:
-                region_start = 0
-                region_end = self.search_space + right_limit - left_limit - self.search_space
-            else:
-                region_start = right_limit - left_limit - self.search_space
-
-        p3_seq_args = {
-            region_key: [region_start, region_end, -1, -1],
-            'SEQUENCE_TEMPLATE': seq,
-            'SEQUENCE_INCLUDED_REGION': [0, len(seq) - 1]
-        }
-        p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [
-            [int(self.amplicon_length * 0.9), int(self.amplicon_length * 1.1)]]
-        p3_global_args['PRIMER_NUM_RETURN'] = self.max_candidates
-        keep_right = False
-
-        while True:
-            primer3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
-            num_returned = primer3_output['PRIMER_PAIR_NUM_RETURNED']
-            if num_returned:
-                break
-
-            if p3_seq_args[region_key][0] == 0 or keep_right:
-                step_type = 'right'
-                p3_seq_args[region_key][0] = 0
-                p3_seq_args[region_key][1] += self.step_size
-                keep_right = True
-            else:
-                step_type = 'left'
-                p3_seq_args[region_key][0] -= self.step_size
-                p3_seq_args[region_key][1] += self.step_size
-                if p3_seq_args[region_key][0] < 0:
-                    keep_right = True
-
-            logger.debug('Region {}: step type {}, range {}:{}, limit {}, keep right={}'.format(region_num, step_type, p3_seq_args[region_key][0] + left_limit, p3_seq_args[region_key][0] + left_limit + p3_seq_args[region_key][1], str(left_limit) if step_type == 'left' else 'none', keep_right))
-
-            if left_limit + p3_seq_args[region_key][0] + p3_seq_args[region_key][1] > len(self.primary_reference):
-                raise NoSuitableException
-
-        return Region(self.prefix, region_num, self.max_candidates, (left_limit, right_limit), primer3_output,
                       self.references)
