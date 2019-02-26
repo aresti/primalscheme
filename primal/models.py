@@ -37,7 +37,7 @@ class Primer(object):
 class CandidatePrimer(Primer):
     """A candidate primer for a region."""
 
-    def __init__(self, direction, name, seq, start, gc, tm, references):
+    def __init__(self, direction, name, seq, start, gc, tm, references, align):
         super(CandidatePrimer, self).__init__(direction, name, seq)
         self.start = start
         self.gc = gc
@@ -46,10 +46,11 @@ class CandidatePrimer(Primer):
         self.sub_total = 0
         self.alignments = []
 
-        for ref in references:
-            alignment = CAlignment(self, ref)
-            self.alignments.append(alignment)
-            self.sub_total += alignment.score
+        if align:
+            for ref in references:
+                alignment = CAlignment(self, ref)
+                self.alignments.append(alignment)
+                self.sub_total += alignment.score
 
     @property
     def end(self):
@@ -75,7 +76,7 @@ class CandidatePrimerPair(object):
 class Region(object):
     """A region that forms part of a scheme."""
 
-    def __init__(self, prefix, region_num, max_candidates, chunk_start, primer3_output, references):
+    def __init__(self, prefix, region_num, max_candidates, chunk_start, primer3_output, references, align):
         self.region_num = region_num
         self.pool = '2' if self.region_num % 2 == 0 else '1'
         self.candidate_pairs = []
@@ -99,16 +100,22 @@ class Region(object):
             left_tm = float(primer3_output['PRIMER_LEFT_%i_TM' % (cand_num)])
             right_tm = float(primer3_output['PRIMER_RIGHT_%i_TM' % (cand_num)])
 
-            left = CandidatePrimer('LEFT', left_name, left_seq, left_start, left_gc, left_tm, references)
-            right = CandidatePrimer('RIGHT', right_name, right_seq, right_start, right_gc, right_tm, references)
+            left = CandidatePrimer('LEFT', left_name, left_seq, left_start, left_gc, left_tm, references, align)
+            right = CandidatePrimer('RIGHT', right_name, right_seq, right_start, right_gc, right_tm, references, align)
 
             self.candidate_pairs.append(CandidatePrimerPair(left, right))
-        # Select the highest scoring pair with the rightmost position
+        # Sort by highest scoring pair with the rightmost position
         self.candidate_pairs.sort(key=lambda x: (x.total, x.right.end), reverse=True)
 
     @property
     def top_pair(self):
         return self.candidate_pairs[0]
+
+    @property
+    def unique_candidates(self):
+        unique_left = len(set(pair.left.seq for pair in self.candidate_pairs))
+        unique_right = len(set(pair.right.seq for pair in self.candidate_pairs))
+        return [unique_left, unique_right]
 
 class CAlignment(object):
     """An seqan alignment of a primer against a reference."""
@@ -175,7 +182,7 @@ class MultiplexScheme(object):
     """A complete multiplex primer scheme."""
 
     def __init__(self, references, amplicon_length, min_overlap=20, max_gap=100, window_size=50, search_space=30,
-                 max_candidates=10, step_size=1, prefix='PRIMAL_SCHEME'):
+                 max_candidates=10, step_size=10, prefix='PRIMAL_SCHEME'):
         self.references = references
         self.amplicon_length = amplicon_length
         self.min_overlap = min_overlap
@@ -251,15 +258,21 @@ class MultiplexScheme(object):
 
             #Report scores and alignments
             #Don't report aligment to primary reference
-            for i in range(1, len(self.references)):
+            for i in range(0, len(self.references)):
                 logger.debug(regions[-1].candidate_pairs[0].left.alignments[i].formatted_alignment)
-                logger.debug('Subtotal: %i' % (regions[-1].candidate_pairs[0].left.alignments[i].score))
+            logger.debug('Subtotal left: %i' % (regions[-1].candidate_pairs[0].left.alignments[i].score))
+            logger.debug('Left start for sorted candidates: ' + ','.join(['%i' %each.left.start for each in regions[-1].candidate_pairs]))
+            logger.debug('Left end for sorted candidates: ' + ','.join(['%i' %each.left.end for each in regions[-1].candidate_pairs]))
+            logger.debug('Left length for sorted candidates: ' + ','.join(['%i' %each.left.length for each in regions[-1].candidate_pairs]))
+
+            for i in range(0, len(self.references)):
                 logger.debug(regions[-1].candidate_pairs[0].right.alignments[i].formatted_alignment)
-                logger.debug('Subtotal: %i' % (regions[-1].candidate_pairs[0].right.alignments[i].score))
-                logger.debug('Totals for sorted candidates: ' + ','.join(['%.2f' %each.total for each in regions[-1].candidate_pairs]))
-                logger.debug('Right start for sorted candidates: ' + ','.join(['%i' %each.right.start for each in regions[-1].candidate_pairs]))
-                logger.debug('Right end for sorted candidates: ' + ','.join(['%i' %each.right.end for each in regions[-1].candidate_pairs]))
-                logger.debug('Length for sorted candidates: ' + ','.join(['%i' %each.right.length for each in regions[-1].candidate_pairs]))
+            logger.debug('Subtotal right: %i' % (regions[-1].candidate_pairs[0].right.alignments[i].score))
+            logger.debug('Right start for sorted candidates: ' + ','.join(['%i' %each.right.start for each in regions[-1].candidate_pairs]))
+            logger.debug('Right end for sorted candidates: ' + ','.join(['%i' %each.right.end for each in regions[-1].candidate_pairs]))
+            logger.debug('Right length for sorted candidates: ' + ','.join(['%i' %each.right.length for each in regions[-1].candidate_pairs]))
+
+            logger.debug('Totals for sorted pairs: ' + ','.join(['%.2f' %each.total for each in regions[-1].candidate_pairs]))
 
             if region_num > 1:
             # Remember, results now include this one, so -2 is the other pool
@@ -391,10 +404,15 @@ class MultiplexScheme(object):
             p3_seq_args['SEQUENCE_INCLUDED_REGION'] = [0, len(seq) - 1]
             logger.debug("Region %i: reference chunk %i:%i, length %i" %(region_num, chunk_start, chunk_end, len(seq)))
             primer3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
-            num_returned = primer3_output['PRIMER_PAIR_NUM_RETURNED']
-            logger.debug("Region %i: current settings returned %i pairs" %(region_num, num_returned))
-            if num_returned:
+            pair_returned = primer3_output['PRIMER_PAIR_NUM_RETURNED']
+            logger.debug("Region %i: current settings returned %i pairs" %(region_num, pair_returned))
+
+            region = Region(self.prefix, region_num, self.max_candidates, chunk_start, primer3_output, self.references, align=False)
+            logger.info("%i unique left candidates and %i unique right candidates returned" %(region.unique_candidates[0], region.unique_candidates[1]))
+            if region.unique_candidates[0] >= 3 and region.unique_candidates[1] >= 3:
                 break
+            #if pair_returned:
+            #    break
 
             #Move right if first region or if hit left limit
             if region_num == 1 or hit_left_limit:
@@ -414,7 +432,6 @@ class MultiplexScheme(object):
                     chunk_end = int(chunk_end)
                     hit_left_limit = True
 
-
         # right_limit not used by region so could be removed
         return Region(self.prefix, region_num, self.max_candidates, chunk_start, primer3_output,
-                      self.references)
+                      self.references, align=True)
