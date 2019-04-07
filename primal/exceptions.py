@@ -1,10 +1,18 @@
-class NoSuitableException(Exception):
+class Error(Exception):
+    """Base exception class"""
+
+    pass
+
+
+class NoSuitableError(Error):
     """No suitable primer found."""
 
-    pass
+    def __init__(self, message):
+        self.message = message
 
 
-class MaxGapException(Exception):
+class MaxGapError(Exception):
     """Maximum gap exceeded, increase amplicon length."""
 
-    pass
+    def __init__(self, message):
+        self.message = message
