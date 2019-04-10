@@ -24,10 +24,11 @@ class Primer(object):
     """A simple primer."""
 
     def __init__(self, direction, name, seq):
-        # TODO: Validate direction is LEFT or RIGHT
         self.direction = direction
         self.name = name
         self.seq = seq
+        self.tm = primer3.calcTm(self.seq, dv_conc=1.5, dntp_conc=0.6)
+        self.gc = 100.0 * (seq.count('G') + seq.count('C')) / len(seq)
 
     @property
     def length(self):
@@ -37,23 +38,23 @@ class Primer(object):
 class CandidatePrimer(Primer):
     """A candidate primer for a region."""
 
-    def __init__(self, direction, name, seq, start, references, align):
+    def __init__(self, direction, name, seq, start, references):
         super(CandidatePrimer, self).__init__(direction, name, seq)
         self.start = start
-        # Arguments to generate Tm same as output dv_conc=2 and dntp_conc=0.8 for Q5
-        self.tm = primer3.calcTm(self.seq, dv_conc=1.5, dntp_conc=0.6)
-        self.gc =  100.0 * (seq.count('G') + seq.count('C')) / len(seq)
-        self.sub_total = 0
+        self.percent_identity = 0
         self.alignments = []
+        self.references = references
 
-        if align:
-            for ref in references:
-                alignment = CAlignment(self, ref)
-                self.alignments.append(alignment)
-                self.sub_total += alignment.score
+    def align(self):
+        percent_identity = 0
+        for ref in self.references:
+            alignment = CAlignment(self, ref)
+            self.alignments.append(alignment)
+            percent_identity += alignment.percent_identity
 
-            # Calculate average percent identity
-            self.sub_total = self.sub_total / len(self.alignments)
+        # Calculate average percent identity
+        self.percent_identity = percent_identity / len(self.alignments)
+        return(self)
 
     @property
     def end(self):
@@ -69,8 +70,8 @@ class CandidatePrimerPair(object):
     def __init__(self, left, right):
         self.left = left
         self.right = right
-        # Calculate average percent identity
-        self.total = (left.sub_total + right.sub_total) / 2
+        # Calculate mean percent identity
+        self.mean_percent_identity = (left.percent_identity + right.percent_identity) / 2
 
     @property
     def product_length(self):
@@ -78,59 +79,45 @@ class CandidatePrimerPair(object):
 
 class Region(object):
     """A region that forms part of a scheme."""
-    def __init__(self, region_num, chunk_start, primer3_output, references, prefix, max_candidates, max_alts, align):
+    def __init__(self, region_num, chunk_start, candidate_pairs, references, prefix, max_alts=0):
         self.region_num = region_num
         self.pool = '2' if self.region_num % 2 == 0 else '1'
-        self.candidate_pairs = []
+        self.candidate_pairs = candidate_pairs
         self.alternates = []
 
-        for cand_num in range(max_candidates):
-            lenkey = 'PRIMER_LEFT_%i' % (cand_num)
-            left_name = '%s_%i_%s' % (prefix, region_num, 'LEFT')
-            right_name = '%s_%i_%s' % (prefix, region_num, 'RIGHT')
-            if lenkey not in primer3_output:
-                break
-
-            left_seq = str(primer3_output['PRIMER_LEFT_%i_SEQUENCE' % (cand_num)])
-            right_seq = str(primer3_output['PRIMER_RIGHT_%i_SEQUENCE' % (cand_num)])
-
-            left_start = int(primer3_output['PRIMER_LEFT_%i' % (cand_num)][0] + chunk_start)
-            right_start = int(primer3_output['PRIMER_RIGHT_%i' % (cand_num)][0] + chunk_start + 1)
-
-            left = CandidatePrimer('LEFT', left_name, left_seq, left_start, references, align)
-            right = CandidatePrimer('RIGHT', right_name, right_seq, right_start, references, align)
-
-            self.candidate_pairs.append(CandidatePrimerPair(left, right))
         # Sort by highest scoring pair with the rightmost position
-        self.candidate_pairs.sort(key=lambda x: (x.total, x.right.end), reverse=True)
+        self.candidate_pairs.sort(key=lambda x: (x.mean_percent_identity, x.right.end), reverse=True)
 
-        # Only generate alts if sufficient unique primers were found
-        if align:
+        # Align candidate pairs
+        for pair in self.candidate_pairs:
+            pair.left.align()
+            pair.right.align()
+
         # Get a list of alts based on the alignments
-            left_alts = [str(each.aln_ref) for each in self.candidate_pairs[0].left.alignments if each.aln_ref != self.candidate_pairs[0].left.seq]
-            right_alts = [str(each.aln_ref) for each in self.candidate_pairs[0].right.alignments if each.aln_ref != self.candidate_pairs[0].right.seq]
+        left_alts = [str(each.aln_ref) for each in self.candidate_pairs[0].left.alignments if each.aln_ref != self.candidate_pairs[0].left.seq]
+        right_alts = [str(each.aln_ref) for each in self.candidate_pairs[0].right.alignments if each.aln_ref != self.candidate_pairs[0].right.seq]
 
-            # Get the counts for the alts to prioritise
-            left_alts_counts = [(alt, left_alts.count(alt)) for alt in set(left_alts)]
-            left_alts_counts.sort(key=lambda x: x[1], reverse=True)
+        # Get the counts for the alts to prioritise
+        left_alts_counts = [(alt, left_alts.count(alt)) for alt in set(left_alts)]
+        left_alts_counts.sort(key=lambda x: x[1], reverse=True)
 
-            # Make tuples of unique primers and frequency and sort
-            right_alts_counts = [(alt, right_alts.count(alt)) for alt in set(right_alts)]
-            right_alts_counts.sort(key=lambda x: x[1], reverse=True)
+        # Make tuples of unique primers and frequency and sort
+        right_alts_counts = [(alt, right_alts.count(alt)) for alt in set(right_alts)]
+        right_alts_counts.sort(key=lambda x: x[1], reverse=True)
 
-            # For up to max_alts and if it occurs more than once generate a CandidatePrimer and add it to alternates list in Region
-            for n, left_alt in enumerate(left_alts_counts):
-                # max_alts is 1-indexed
-                if n <= max_alts - 1 and left_alt[1] > 1:
-                    logger.debug('Found an alternate primer {} which covers {} reference sequences'.format(n, left_alt[1]))
-                    left = CandidatePrimer('LEFT', self.candidate_pairs[0].left.name + '_alt%i' %(n+1), left_alt[0], self.candidate_pairs[0].left.start, references, align)
-                    self.alternates.append(left)
+        # For up to max_alts and if it occurs more than once generate a CandidatePrimer and add it to alternates list in Region
+        for n, left_alt in enumerate(left_alts_counts):
+            # max_alts is 1-indexed
+            if n <= max_alts - 1 and left_alt[1] > 1:
+                logger.debug('Found an alternate primer {} which covers {} reference sequences'.format(n, left_alt[1]))
+                left = CandidatePrimer('LEFT', self.candidate_pairs[0].left.name + '_alt%i' %(n+1), left_alt[0], self.candidate_pairs[0].left.start, references).align()
+                self.alternates.append(left)
 
-            for n, right_alt in enumerate(right_alts_counts):
-                if n <= max_alts - 1 and right_alt[1] > 1:
-                    logger.debug('Found an alternate primer {} which covers {} reference sequences'.format(n, right_alt[1]))
-                    right = CandidatePrimer('RIGHT', self.candidate_pairs[0].right.name + '_alt%i' %(n+1), right_alt[0], self.candidate_pairs[0].right.start, references, align)
-                    self.alternates.append(right)
+        for n, right_alt in enumerate(right_alts_counts):
+            if n <= max_alts - 1 and right_alt[1] > 1:
+                logger.debug('Found an alternate primer {} which covers {} reference sequences'.format(n, right_alt[1]))
+                right = CandidatePrimer('RIGHT', self.candidate_pairs[0].right.name + '_alt%i' %(n+1), right_alt[0], self.candidate_pairs[0].right.start, references).align()
+                self.alternates.append(right)
 
     @property
     def top_pair(self):
@@ -154,7 +141,7 @@ class CAlignment(object):
 
         # If the read start is -1, that indicates that the alignment failed completely.
         if ref_start == -1:
-            self.score = 0.0
+            self.percent_identity = 0.0
             self.formatted_alignment = 'None'
         else:
             ref_end = int(result_parts[1]) + 1
@@ -171,7 +158,7 @@ class CAlignment(object):
                 self.length = self.start - self.end
 
             # Percentage identity for glocal alignment
-            self.score = full_primer_percent_identity
+            self.percent_identity = full_primer_percent_identity
 
             # Get alignment strings
             self.aln_query = result_parts[8][ref_start:ref_end]
@@ -200,7 +187,7 @@ class CAlignment(object):
             # Check 3' mismatches
             if set([self.aln_query[-1], self.aln_ref_comp[-1]]) in settings.MISMATCHES:
                 self.mm_3prime = True
-                self.score = 0
+                self.percent_identity = 0
 
 
 class MultiplexScheme(object):
@@ -282,19 +269,19 @@ class MultiplexScheme(object):
             for i in range(0, len(self.references)):
                 # Don't display alignment to reference
                 logger.debug(regions[-1].candidate_pairs[0].left.alignments[i].formatted_alignment)
-            logger.debug('Identities for sorted left candidates: ' + ','.join(['%.2f' %each.left.sub_total for each in regions[-1].candidate_pairs]))
+            logger.debug('Identities for sorted left candidates: ' + ','.join(['%.2f' %each.left.percent_identity for each in regions[-1].candidate_pairs]))
             logger.debug('Left start for sorted candidates: ' + ','.join(['%i' %each.left.start for each in regions[-1].candidate_pairs]))
             logger.debug('Left end for sorted candidates: ' + ','.join(['%i' %each.left.end for each in regions[-1].candidate_pairs]))
             logger.debug('Left length for sorted candidates: ' + ','.join(['%i' %each.left.length for each in regions[-1].candidate_pairs]))
 
             for i in range(0, len(self.references)):
                 logger.debug(regions[-1].candidate_pairs[0].right.alignments[i].formatted_alignment)
-            logger.debug('Identities for sorted right candidates: ' + ','.join(['%.2f' %each.right.sub_total for each in regions[-1].candidate_pairs]))
+            logger.debug('Identities for sorted right candidates: ' + ','.join(['%.2f' %each.right.percent_identity for each in regions[-1].candidate_pairs]))
             logger.debug('Right start for sorted candidates: ' + ','.join(['%i' %each.right.start for each in regions[-1].candidate_pairs]))
             logger.debug('Right end for sorted candidates: ' + ','.join(['%i' %each.right.end for each in regions[-1].candidate_pairs]))
             logger.debug('Right length for sorted candidates: ' + ','.join(['%i' %each.right.length for each in regions[-1].candidate_pairs]))
 
-            logger.debug('Totals for sorted pairs: ' + ','.join(['%.2f' %each.total for each in regions[-1].candidate_pairs]))
+            logger.debug('Totals for sorted pairs: ' + ','.join(['%.2f' %each.mean_percent_identity for each in regions[-1].candidate_pairs]))
 
             if len(regions) > 1:
             # Remember, results now include this one, so -2 is the other pool
@@ -403,8 +390,7 @@ class MultiplexScheme(object):
         """
         Find primers for a given region.
 
-        Given a list of biopython SeqRecords (references), and a string representation
-        of the pimary reference (seq), return a list of Region objects containing candidate
+        Return a list of Region objects containing candidate
         primer pairs sorted by an alignment score summed over all references.
         """
 
@@ -440,11 +426,32 @@ class MultiplexScheme(object):
             logger.debug("Region %i: reference chunk %i:%i, length %i" %(region_num, chunk_start, chunk_end, len(seq)))
             primer3_output = primer3.bindings.designPrimers(p3_seq_args, p3_global_args)
 
-            # Call Region on the primer3 output with alignment turned off so we can count unique primers not just returned
-            region = Region(region_num, chunk_start, primer3_output, self.references, self.prefix, self.max_candidates, self.max_alts, align=False)
-            logger.info("Region %i: current position returned %i left and %i right unique" %(region_num, region.unique_candidates[0], region.unique_candidates[1]))
-            if region.unique_candidates[0] >= 3 and region.unique_candidates[1] >= 3:
-                break
+            candidate_pairs = []
+            for cand_num in range(self.max_candidates):
+                lenkey = 'PRIMER_LEFT_%i' % (cand_num)
+                left_name = '%s_%i_%s' % (self.prefix, region_num, 'LEFT')
+                right_name = '%s_%i_%s' % (self.prefix, region_num, 'RIGHT')
+                if lenkey not in primer3_output:
+                    break
+
+                left_seq = str(primer3_output['PRIMER_LEFT_%i_SEQUENCE' % (cand_num)])
+                right_seq = str(primer3_output['PRIMER_RIGHT_%i_SEQUENCE' % (cand_num)])
+
+                left_start = int(primer3_output['PRIMER_LEFT_%i' % (cand_num)][0] + chunk_start)
+                right_start = int(primer3_output['PRIMER_RIGHT_%i' % (cand_num)][0] + chunk_start + 1)
+
+                left = CandidatePrimer('LEFT', left_name, left_seq, left_start, self.references)
+                right = CandidatePrimer('RIGHT', right_name, right_seq, right_start, self.references)
+
+                candidate_pairs.append(CandidatePrimerPair(left, right))
+
+            set_left = set(pair.left.seq for pair in candidate_pairs)
+            set_right = set(pair.right.seq for pair in candidate_pairs)
+
+            logger.info("Region %i: current position returned %i left and %i right unique" %(region_num, len(set_left), len(set_right)))
+
+            if len(set_left) > 2 and len(set_right) > 2:
+                return Region(region_num, chunk_start, candidate_pairs, self.references, self.prefix, self.max_alts)
 
             # Move right if first region or to open gap
             if region_num == 1 or hit_left_limit:
@@ -466,6 +473,3 @@ class MultiplexScheme(object):
                     chunk_start = _chunk_start
                     chunk_end = _chunk_end
                     hit_left_limit = True
-
-        # Return Region with alignment
-        return Region(region_num, chunk_start, primer3_output, self.references, self.prefix, self.max_candidates, self.max_alts, align=True)
