@@ -11,12 +11,14 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from primal.models import MultiplexScheme
+from primal.reporting import SchemeReporter
+
+logger = logging.getLogger('Primal Log')
 
 
 def multiplex(args):
     print args
-    scheme = MultiplexScheme(args.references, args.amplicon_length, min_overlap=args.min_overlap, max_gap=args.max_gap,
+    scheme = SchemeReporter(args.references, args.amplicon_length, min_overlap=args.min_overlap, max_gap=args.max_gap,
                              max_alts=args.max_alts, max_candidates=args.max_candidates, step_size=args.step_size,
                              max_variation=args.max_variation, prefix=args.prefix)
     scheme.write_bed(args.output_path)
@@ -27,7 +29,6 @@ def multiplex(args):
 
 
 def main():
-    logger = logging.getLogger('Primal Log')
     parser = argparse.ArgumentParser(prog='primal', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers(title='[sub-commands]', dest='command')
 
