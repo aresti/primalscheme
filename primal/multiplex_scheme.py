@@ -1,6 +1,6 @@
 import logging
-import settings
 import primer3
+from primal import settings
 from .exceptions import MaxGapReached, NoSuitablePrimers
 from .models import CandidatePrimer, CandidatePrimerPair, Region
 

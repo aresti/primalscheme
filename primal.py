@@ -17,7 +17,7 @@ logger = logging.getLogger('Primal Log')
 
 
 def multiplex(args):
-    print args
+    #print args
     scheme = SchemeReporter(args.references, args.amplicon_length, min_overlap=args.min_overlap, max_gap=args.max_gap,
                              max_alts=args.max_alts, max_candidates=args.max_candidates, step_size=args.step_size,
                              max_variation=args.max_variation, prefix=args.prefix)

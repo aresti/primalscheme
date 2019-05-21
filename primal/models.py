@@ -1,16 +1,13 @@
 import os
 import sys
 import logging
-import settings
+from primal import settings
 
 from Bio.Seq import Seq
 from primer3 import calcTm
-
+from Porechop.porechop.cpp_function_wrappers import adapter_alignment
 
 logger = logging.getLogger('Primal Log')
-
-sys.path.append('Porechop/porechop')
-from cpp_function_wrappers import adapter_alignment
 
 
 class Primer(object):
