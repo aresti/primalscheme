@@ -135,9 +135,9 @@ class SchemeReporter(MultiplexScheme):
             primer_color = colors.red #if strand == 1 else colors.blue
             region_color = colors.palevioletred #if strand == 1 else colors.lightblue
 
-            primer_feature_set.add_feature(region_feature, color=region_color, name=region, label=True, label_size=10, label_position="middle", label_angle=0 if strand == 1 else -180)
-            primer_feature_set.add_feature(fwd_feature, color=primer_color, name=region, label=False)
-            primer_feature_set.add_feature(rev_feature, color=primer_color, name=region, label=False)
+            primer_feature_set.add_feature(region_feature, color=region_color, name=region, label=True, label_position="middle", label_angle=0 if strand == 1 else -180)
+            primer_feature_set.add_feature(fwd_feature, color=primer_color, name=region)
+            primer_feature_set.add_feature(rev_feature, color=primer_color, name=region)
 
         primer_track = GenomeDiagram.Track(name="Annotated Features", height=1)
         primer_track.add_set(primer_feature_set)
