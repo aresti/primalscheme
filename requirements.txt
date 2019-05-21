@@ -1,7 +1,4 @@
-biopython==1.67
-Cython==0.24
-pip==8.1.2
-primer3-py==0.5.1
-setuptools==23.0.0
-wheel==0.29.0
-reportlab==3.3.0
+biopython==1.73
+Cython=0.29.7
+primer3-py==0.6.0
+reportlab==3.5.21
