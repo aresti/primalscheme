@@ -4,7 +4,7 @@ import logging
 from primal import settings
 
 from Bio.Seq import Seq
-from primer3 import calcTm
+from primer3 import calcTm, calcHairpin, calcHomodimer
 from Porechop.porechop.cpp_function_wrappers import adapter_alignment
 
 logger = logging.getLogger('Primal Log')
@@ -17,7 +17,9 @@ class Primer(object):
         self.direction = direction
         self.name = name
         self.seq = seq
-        self.tm = calcTm(self.seq, dv_conc=1.5, dntp_conc=0.6)
+        self.tm = calcTm(self.seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6)
+        self.homodimer = calcHomodimer(self.seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6).tm
+        self.hairpin = calcHairpin(self.seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6).tm
         self.gc = 100.0 * (seq.count('G') + seq.count('C')) / len(seq)
 
     @property
@@ -71,7 +73,8 @@ class Region(object):
     """A region that forms part of a scheme."""
     def __init__(self, region_num, chunk_start, candidate_pairs, references, prefix, max_alts=0):
         self.region_num = region_num
-        self.pool = '2' if self.region_num % 2 == 0 else '1'
+        self.prefix = prefix
+        self.pool = '%s_2' %(self.prefix) if self.region_num % 2 == 0 else '%s_1' %(self.prefix)
         self.candidate_pairs = candidate_pairs
         self.alternates = []
 
