@@ -11,16 +11,27 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from primal.reporting import SchemeReporter
+from primal.multiplex_reporting import MultiplexReporter
+from primal.smart_reporting import SMARTplexReporter
 
 logger = logging.getLogger('Primal Log')
 
 
 def multiplex(args):
-    #print args
-    scheme = SchemeReporter(args.references, args.amplicon_length, min_overlap=args.min_overlap, max_gap=args.max_gap,
+    #print(args)
+    scheme = MultiplexReporter(args.references, args.amplicon_length, min_overlap=args.min_overlap, max_gap=args.max_gap,
                              max_alts=args.max_alts, max_candidates=args.max_candidates, step_size=args.step_size,
                              max_variation=args.max_variation, prefix=args.prefix)
+    scheme.write_bed(args.output_path)
+    scheme.write_pickle(args.output_path)
+    scheme.write_tsv(args.output_path)
+    scheme.write_refs(args.output_path)
+    scheme.write_schemadelica_plot(args.output_path)
+
+def smart(args):
+    print(args)
+    sys.exit()
+    scheme = SMARTplexReporter(args.references, args.amplicon_length, max_candidates=args.max_candidates, prefix=args.prefix)
     scheme.write_bed(args.output_path)
     scheme.write_pickle(args.output_path)
     scheme.write_tsv(args.output_path)
@@ -33,7 +44,7 @@ def main():
     subparsers = parser.add_subparsers(title='[sub-commands]', dest='command')
 
     # Standard scheme
-    parser_scheme = subparsers.add_parser('scheme', help='Tiling amplicons designer')
+    parser_scheme = subparsers.add_parser('multiplex', help='Multiplex PCR scheme')
     parser_scheme.add_argument('fasta', help='FASTA file')
     parser_scheme.add_argument('prefix', help='Prefix')
     parser_scheme.add_argument('--amplicon-length', help='Amplicon length (default: %(default)i)', type=int, default=400)
@@ -47,6 +58,17 @@ def main():
     parser_scheme.add_argument('--force', help='Force overwrite', action="store_true")
     parser_scheme.add_argument('--debug', help='Verbose logging', action="store_true")
     parser_scheme.set_defaults(func=multiplex)
+
+    # SMART scheme
+    parser_smart = subparsers.add_parser('smart', help='SMART-plex scheme')
+    parser_smart.add_argument('fasta', help='FASTA file')
+    parser_smart.add_argument('prefix', help='Prefix')
+    parser_smart.add_argument('--amplicon-length', help='Amplicon length (default: %(default)i)', type=int, default=400)
+    parser_smart.add_argument('--max-candidates', help='Maximum candidate primers (default: %(default)i)', type=int, default=10)
+    parser_smart.add_argument('--output-path', help='Output directory to save files (default: %(default)s)', default='./')
+    parser_smart.add_argument('--force', help='Force overwrite', action="store_true")
+    parser_smart.add_argument('--debug', help='Verbose logging', action="store_true")
+    parser_smart.set_defaults(func=smart)
 
     # Generate args
     args = parser.parse_args()
