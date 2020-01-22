@@ -25,6 +25,7 @@ def multiplex(args):
     scheme.write_bed(args.output_path)
     scheme.write_pickle(args.output_path)
     scheme.write_tsv(args.output_path)
+    scheme.write_SMARTplex(args.output_path)
     scheme.write_refs(args.output_path)
     scheme.write_schemadelica_plot(args.output_path)
 

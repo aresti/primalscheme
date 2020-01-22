@@ -5,7 +5,9 @@ from Bio import SeqIO, SeqUtils
 from Bio.Graphics import GenomeDiagram
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
+from .SMARTplex import SMARTplex
 from .multiplex import MultiplexScheme
+from primal import settings
 
 logger = logging.getLogger('Primal Log')
 
@@ -33,6 +35,17 @@ class MultiplexReporter(MultiplexScheme):
                 if r.alternates:
                     for alt in r.alternates:
                         print(*map(str, [alt.name, r.pool, alt.seq, alt.length, '%.2f' %alt.gc, '%.2f' %alt.tm]), sep='\t', file=tsvhandle)
+
+    def write_SMARTplex(self, path='./'):
+        logger.info('Writing SMARTplex')
+        filepath = os.path.join(path, '{}_SMARTplex.tsv'.format(self.prefix))
+        with open(filepath, 'w') as tsvhandle:
+            print(*['name','fullseq', 'tm (use 52)', 'seq', 'subseq','lensubseq','lenmatch',], sep='\t', file=tsvhandle)
+            for r in self.regions:
+                right = r.top_pair.right
+                name = '{}_{}_SMARTplex'.format(self.prefix, r.region_num)
+                RTprimer, thermo, subseq, lensubseq, lenmatch  = SMARTplex(right)
+                print(*map(str, [name, RTprimer, '%.2f' %thermo, right.seq, subseq, lensubseq, lenmatch]), sep='\t', file=tsvhandle)
 
     def write_pickle(self, path='./'):
         logger.info('Writing pickles')
