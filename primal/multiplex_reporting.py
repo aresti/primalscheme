@@ -16,7 +16,7 @@ class MultiplexReporter(MultiplexScheme):
 
     def write_bed(self, path='./'):
         logger.info('Writing BED')
-        filepath = os.path.join(path, '{}.bed'.format(self.prefix))
+        filepath = os.path.join(path, '{}.scheme.bed'.format(self.prefix))
         with open(filepath, 'w') as bedhandle:
             for r in self.regions:
                 print(*map(str, [self.primary_reference.id, r.top_pair.left.start, r.top_pair.left.end, r.top_pair.left.name, r.pool]), sep='\t', file=bedhandle)
@@ -55,7 +55,7 @@ class MultiplexReporter(MultiplexScheme):
 
     def write_refs(self, path='./'):
         logger.info('Writing references')
-        filepath = os.path.join(path, '{}.fasta'.format(self.prefix))
+        filepath = os.path.join(path, '{}.reference.fasta'.format(self.prefix))
         with open(filepath, 'w') as refhandle:
             SeqIO.write(self.references, filepath, 'fasta')
 

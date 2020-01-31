@@ -37,14 +37,17 @@ class CandidatePrimer(Primer):
         self.alignments = []
 
     def align(self, references):
-        percent_identity = 0
+        #percent_identity = 0
         for ref in references:
             alignment = CAlignment(self, ref)
             self.alignments.append(alignment)
-            percent_identity += alignment.percent_identity
-
+            #percent_identity += alignment.percent_identity
         # Calculate average percent identity
-        self.percent_identity = percent_identity / len(self.alignments)
+        #print(self.name, self.seq)
+        idents = [i.percent_identity for i in self.alignments if i.percent_identity]
+        if idents:
+            self.percent_identity = sum(idents) / len(idents)
+        #self.percent_identity = percent_identity / len(self.alignments)
         return(self)
 
     @property
@@ -87,15 +90,20 @@ class Region(object):
             pair.right.align(references)
 
         # Get a list of alts based on the alignments
-        left_alts = [str(each.aln_ref) for each in self.candidate_pairs[0].left.alignments if each.aln_ref != self.candidate_pairs[0].left.seq]
-        right_alts = [str(each.aln_ref) for each in self.candidate_pairs[0].right.alignments if each.aln_ref != self.candidate_pairs[0].right.seq]
+        #for each in self.candidate_pairs[0].left.alignments:
+        #    print(vars(each))
+        left_alts = [each.aln_ref for each in self.candidate_pairs[0].left.alignments if each.aln_ref != self.candidate_pairs[0].left.seq]
+        right_alts = [each.aln_ref for each in self.candidate_pairs[0].right.alignments if each.aln_ref != self.candidate_pairs[0].right.seq]
+
+        left_alts_filt = [str(alt) for alt in left_alts if alt is not None]
+        right_alts_filt = [str(alt) for alt in right_alts if alt is not None]
 
         # Get the counts for the alts to prioritise
-        left_alts_counts = [(alt, left_alts.count(alt)) for alt in set(left_alts)]
+        left_alts_counts = [(alt, left_alts_filt.count(alt)) for alt in set(left_alts_filt)]
         left_alts_counts.sort(key=lambda x: x[1], reverse=True)
 
         # Make tuples of unique primers and frequency and sort
-        right_alts_counts = [(alt, right_alts.count(alt)) for alt in set(right_alts)]
+        right_alts_counts = [(alt, right_alts_filt.count(alt)) for alt in set(right_alts_filt)]
         right_alts_counts.sort(key=lambda x: x[1], reverse=True)
 
         # For up to max_alts and if it occurs more than once generate a CandidatePrimer and add it to alternates list in Region
@@ -127,21 +135,35 @@ class CAlignment(object):
     """An seqan alignment of a primer against a reference."""
 
     def __init__(self, primer, ref):
+        self.start = None
+        self.end = None
+        self.length = None
+        self.percent_identity = None
+        self.aln_query = None
+        self.aln_ref = None
+        self.aln_ref_comp = None
+        self.ref_id = None
+        self.mm_3prime = None
+        self.cigar = None
+        self.formatted_alignment = None
+
         if primer.direction == 'LEFT':
             alignment_result = adapter_alignment(str(ref.seq), str(primer.seq), [2, -1, -2, -1])
         elif primer.direction == 'RIGHT':
             alignment_result = adapter_alignment(str(ref.seq.reverse_complement()), str(primer.seq), [2, -1, -2, -1])
         result_parts = alignment_result.split(',')
         ref_start = int(result_parts[0])
+        full_primer_percent_identity = float(result_parts[6])
 
         # If the read start is -1, that indicates that the alignment failed completely.
-        if ref_start == -1:
-            self.percent_identity = 0.0
-            self.formatted_alignment = 'None'
+        if ref_start == -1 or full_primer_percent_identity < 70:
+            return
+            #self.percent_identity = 0.0
+            #self.formatted_alignment = 'None'
         else:
             ref_end = int(result_parts[1]) + 1
             #aligned_region_percent_identity = float(result_parts[5])
-            full_primer_percent_identity = float(result_parts[6])
+            #full_primer_percent_identity = float(result_parts[6])
 
             if primer.direction == 'LEFT':
                 self.start = ref_start

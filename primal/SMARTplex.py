@@ -17,7 +17,6 @@ def LCSubStr(X, Y):
                 result = max(result, LCSuff[i][j])
             else:
                 LCSuff[i][j] = 0
-    for line in LCSuff:
     return result
 
 def SMARTplex(right):
