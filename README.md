@@ -3,17 +3,17 @@ A primer3 wrapper for designing multiplex primer schemes
 
 # installation
 ```
-git clone --recurse-submodules https://github.com/aresti/primalrefactor.git
-cd primalrefactor  
-virtualenv -p python2.7 venv
-pip install -r requirements.txt 
+git clone --recurse-submodules https://github.com/aresti/primalscheme.git
+cd primalscheme  
+virtualenv -p python3 venv
 source venv/bin/activate  
+pip install -r requirements.txt 
 make  
 ```
 
 # usage
 ```
-python primal.py scheme test_references/CHIKV_demo.50ca2db6b3ff.fa test --output-path test
+python primal.py multiplex test_references/CHIKV_demo.50ca2db6b3ff.fa test --output-path test
 ```
 
 

@@ -1,4 +1,4 @@
-biopython==1.73
-Cython=0.29.7
+biopython==1.76
+Cython==0.29.15
 primer3-py==0.6.0
-reportlab==3.5.21
+reportlab==3.5.42
