@@ -1,6 +1,7 @@
 from . import settings
-from Bio.Seq import Seq
+
 from primer3 import calcTm
+
 
 def LCSubStr(X, Y):
     # LCSuff is the table with zero value initially in each cell
@@ -18,6 +19,7 @@ def LCSubStr(X, Y):
             else:
                 LCSuff[i][j] = 0
     return result
+
 
 def SMARTplex(right):
     seq = right.seq
