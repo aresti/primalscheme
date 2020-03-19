@@ -7,7 +7,7 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
 from .SMARTplex import SMARTplex
 from .multiplex import MultiplexScheme
-from primal import settings
+from . import settings
 
 logger = logging.getLogger('Primal Log')
 

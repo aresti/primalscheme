@@ -1,4 +1,4 @@
-from primal import settings
+from . import settings
 from Bio.Seq import Seq
 from primer3 import calcTm
 

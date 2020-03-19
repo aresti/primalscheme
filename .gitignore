@@ -10,3 +10,5 @@
 *.svg
 venv/
 test_outputs/
+test/
+.DS_Store
