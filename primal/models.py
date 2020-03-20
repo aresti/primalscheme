@@ -78,7 +78,7 @@ class Region(object):
         self.region_num = region_num
         self.prefix = prefix
         if self.region_num % 2 == 0:
-            self.pool = '%s_2'
+            self.pool = '%s_2' % (self.prefix)
         else:
             self.pool = '%s_1' % (self.prefix)
         self.candidate_pairs = candidate_pairs
