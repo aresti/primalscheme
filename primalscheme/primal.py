@@ -11,8 +11,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from primalscheme.multiplex_reporting import MultiplexReporter
-from primalscheme.smart_reporting import SMARTplexReporter
+from .multiplex_reporting import MultiplexReporter
+from .smart_reporting import SMARTplexReporter
 
 logger = logging.getLogger('Primal Log')
 
