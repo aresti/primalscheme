@@ -1,24 +1,31 @@
-# primal
+# primalscheme
 A primer3 wrapper for designing multiplex primer schemes
 
 # installation
 ```
-git clone --recurse-submodules https://github.com/aresti/primalscheme.git
-cd primalscheme  
+git clone https://github.com/aresti/primalscheme.git
+cd primalscheme
 virtualenv -p python3 venv
-source venv/bin/activate  
-pip install -r requirements.txt 
-make  
+source venv/bin/activate
+python setup.py install
+```
+
+Alternatively, you can install using pip
+```
+pip3 install git+https://github.com/aresti/primalscheme.git
 ```
 
 # usage
 ```
+primalscheme multiplex test_references/CHIKV_demo.50ca2db6b3ff.fa test --output-path test
+```
+or from within the project
+```
 python primal.py multiplex test_references/CHIKV_demo.50ca2db6b3ff.fa test --output-path test
 ```
 
-
 # about
-Primal scheme is a tool for designing multiplex PCR primers for generating tiling amplicons. It was developed for sequencing large numbers of viral isolates of known lineages e.g. outbreak strains. It requires only two PCR reactions to generate the products which should cover at least 80% of the target region without optimisation. Higher coverage is possible with balancing of individial primer concentrations.
+Primal Scheme is a tool for designing multiplex PCR primers for generating tiling amplicons. It was developed for sequencing large numbers of viral isolates of known lineages e.g. outbreak strains. It requires only two PCR reactions to generate the products which should cover at least 80% of the target region without optimisation. Higher coverage is possible with balancing of individial primer concentrations.
 
 The primal scheme software is a wrapper for primer3 which is used to generate candidate primers from the primary reference (the first reference in the FASTA file). It then scores the primers based on pairwise alignment to all additional reference genomes before selecting the most universal. The input FASTA file should contain complete genomes representative of the lineages you would expect to find in your samples. The first genome in the fasta file is used to generate the candidates so it is the most important, see guidelines below.
 
@@ -29,7 +36,7 @@ Guidelines for designing a scheme:
 1. Download complete genomes from GenBank and put into a single FASTA file
 2. Align all sequences using Clustal Omega
 3. Check start and ends of the alignment and remove any sequences that are not full length
-4. Click the 'Phylogenetic Tree' tab to see how many major clades there are 
+4. Click the 'Phylogenetic Tree' tab to see how many major clades there are
 5. Click the 'Result Summary' tab then 'Percent Identity Matrix' link to see the identity matrix of all sequences
 6. Check that the maximum sequence divergence is not more than 10%, it may be necessary to group the more similar genomes and make separate schemes for them
 7. Remove duplicate or sequences with >99% identity to other genomes in the file as these will bias the primer selection
