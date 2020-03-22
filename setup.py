@@ -16,12 +16,12 @@ setup(
     url='https://github.com/aresti/primalscheme',
     packages=find_packages(),
     install_requires=[
-          'biopython>=1,<2',
-          'Cython>=0,<1',
-          'primer3-py>=0,<1',
-          'reportlab>=3,<4',
-          'Porechop @ git+https://github.com/joshquick/Porechop'
-      ],
+        'biopython>=1,<2',
+        'Cython>=0,<1',
+        'primer3-py>=0,<1',
+        'reportlab>=3,<4',
+        'porechop @ git+https://github.com/joshquick/Porechop'
+    ],
     entry_points={
         "console_scripts": [
             "primalscheme = primalscheme.primal:main",

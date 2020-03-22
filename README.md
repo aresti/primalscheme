@@ -7,10 +7,10 @@ git clone https://github.com/aresti/primalscheme.git
 cd primalscheme
 virtualenv -p python3 venv
 source venv/bin/activate
-python setup.py install
+pip install .
 ```
 
-Alternatively, you can install using pip
+Or, from within an existing an environment simply
 ```
 pip3 install git+https://github.com/aresti/primalscheme.git
 ```
@@ -18,10 +18,6 @@ pip3 install git+https://github.com/aresti/primalscheme.git
 # usage
 ```
 primalscheme multiplex test_references/CHIKV_demo.50ca2db6b3ff.fa test --output-path test
-```
-or from within the project
-```
-python primal.py multiplex test_references/CHIKV_demo.50ca2db6b3ff.fa test --output-path test
 ```
 
 # about
