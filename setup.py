@@ -22,6 +22,11 @@ setup(
           'reportlab>=3,<4',
           'Porechop @ git+https://github.com/joshquick/Porechop'
       ],
+    entry_points={
+        "console_scripts": [
+            "primalscheme = primalscheme.primal:main",
+        ],
+    },
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
