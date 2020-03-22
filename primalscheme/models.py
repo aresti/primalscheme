@@ -2,7 +2,7 @@ import logging
 
 from Bio.Seq import Seq
 from primer3 import calcTm, calcHairpin, calcHomodimer
-from Porechop.porechop.cpp_function_wrappers import adapter_alignment
+from porechop.cpp_function_wrappers import adapter_alignment
 
 from . import settings
 

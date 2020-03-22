@@ -20,7 +20,7 @@ setup(
           'Cython>=0,<1',
           'primer3-py>=0,<1',
           'reportlab>=3,<4',
-          'Porechop @ https://github.com/rrwick/Porechop/archive/v0.2.4.tar.gz'
+          'Porechop @ git+https://github.com/joshquick/Porechop'
       ],
     classifiers=[
         "Programming Language :: Python :: 3.6",
