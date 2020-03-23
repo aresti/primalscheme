@@ -1,4 +1,8 @@
 biopython==1.76
 Cython==0.29.15
+numpy==1.18.2
+Pillow==7.0.0
 primer3-py==0.6.0
 reportlab==3.5.42
+git+https://github.com/joshquick/Porechop#egg=porechop
+git+https://github.com/aresti/primalscheme#egg=primalscheme
