@@ -24,7 +24,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "primalscheme = primalscheme.primal:main",
+            "primalscheme = primalscheme.primalscheme:main",
         ],
     },
     classifiers=[
