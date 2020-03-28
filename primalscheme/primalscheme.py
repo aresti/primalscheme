@@ -32,7 +32,6 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from .multiplex_reporting import MultiplexReporter
-from .smart_reporting import SMARTplexReporter
 
 logger = logging.getLogger('Primal Log')
 
@@ -106,28 +105,6 @@ def main():
     parser_scheme.add_argument(
         '--debug', action='store_true', help='Verbose logging')
     parser_scheme.set_defaults(func=multiplex)
-
-    # SMART scheme
-    parser_smart = subparsers.add_parser(
-        'smart', help='SMART-plex scheme')
-    parser_smart.add_argument(
-        'fasta', help='FASTA file')
-    parser_smart.add_argument(
-        'prefix', help='Prefix')
-    parser_smart.add_argument(
-        '--amplicon-length', type=int, default=400,
-        help='Amplicon length (default: %(default)i)')
-    parser_smart.add_argument(
-        '--max-candidates', type=int, default=10,
-        help='Maximum candidate primers (default: %(default)i)')
-    parser_smart.add_argument(
-        '--output-path', default='./',
-        help='Output directory to save files (default: %(default)s)')
-    parser_smart.add_argument(
-        '--force', action='store_true', help='Force overwrite')
-    parser_smart.add_argument(
-        '--debug', action='store_true', help='Verbose logging')
-    parser_smart.set_defaults(func=smart)
 
     # Generate args
     args = parser.parse_args()
