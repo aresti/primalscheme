@@ -28,6 +28,7 @@ import argparse
 import logging
 
 from Bio import SeqIO
+from Bio.Alphabet import AlphabetEncoder, _verify_alphabet, IUPAC
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
@@ -36,39 +37,138 @@ from .multiplex_reporting import MultiplexReporter
 logger = logging.getLogger('Primal Log')
 
 
+def main():
+    """
+    Entry point for primalscheme. Proccesses args, sets up logging and calls
+    the appropriate scheme function.
+    """
+
+    args = get_arguments()
+    output_path = args.output_path
+    setup_logging(output_path, debug=args.debug, prefix=args.prefix)
+
+    try:
+        check_output_dir(output_path, force=args.force)
+
+        logger.info('PrimalScheme started...')
+        for arg in vars(args):
+            logger.debug('{}: {}'.format(arg, str(vars(args)[arg])))
+        # Run
+        args.func(args)
+    except Exception as e:
+        logger.error('Error: {}'.format(e))
+        sys.exit()
+
+
 def multiplex(args):
+    """
+    Multipex scheme runner.
+    """
+
+    references = process_fasta(args.fasta)
+
+    for record in references:
+        logger.info('Reference: {}'.format(record.id))
+
     scheme = MultiplexReporter(
-        args.references, args.amplicon_length, min_overlap=args.min_overlap,
+        references, args.amplicon_length, min_overlap=args.min_overlap,
         max_gap=args.max_gap, max_alts=args.max_alts,
         max_candidates=args.max_candidates, step_size=args.step_size,
         max_variation=args.max_variation, prefix=args.prefix)
-    scheme.write_bed(args.output_path)
-    scheme.write_pickle(args.output_path)
-    scheme.write_tsv(args.output_path)
-    scheme.write_SMARTplex(args.output_path)
-    scheme.write_refs(args.output_path)
-    scheme.write_schemadelica_plot(args.output_path)
+
+    scheme.write_all(args.output_path)
 
 
-def smart(args):
-    print(args)
-    sys.exit()
-    scheme = SMARTplexReporter(
-        args.references, args.amplicon_length,
-        max_candidates=args.max_candidates, prefix=args.prefix)
-    scheme.write_bed(args.output_path)
-    scheme.write_pickle(args.output_path)
-    scheme.write_tsv(args.output_path)
-    scheme.write_refs(args.output_path)
-    scheme.write_schemadelica_plot(args.output_path)
+def process_fasta(file_path):
+    """
+    Parse and validate the fasta file.
+    """
+
+    references = []
+    alphabet = AlphabetEncoder(IUPAC.unambiguous_dna, 'N')
+
+    records = SeqIO.parse(file_path, 'fasta')  # may raise
+
+    # Remove gaps, set alphabet
+    for record in records:
+        ref = SeqRecord(
+            Seq(str(record.seq).replace('-', '').upper(), alphabet),
+            id=record.id, description=record.id
+        )
+        references.append(ref)
+
+    # Check for too few or too many references
+    if not (1 <= len(references) <= 100):
+        raise ValueError('Between 1 and 100 reference genomes are required.')
+
+    # Check for max difference in length between references
+    primary_ref = references[0]
+    primary_ref_len = len(primary_ref)
+
+    if any(abs(len(r) - primary_ref_len) > 500 for r in references):
+        raise ValueError(
+            'One or more of your references is too different in length to '
+            'the primary (first) reference. The maximum difference is '
+            '500 nt.'
+        )
+
+    # Check for a valid alphabet
+    if any(not _verify_alphabet(r.seq) for r in references):
+        raise ValueError(
+            'One or more of your fasta sequences contain invalid '
+            "nucleotide codes. The supported alphabet is '{}'. "
+            'Ambiguity codes and gaps are not currently supported.'
+            .format(alphabet.letters)
+        )
+
+    return references
 
 
-def main():
+def setup_logging(output_path, debug=False, prefix='primalscheme'):
+    """
+    Setup logging output and verbosity.
+    """
+
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
+
+    fh = logging.FileHandler(
+        os.path.join(output_path, '{}.log'.format(prefix)))
+    fh.setLevel(logging.DEBUG)
+    fh_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(fh_formatter)
+    logger.addHandler(fh)
+
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.INFO)
+    sh_formatter = logging.Formatter('%(message)s')
+    sh.setFormatter(sh_formatter)
+    logger.addHandler(sh)
+
+
+def check_output_dir(output_path, force=False):
+    """
+    Check for an existing output dir, require --force to overwrite.
+    Otherwise, create a new one.
+    """
+
+    if os.path.isdir(output_path) and not force:
+        raise IOError('Directory exists add --force to overwrite')
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+
+
+def get_arguments():
+    """
+    Parse command line arguments
+    """
+
     parser = argparse.ArgumentParser(
-        prog='primal', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        prog='primalscheme',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers(title='[sub-commands]', dest='command')
 
-    # Standard scheme
+    # Standard multiplex scheme
     parser_scheme = subparsers.add_parser(
         'multiplex', help='Multiplex PCR scheme')
     parser_scheme.add_argument(
@@ -108,46 +208,7 @@ def main():
 
     # Generate args
     args = parser.parse_args()
-    args.references = []
-    for record in SeqIO.parse(open(args.fasta, 'r'), 'fasta'):
-        args.references.append(
-            SeqRecord(Seq(str(record.seq).replace('-', '').upper()),
-                      id=record.id, description=record.id))
-
-    # Check directory exists
-    if os.path.isdir(args.output_path) and not args.force:
-        logger.error('Directory exists add --force to overwrite')
-        raise IOError('Directory exists add --force to overwrite')
-        sys.exit()
-    if not os.path.isdir(args.output_path):
-        os.mkdir(args.output_path)
-
-    # Logging
-    logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
-
-    fh = logging.FileHandler(
-        os.path.join(args.output_path, '{}.log'.format(args.prefix)))
-    fh.setLevel(logging.DEBUG)
-    fh_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(fh_formatter)
-    logger.addHandler(fh)
-
-    sh = logging.StreamHandler(sys.stdout)
-    sh.setLevel(logging.INFO)
-    sh_formatter = logging.Formatter('%(message)s')
-    sh.setFormatter(sh_formatter)
-    logger.addHandler(sh)
-
-    logger.info('Primal scheme started...)')
-    for arg in vars(args):
-        logger.debug('{}: {}'.format(arg, str(vars(args)[arg])))
-
-    for r in args.references:
-        logger.info('Reference: {}'.format(r.id))
-
-    # Run
-    args.func(args)
+    return args
 
 
 if __name__ == '__main__':

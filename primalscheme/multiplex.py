@@ -36,7 +36,7 @@ class MultiplexScheme(object):
 
     def __init__(self, references, amplicon_length, min_overlap, max_gap,
                  max_alts, max_candidates, step_size, max_variation,
-                 prefix='PRIMAL_SCHEME'):
+                 prefix='primalscheme'):
         self.references = references
         self.amplicon_length = amplicon_length
         self.min_overlap = min_overlap

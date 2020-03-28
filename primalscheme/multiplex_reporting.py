@@ -37,6 +37,13 @@ logger = logging.getLogger('Primal Log')
 class MultiplexReporter(MultiplexScheme):
     """Reporting methods to extend MultiplexScheme"""
 
+    def write_all(self, path='./'):
+        self.write_bed(path=path)
+        self.write_pickle(path=path)
+        self.write_tsv(path=path)
+        self.write_refs(path=path)
+        self.write_schemadelica_plot(path=path)
+
     def write_bed(self, path='./'):
         logger.info('Writing BED')
         filepath = os.path.join(path, '{}.scheme.bed'.format(self.prefix))
