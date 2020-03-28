@@ -1,6 +1,26 @@
-#!/usr/bin/env python2.7
-# Primal scheme by Josh Quick and Andy Smith 2016
-# www.github.com/aresti/primalrefactor.git
+"""
+PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
+Copyright (C) 2020 Dr Josh Quick
+Contributions from Andrew Smith
+www.github.com/aresti/primalscheme
+
+This module contains the main script for PrimalScheme.
+It is executed when the user runs 'primalscheme' after installation,
+or 'primal.py' (directly from the source directory).
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>
+"""
 
 import sys
 import os
