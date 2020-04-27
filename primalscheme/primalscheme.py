@@ -45,14 +45,15 @@ def main():
 
     args = get_arguments()
     output_path = args.output_path
-    setup_logging(output_path, debug=args.debug, prefix=args.prefix)
 
     try:
         check_output_dir(output_path, force=args.force)
-
+        setup_logging(output_path, debug=args.debug, prefix=args.prefix)
         logger.info('PrimalScheme started...')
+
         for arg in vars(args):
             logger.debug('{}: {}'.format(arg, str(vars(args)[arg])))
+
         # Run
         args.func(args)
     except Exception as e:
