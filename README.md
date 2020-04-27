@@ -1,6 +1,15 @@
 # primalscheme
 A primer3 wrapper for designing multiplex primer schemes
 
+# requirements
+* macOS or Linux
+* Python 3.6
+* C++ compiler (for the porechop dependency)
+    - If you're using GCC, version 4.9.1 or later is required (check with g++ --version)
+
+Not tested on Windows, but it should be possible.
+
+
 # installation
 ```
 git clone https://github.com/aresti/primalscheme.git
