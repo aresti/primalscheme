@@ -165,8 +165,9 @@ def get_arguments():
 
     parser = argparse.ArgumentParser(
         prog='primalscheme',
+        description='A primer3 wrapper for designing multiplex primer schemes.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    subparsers = parser.add_subparsers(title='[sub-commands]', dest='command')
+    subparsers = parser.add_subparsers(title='[subcommands]', dest='command', required=True)
 
     # Standard multiplex scheme
     parser_scheme = subparsers.add_parser(
