@@ -26,7 +26,7 @@ pip3 install git+https://github.com/aresti/primalscheme.git
 
 # usage
 ```
-primalscheme multiplex test_references/CHIKV_demo.50ca2db6b3ff.fa test --output-path test
+primalscheme multiplex test/inputs/CHIKV_demo.50ca2db6b3ff.fa CHIKV_demo --output-path outputdir
 ```
 
 # about
