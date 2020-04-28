@@ -1,5 +1,5 @@
 # primalscheme
-A primer3 wrapper for designing multiplex primer schemes
+A primer3 wrapper for designing multiplex primer schemes.
 
 # requirements
 * macOS or Linux
@@ -7,7 +7,7 @@ A primer3 wrapper for designing multiplex primer schemes
 * C++ compiler (for the porechop dependency)
     - If you're using GCC, version 4.9.1 or later is required (check with g++ --version)
 
-Not tested on Windows, but it should be possible.
+Not tested on Windows, but it should be possible to install.
 
 
 # installation
@@ -19,14 +19,14 @@ source venv/bin/activate
 pip install .
 ```
 
-Or, from within an existing an environment simply
+Or, from within an existing an environment simply:
 ```
 pip3 install git+https://github.com/aresti/primalscheme.git
 ```
 
 # usage
 ```
-primalscheme multiplex test/inputs/CHIKV_demo.50ca2db6b3ff.fa CHIKV_demo --output-path outputdir
+primalscheme multiplex tests/inputs/CHIKV_demo.50ca2db6b3ff.fa CHIKV_demo --output-path outputdir
 ```
 
 # about
