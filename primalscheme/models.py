@@ -1,7 +1,6 @@
 """
 PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
-Copyright (C) 2020 Dr Josh Quick
-Contributions from Andrew Smith
+Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
 This module contains classes that constitute the various components of a
