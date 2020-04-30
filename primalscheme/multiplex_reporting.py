@@ -28,7 +28,7 @@ from Bio import SeqIO
 from Bio.Graphics import GenomeDiagram
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
-from .multiplex import MultiplexScheme
+from primalscheme.multiplex import MultiplexScheme
 
 logger = logging.getLogger('Primal Log')
 

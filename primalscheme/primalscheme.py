@@ -31,7 +31,7 @@ from Bio.Alphabet import AlphabetEncoder, _verify_alphabet, IUPAC
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from .multiplex_reporting import MultiplexReporter
+from primalscheme.multiplex_reporting import MultiplexReporter
 
 logger = logging.getLogger('Primal Log')
 

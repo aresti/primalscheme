@@ -23,9 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 import logging
 import primer3
 
-from . import settings
-from .exceptions import NoSuitablePrimers
-from .models import CandidatePrimer, CandidatePrimerPair, Region
+from primalscheme import settings
+from primalscheme.exceptions import NoSuitablePrimers
+from primalscheme.models import CandidatePrimer, CandidatePrimerPair, Region
 
 logger = logging.getLogger('Primal Log')
 

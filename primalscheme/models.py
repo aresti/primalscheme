@@ -27,7 +27,7 @@ from Bio.Seq import Seq
 from primer3 import calcTm, calcHairpin, calcHomodimer
 from porechop.cpp_function_wrappers import adapter_alignment
 
-from . import settings
+from primalscheme import settings
 
 logger = logging.getLogger('Primal Log')
 
