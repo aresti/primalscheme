@@ -14,7 +14,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='https://github.com/aresti/primalscheme',
-    packages=find_packages(),
+    packages=find_packages(exclude=('tests', 'docs')),
     install_requires=[
         'biopython>=1,<2',
         'Cython>=0,<1',
