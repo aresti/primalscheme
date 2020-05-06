@@ -96,9 +96,13 @@ def process_fasta(file_path):
         )
         references.append(ref)
 
-    # Check for too few or too many references
-    if not (1 <= len(references) <= 100):
-        raise ValueError('Between 1 and 100 reference genomes are required.')
+    # Check for no references
+    if not references:
+        raise ValueError('The input FASTA file does not contain any valid references.')
+
+    # Check for too many references
+    if len(references) > 100:
+        raise ValueError('A maximum of 100 reference genomes is currently supported.')
 
     # Check for max difference in length between references
     primary_ref = references[0]
