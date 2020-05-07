@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='primalscheme',
-    version='0.2.3',
+    version='0.2.4',
     author='Josh Quick',
     author_email='j.quick@bham.ac.uk',
     license='GPL',
