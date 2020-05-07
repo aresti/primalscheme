@@ -107,14 +107,15 @@ class Region(object):
         self.candidate_pairs = candidate_pairs
         self.alternates = []
 
-        # Sort by highest scoring pair with the rightmost position
-        self.candidate_pairs.sort(key=lambda x: (x.mean_percent_identity,
-                                                 x.right.end), reverse=True)
-
         # Align candidate pairs
         for pair in self.candidate_pairs:
             pair.left.align(references)
             pair.right.align(references)
+
+        # Sort by highest scoring pair with the rightmost position
+        self.candidate_pairs.sort(key=lambda x: (x.mean_percent_identity,
+                                                 x.right.end), reverse=True)
+
 
         # Get a list of alts based on the alignments
         left_alts = [each.aln_ref for each in
