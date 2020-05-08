@@ -3,8 +3,8 @@ PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
-This module contains the MutilplexScheme object. Instantiation of this object
-will result in a complete multiplex primer scheme.
+This module contains the MutilplexScheme. Instantiation of this object
+will result in a complete multiplex primer scheme.  # TODO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -21,277 +21,209 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
 import logging
-import primer3
 
-from primalscheme import settings
-from primalscheme.exceptions import NoSuitablePrimers
-from primalscheme.models import CandidatePrimer, CandidatePrimerPair, Region
+from primalscheme.wrapper import (design_primers, InsufficientPrimersError)
+from primalscheme.components import (CandidatePrimer, CandidatePrimerPair)
 
-logger = logging.getLogger('Primal Log')
+logger = logging.getLogger('primalscheme')
 
 
 class MultiplexScheme(object):
     """A complete multiplex primer scheme."""
 
-    def __init__(self, references, amplicon_length, min_overlap, max_gap,
-                 max_alts, max_candidates, step_size, max_variation,
-                 prefix='primalscheme'):
+    def __init__(self, references, amplicon_size, amplicon_max_variation,
+                 target_overlap, step_distance, min_unique, prefix, p3_global):
+
         self.references = references
-        self.amplicon_length = amplicon_length
-        self.min_overlap = min_overlap
-        self.max_gap = max_gap
-        self.max_alts = max_alts
-        self.max_candidates = max_candidates
-        self.step_size = step_size
-        self.max_variation = max_variation
+        self.amplicon_size = amplicon_size
+        self.amplicon_max_variation = amplicon_max_variation
+        self.target_overlap = target_overlap
+        self.step_distance = step_distance
+        self.min_unique = min_unique
         self.prefix = prefix
+        self.p3_global = p3_global
+
+        # derived
+        self.primary_ref = references[0]
+        self.ref_len = len(self.primary_ref)
+        self.amplicon_max_size = amplicon_size + amplicon_max_variation
+        self.primer_max_size = p3_global['PRIMER_MAX_SIZE']
+
         self.regions = []
 
-        self.run()
-
-    @property
-    def primary_reference(self):
-        return self.references[0]
-
-    def run(self):
+    def design_scheme(self):
         regions = []
         region_num = 0
-        is_last_region = False
+        is_last = False
 
-        while True:
+        while not is_last:
             region_num += 1
-
-            # Get the previous region in each pool
-            prev_pair = (regions[-1].candidate_pairs[0]
-                         if len(regions) >= 1 else None)
-            prev_pair_same_pool = (regions[-2].candidate_pairs[0]
-                                   if len(regions) > 2 else None)
-
-            # If there are two regions or more
-            if prev_pair_same_pool:
-                # Gap opened between -1 and -2 regions
-                if prev_pair.left.start > prev_pair_same_pool.right.start:
-                    # If gap, left primer cannot overlap with -1 region
-                    left_primer_left_limit = prev_pair.left.end + 1
-                else:
-                    # Left primer cannot overlap -2 region
-                    left_primer_left_limit = (prev_pair_same_pool.right.start
-                                              + 1)
-            # If there is more than one region
-            elif prev_pair:
-                # Left primer cannot overlap with -1 region or you don't move
-                left_primer_left_limit = prev_pair.left.end + 1
+            prev = regions[-1].top_pair if regions else None
+            prev_in_pool = regions[-2].top_pair if region_num > 2 else None
+            
+            # determine left limit
+            if region_num == 1:
+                left_limit = 0
+            elif region_num == 2 or prev.left.start > prev_in_pool.right.start:
+                # first region in second pool, or we have a gap
+                # avoids finding the same primer again
+                left_limit = prev.left.end + 1
             else:
-                # Region one only limit is 0
-                left_primer_left_limit = 0
+                # default case (just don't crash into prev in pool)
+                left_limit = prev_in_pool.right.start + 1
 
-            # Right start limit maintains the minimum_overlap
-            left_primer_right_limit = (prev_pair.right.end
-                                       - self.min_overlap - 1
-                                       if prev_pair else self.max_gap)
+            # determine slice start
+            if region_num == 1:
+                slice_start = 0
+            else:
+                insert_start = prev.right.end - self.target_overlap - 1
+                slice_start = (insert_start - self.primer_max_size -
+                               self.amplicon_max_variation * 2)
 
-            # Last region if less than one amplicon length remaining
-            if prev_pair:
-                if ((len(self.primary_reference) - prev_pair.right.end)
-                        < self.amplicon_length):
-                    is_last_region = True
-                    logger.debug(
-                        'Region {}: is last region'.format(region_num))
+                # if target overlap is impossible, take left_limit
+                slice_start = max(slice_start, left_limit)
 
-            # Log limits
-            logger.debug('Region {}: forward primer limits {}:{}'.format(
-                region_num, left_primer_left_limit, left_primer_right_limit))
+                # handle last region
+                remaining_distance = self.ref_len - prev.right.start
+                is_last = remaining_distance <= self.amplicon_max_size
+                if is_last:
+                    right_aligned = self.ref_len - self.amplicon_max_size
+                    # if forced to choose, take a gap at the end
+                    slice_start = min(slice_start, right_aligned)
 
-            # Find primers or handle no suitable error
+            # create region, find primers
+            region = Region(region_num, self, left_limit, slice_start)
             try:
-                region = self._find_primers(region_num, left_primer_left_limit,
-                                            left_primer_right_limit,
-                                            is_last_region)
-                regions.append(region)
-            except NoSuitablePrimers:
-                logger.debug('Region {}: no suitable primer error'.format(
-                    region_num))
+                region.find_primers()
+            except NoSuitablePrimersError as e:
+                if region_num == 1:
+                    raise e  # we've got nothing
                 break
-
-            # Handle the end
-            if is_last_region:
-                logger.debug('Region {}: ending normally'.format(region_num))
-                break
-
-            # Report scores and alignments
-            for i in range(0, len(self.references)):
-                # Don't display alignment to reference
-                logger.debug(regions[-1].candidate_pairs[0].left.alignments[i]
-                             .formatted_alignment)
-            logger.debug('Identities for sorted left candidates: ' + ','.join(
-                ['%.2f' % each.left.percent_identity
-                 for each in regions[-1].candidate_pairs]))
-            logger.debug('Left start for sorted candidates: ' + ','.join(
-                ['%i' % each.left.start
-                 for each in regions[-1].candidate_pairs]))
-            logger.debug('Left end for sorted candidates: '
-                         + ','.join(['%i' % each.left.end
-                                     for each in regions[-1].candidate_pairs]))
-            logger.debug('Left length for sorted candidates: ' + ','.join(
-                ['%i' % each.left.length
-                 for each in regions[-1].candidate_pairs]))
-
-            for i in range(0, len(self.references)):
-                logger.debug(regions[-1].candidate_pairs[0].right.alignments[i]
-                             .formatted_alignment)
-            logger.debug('Identities for sorted right candidates: ' + ','.join(
-                ['%.2f' % each.right.percent_identity
-                 for each in regions[-1].candidate_pairs]))
-            logger.debug('Right start for sorted candidates: ' + ','.join(
-                ['%i' % each.right.start
-                 for each in regions[-1].candidate_pairs]))
-            logger.debug('Right end for sorted candidates: ' + ','.join(
-                ['%i' % each.right.end
-                 for each in regions[-1].candidate_pairs]))
-            logger.debug('Right length for sorted candidates: ' + ','.join(
-                ['%i' % each.right.length
-                 for each in regions[-1].candidate_pairs]))
-            logger.debug('Totals for sorted pairs: ' + ','.join(
-                ['%.2f' % each.mean_percent_identity
-                 for each in regions[-1].candidate_pairs]))
-
-            if len(regions) > 1:
-                # Remember, results now include this one, so -2
-                # is the other pool
-                trimmed_overlap = (regions[-2].candidate_pairs[0].right.end
-                                   - regions[-1].candidate_pairs[0].left.end
-                                   - 1)
-                logger.info(
-                    "Region %i: highest scoring product %i:%i, length %i, "
-                    "trimmed overlap %i" % (
-                        region_num, regions[-1].candidate_pairs[0].left.start,
-                        regions[-1].candidate_pairs[0].right.start,
-                        regions[-1].candidate_pairs[0].product_length,
-                        trimmed_overlap))
-            else:
-                logger.info(
-                    "Region %i: highest scoring product %i:%i, length %i" % (
-                        region_num, regions[-1].candidate_pairs[0].left.start,
-                        regions[-1].candidate_pairs[0].right.start,
-                        regions[-1].candidate_pairs[0].product_length))
-
-        # Return regions
+            regions.append(region)
+        
         self.regions = regions
 
-    def _find_primers(self, region_num, left_primer_left_limit,
-                      left_primer_right_limit, is_last_region):
+
+class Window:
+    """
+    A sliding window representing slice coordinates
+    against the primary reference.
+    """
+
+    def __init__(self, scheme, left_limit, slice_start, right_limit=None):
+        self.scheme = scheme
+        self.left_limit = left_limit
+        self.slice_start = slice_start
+        self.right_limit = right_limit or len(scheme.primary_ref.seq)
+
+        self._initial_slice_start = self.slice_start
+
+        # check bounds
+        if (slice_start < left_limit or self.slice_end > self.right_limit):
+            raise SliceOutOfBoundsError('The window slice is out of bounds.')
+
+    def step_left(self):
+        distance = self.scheme.step_distance
+        if (self.slice_start - distance) < self.left_limit:
+            raise SliceOutOfBoundsError('Left window limit reached.')
+        self.slice_start -= distance
+
+    def step_right(self):
+        distance = self.scheme.step_distance
+        if (self.slice_end + distance) > self.right_limit:
+            raise SliceOutOfBoundsError('Right window limit reached.')
+        self.slice_start += distance
+
+    def reset_slice(self):
+        self.slice_start = self._initial_slice_start
+
+    @property
+    def slice_end(self):
+        return (self.slice_start + self.scheme.amplicon_max_variation +
+                self.scheme.amplicon_size)
+
+    @property
+    def ref_slice(self):
+        primary_ref = self.scheme.primary_ref.seq  # Seq object
+        return str(primary_ref[self.slice_start:self.slice_end])
+
+
+class Region(Window):
+    """
+    Region forming part of a tiling amplicon scheme.
+    """
+
+    def __init__(self, region_num, *args, **kwargs):
+        self.region_num = region_num
+        self.pool = 1 if self.region_num % 2 == 1 else 2
+        self.candidate_pairs = []
+        self.top_pair = None
+        super().__init__(*args, **kwargs)  # init Window
+    
+    def find_primers(self):
         """
-        Find primers for a given region.
-
-        Return a list of Region objects containing candidate
-        primer pairs sorted by mean percent identity against all references.
+        Try <-> step window logic:
         """
-
-        # Calculate where to slice the reference
-        if region_num == 1:
-            chunk_start = 0
-            chunk_end = (int((1 + self.max_variation / 2)
-                             * self.amplicon_length))
-        elif is_last_region:
-            # Last time work backwards
-            chunk_start = (int(len(self.primary_reference)
-                               - ((1 + self.max_variation / 2)
-                               * self.amplicon_length)))
-            chunk_end = len(self.primary_reference)
-        else:
-            # right limit
-            # - min overlap
-            # - diff max min product length
-            # - max primer length
-            chunk_start = (int(left_primer_right_limit
-                               - (self.max_variation * self.amplicon_length)
-                               - settings.global_args['PRIMER_MAX_SIZE']))
-            chunk_end = (int(chunk_start
-                             + ((1 + self.max_variation/2)
-                                 * self.amplicon_length)))
-        initial_chunk_start = chunk_start
-        initial_chunk_end = chunk_end
-
-        # Primer3 setup
-        p3_global_args = settings.global_args
-        p3_seq_args = settings.seq_args
-        p3_global_args['PRIMER_PRODUCT_SIZE_RANGE'] = [
-            [int(self.amplicon_length * (1 - self.max_variation / 2)),
-             int(self.amplicon_length * (1 + self.max_variation / 2))]]
-        p3_global_args['PRIMER_NUM_RETURN'] = self.max_candidates
-
-        # Run primer3 until primers are found
-        hit_left_limit = False
+        exhausted_left = False
         while True:
-            # Slice primary reference
-            seq = str(self.primary_reference.seq[chunk_start:chunk_end])
-            p3_seq_args['SEQUENCE_TEMPLATE'] = seq
-            p3_seq_args['SEQUENCE_INCLUDED_REGION'] = [0, len(seq) - 1]
-            logger.debug("Region %i: reference chunk %i:%i, length %i" % (
-                region_num, chunk_start, chunk_end, len(seq)))
-            primer3_output = primer3.bindings.designPrimers(p3_seq_args,
-                                                            p3_global_args)
+            try:
+                self._find_primers_for_slice()
+                break
+            except InsufficientPrimersError:
+                if exhausted_left:
+                    try:
+                        # step right, retry
+                        self.step_right()
+                    except SliceOutOfBoundsError:
+                        raise NoSuitablePrimersError(
+                            'Unable to find suitable primers for region {}.'
+                            .format(self.region_num))
+                else:
+                    try:
+                        # step left, retry
+                        self.step_left()
+                    except SliceOutOfBoundsError:
+                        self.reset_slice()
+                        exhausted_left = True
+            except NoSuitablePrimersError as e:
+                # out of options
+                raise e
 
-            candidate_pairs = []
+    def _find_primers_for_slice(self):
+        """Try to find sufficient primers for the current slice"""
 
-            for cand_num in range(self.max_candidates):
-                lenkey = 'PRIMER_LEFT_%i' % (cand_num)
-                left_name = '%s_%i_%s' % (self.prefix, region_num, 'LEFT')
-                right_name = '%s_%i_%s' % (self.prefix, region_num, 'RIGHT')
+        pairs = design_primers(self.ref_slice, self.scheme.p3_global,
+                               self.scheme.min_unique, offset=self.slice_start)
 
-                if lenkey not in primer3_output:
-                    break
+        name = f'{self.scheme.prefix}_{self.region_num}'
+        for i in range(len(pairs[0])):
+            left = CandidatePrimer(
+                pairs[0][i].seq, pairs[0][i].start, 'LEFT', f'{name}_LEFT',
+                penalty=pairs[0][i].penalty)
+            right = CandidatePrimer(
+                pairs[1][i].seq, pairs[1][i].start, 'RIGHT', f'{name}_RIGHT',
+                penalty=pairs[1][i].penalty)
+            left.align(self.scheme.references)
+            right.align(self.scheme.references)
+            self.candidate_pairs.append(CandidatePrimerPair(left, right))
+        
+        self._pick_pair()
 
-                left_seq = str(
-                    primer3_output['PRIMER_LEFT_%i_SEQUENCE' % (cand_num)])
-                right_seq = str(
-                    primer3_output['PRIMER_RIGHT_%i_SEQUENCE' % (cand_num)])
+    def _sort_candidate_pairs(self):
+        """Sort the list of candidate pairs in place"""
+        self.candidate_pairs.sort(key=lambda x: (x.mean_percent_identity,
+                                                 x.right.end), reverse=True)
+    
+    def _pick_pair(self):
+        self._sort_candidate_pairs()
+        self.top_pair = self.candidate_pairs[0]
 
-                left_start = int(
-                    primer3_output['PRIMER_LEFT_%i' % (cand_num)][0]
-                    + chunk_start)
-                right_start = int(
-                    primer3_output['PRIMER_RIGHT_%i' % (cand_num)][0]
-                    + chunk_start + 1)
 
-                left = CandidatePrimer('LEFT', left_name, left_seq, left_start)
-                right = CandidatePrimer('RIGHT', right_name, right_seq,
-                                        right_start)
+class NoSuitablePrimersError(Exception):
+    """No suitable primers found."""
+    pass
 
-                candidate_pairs.append(CandidatePrimerPair(left, right))
 
-            set_left = set(pair.left.seq for pair in candidate_pairs)
-            set_right = set(pair.right.seq for pair in candidate_pairs)
-
-            logger.info(
-                "Region %i: current position returned %i left and %i "
-                "right unique" % (region_num, len(set_left), len(set_right)))
-
-            if len(set_left) > 2 and len(set_right) > 2:
-                return Region(region_num, chunk_start, candidate_pairs,
-                              self.references, self.prefix, self.max_alts)
-
-            # Move right if first region or to open gap
-            if region_num == 1 or hit_left_limit:
-                logger.debug("Region %i: stepping right, position %i"
-                             % (region_num, chunk_start))
-                chunk_start += self.step_size
-                chunk_end += self.step_size
-                # Hit end of regerence
-                if chunk_end > len(self.primary_reference):
-                    logger.debug("Region %i: hit right limit %i"
-                                 % (region_num, len(self.primary_reference)))
-                    raise NoSuitablePrimers("No suitable primers in region")
-            else:
-                # Move left for all other regions
-                logger.debug(
-                    "Region %i: stepping left, position %i, limit %s"
-                    % (region_num, chunk_start, left_primer_left_limit))
-                chunk_start -= self.step_size
-                chunk_end -= self.step_size
-                if chunk_start <= left_primer_left_limit:
-                    # Switch direction to open gap
-                    logger.debug("Region %i: hit left limit" % (region_num))
-                    chunk_start = initial_chunk_start
-                    chunk_end = initial_chunk_end
-                    hit_left_limit = True
+class SliceOutOfBoundsError(Exception):
+    """The requested start position would put the slice out of bounds."""
+    pass

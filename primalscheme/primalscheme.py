@@ -21,10 +21,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
+import json
 import sys
 import os
 import argparse
 import logging
+
+from pathlib import Path
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -32,7 +35,7 @@ from Bio.SeqRecord import SeqRecord
 
 from primalscheme.multiplex_reporting import MultiplexReporter
 
-logger = logging.getLogger('Primal Log')
+logger = logging.getLogger('primalscheme')
 
 
 def main():
@@ -41,7 +44,8 @@ def main():
     the appropriate scheme function.
     """
 
-    args = get_arguments()
+    config = get_config()
+    args = get_arguments(config['scheme'])
     output_path = args.output_path
 
     try:
@@ -53,27 +57,37 @@ def main():
             logger.debug('{}: {}'.format(arg, str(vars(args)[arg])))
 
         # Run
-        args.func(args)
+        args.func(config, args)  # TODO get rid of subparser
     except Exception as e:
         logger.error('Error: {}'.format(e))
+        raise e
         sys.exit()
 
 
-def multiplex(args):
+def multiplex(config, args):
     """
     Multipex scheme runner.
     """
 
     references = process_fasta(args.fasta)
 
-    for record in references:
-        logger.info('Reference: {}'.format(record.id))
+    for i, record in enumerate(references):
+        logger.info(
+            f'{"PRIMARY" if i == 0 else ""} Reference {i + 1}: {record.id}')
+
+    # update p3_global from args
+    p3_global = config['primer3']
+    p3_global['PRIMER_NUM_RETURN'] = args.max_candidates
+    p3_global['PRIMER_PRODUCT_SIZE_RANGE'] = [[
+        args.amplicon_size - args.amplicon_max_variation,
+        args.amplicon_size + args.amplicon_max_variation
+    ]]
 
     scheme = MultiplexReporter(
-        references, args.amplicon_length, min_overlap=args.min_overlap,
-        max_gap=args.max_gap, max_alts=args.max_alts,
-        max_candidates=args.max_candidates, step_size=args.step_size,
-        max_variation=args.max_variation, prefix=args.prefix)
+        references, args.amplicon_size, args.amplicon_max_variation,
+        args.target_overlap, args.step_distance, args.min_unique, args.prefix,
+        p3_global)
+    scheme.design_scheme()
 
     scheme.write_all(args.output_path)
 
@@ -84,10 +98,8 @@ def process_fasta(file_path):
     """
 
     references = []
-
     records = SeqIO.parse(file_path, 'fasta')  # may raise
 
-    
     # Remove gaps
     for record in records:
         ref = SeqRecord(
@@ -163,11 +175,15 @@ def check_output_dir(output_path, force=False):
         os.mkdir(output_path)
 
 
-def get_arguments():
+def get_config():
+    config_file = Path(__file__).parent / 'config.json'
+    return json.loads(config_file.read_text())
+
+    
+def get_arguments(defaults):
     """
     Parse command line arguments
     """
-
     parser = argparse.ArgumentParser(
         prog='primalscheme',
         description='A primer3 wrapper for designing multiplex primer schemes.',
@@ -180,36 +196,34 @@ def get_arguments():
     parser_scheme.add_argument(
         'fasta', help='FASTA file')
     parser_scheme.add_argument(
-        'prefix', help='Prefix')
+        'prefix', default=defaults['prefix'],
+        help='Prefix for primer names (default: %(default)s)')
     parser_scheme.add_argument(
-        '--amplicon-length', type=int, default=400,
-        help='Amplicon length (default: %(default)i)')
+        '--amplicon-size', type=int, default=defaults['amplicon_size'],
+        help='Desired amplicon size (default: %(default)i)')
     parser_scheme.add_argument(
-        '--min-overlap', type=int, default=0,
-        help='Minimum overlap length (default: %(default)i)')
+        '--amplicon-max-variation', type=int,
+        default=defaults['amplicon_max_variation'],
+        help='Maximum amplicon variation (default: %(default)i')
     parser_scheme.add_argument(
-        '--max-gap', type=int, default=200,
-        help='Maximum gap to introduce before failing (default: %(default)i)')
+        '--debug', action='store_true', help=f'Verbose logging')
     parser_scheme.add_argument(
-        '--max-alts', type=int, default=2,
-        help='Maximum number of alternate primers to output '
-        '(default: %(default)i)')
+        '--force', action='store_true', help=f'Force overwrite')
     parser_scheme.add_argument(
-        '--max-candidates', type=int, default=10,
-        help='Maximum candidate primers (default: %(default)i)')
+        '--target-overlap', type=int, default=defaults['target_overlap'],
+        help='Target overlap size (default: %(default)i)')
     parser_scheme.add_argument(
-        '--step-size', type=int, default=11,
-        help='Step size when moving left or right (default: %(default)i)')
+        '--min-unique', type=int, default=defaults['min_unique'],
+        help='Minimum unique candiate pairs (default: %(default)i)')
     parser_scheme.add_argument(
-        '--max-variation', type=float, default=0.1,
-        help='Variation in allowed product length (default: %(default)i)')
+        '--max-candidates', type=int, default=defaults['max_candidates'],
+        help='Maximum candidate pairs (default: %(default)i)')
     parser_scheme.add_argument(
-        '--output-path', default='./',
-        help='Output directory to save files (default: %(default)s)')
+        '--output-path', default='./output',
+        help='Output directory (default: %(default)s)')
     parser_scheme.add_argument(
-        '--force', action='store_true', help='Force overwrite')
-    parser_scheme.add_argument(
-        '--debug', action='store_true', help='Verbose logging')
+        '--step-distance', type=int, default=defaults['step_distance'],
+        help='Distance to step between find attempts (default: %(default)i)')
     parser_scheme.set_defaults(func=multiplex)
 
     # Generate args

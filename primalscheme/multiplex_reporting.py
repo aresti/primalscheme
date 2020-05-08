@@ -30,7 +30,7 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
 from primalscheme.multiplex import MultiplexScheme
 
-logger = logging.getLogger('Primal Log')
+logger = logging.getLogger('primalscheme')
 
 
 class MultiplexReporter(MultiplexScheme):
@@ -49,11 +49,11 @@ class MultiplexReporter(MultiplexScheme):
         with open(filepath, 'w') as bedhandle:
             for r in self.regions:
                 print(*map(str,
-                           [self.primary_reference.id, r.top_pair.left.start,
+                           [self.primary_ref.id, r.top_pair.left.start,
                             r.top_pair.left.end, r.top_pair.left.name, r.pool]
                            ), sep='\t', file=bedhandle)
                 print(*map(str,
-                           [self.primary_reference.id, r.top_pair.right.end,
+                           [self.primary_ref.id, r.top_pair.right.end,
                             r.top_pair.right.start, r.top_pair.right.name,
                             r.pool]),
                       sep='\t', file=bedhandle)
@@ -75,18 +75,13 @@ class MultiplexReporter(MultiplexScheme):
                            [right.name, r.pool, right.seq, right.length,
                             '%.2f' % right.gc, '%.2f' % right.tm]),
                       sep='\t', file=tsvhandle)
-                if r.alternates:
-                    for alt in r.alternates:
-                        print(*map(str,
-                                   [alt.name, r.pool, alt.seq, alt.length,
-                                    '%.2f' % alt.gc, '%.2f' % alt.tm]),
-                              sep='\t', file=tsvhandle)
+                
 
     def write_pickle(self, path='./'):
         logger.info('Writing pickles')
         filepath = os.path.join(path, '{}.pickle'.format(self.prefix))
         with open(filepath, 'wb') as pickleobj:
-            pickle.dump(self.regions, pickleobj)
+            pickle.dump(self, pickleobj)
 
     def write_refs(self, path='./'):
         logger.info('Writing references')
@@ -174,7 +169,7 @@ class MultiplexReporter(MultiplexScheme):
         window = 50
         gc_set = GenomeDiagram.GraphSet('GC skew')
         graphdata1 = self.apply_to_window(
-            self.primary_reference.seq, window, self.calc_gc_skew)
+            self.primary_ref.seq, window, self.calc_gc_skew)
         gc_set.new_graph(graphdata1, 'GC Skew', style='line',
                          color=colors.violet, altcolor=colors.purple)
         gc_track = GenomeDiagram.Track('GC Skew', height=1.5, greytrack=0,
@@ -214,10 +209,10 @@ class MultiplexReporter(MultiplexScheme):
         gd_diagram.add_track(primer_track, 2)
         gd_diagram.add_track(gc_track, 1)
 
-        rows = max(2, int(round(len(self.primary_reference) / 10000.0)))
+        rows = max(2, int(round(len(self.primary_ref) / 10000.0)))
         gd_diagram.draw(format='linear', pagesize=(300 * rows, 200 * rows),
                         fragments=rows, start=0,
-                        end=len(self.primary_reference))
+                        end=len(self.primary_ref))
 
         pdf_filepath = os.path.join(path, '{}.pdf'.format(self.prefix))
         svg_filepath = os.path.join(path, '{}.svg'.format(self.prefix))

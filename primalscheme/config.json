@@ -1,0 +1,31 @@
+{
+    "scheme": {
+        "prefix": "primalscheme",
+        "amplicon_size": 400,
+        "amplicon_max_variation": 20,
+        "max_candidates": 10,
+        "target_overlap": 0,
+        "min_unique": 3,
+        "step_distance": 11
+    },
+    "primer3": {
+        "PRIMER_OPT_SIZE": 22,
+        "PRIMER_MIN_SIZE": 22,
+        "PRIMER_MAX_SIZE": 30,
+        "PRIMER_OPT_TM": 61.5,
+        "PRIMER_MIN_TM": 60,
+        "PRIMER_MAX_TM": 63,
+        "PRIMER_MIN_GC": 30,
+        "PRIMER_MAX_GC": 55,
+        "PRIMER_MAX_POLY_X": 5,
+        "PRIMER_SALT_MONOVALENT": 50,
+        "PRIMER_DNA_CONC": 50,
+        "PRIMER_MAX_NS_ACCEPTED": 0,
+        "PRIMER_MAX_SELF_ANY_TH": 47,
+        "PRIMER_MAX_SELF_END_TH": 47,
+        "PRIMER_PAIR_MAX_COMPL_ANY_TH": 47,
+        "PRIMER_PAIR_MAX_COMPL_END_TH": 47,
+        "PRIMER_MAX_HAIRPIN_TH": 47,
+        "PRIMER_PICK_INTERNAL_OLIGO": 0
+    }
+}
