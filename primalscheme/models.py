@@ -85,9 +85,10 @@ class CandidatePrimerPair(object):
     def __init__(self, left, right):
         self.left = left
         self.right = right
-        # Calculate mean percent identity
-        self.mean_percent_identity = (
-            left.percent_identity + right.percent_identity) / 2
+
+    @property
+    def mean_percent_identity(self):
+        return (self.left.percent_identity + self.right.percent_identity) / 2
 
     @property
     def product_length(self):
