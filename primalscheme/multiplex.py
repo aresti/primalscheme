@@ -124,6 +124,10 @@ class Window:
 
         self._initial_slice_start = self.slice_start
 
+        logger.debug(
+            f'Window: left_limit {left_limit}, initial slice_start {slice_start}, '
+            f'right_limit {self.right_limit}')
+
         # check bounds
         if (slice_start < left_limit or self.slice_end > self.right_limit):
             raise SliceOutOfBoundsError('The window slice is out of bounds.')
@@ -131,14 +135,18 @@ class Window:
     def step_left(self):
         distance = self.scheme.step_distance
         if (self.slice_start - distance) < self.left_limit:
+            logger.debug(f'Left limit reached')
             raise SliceOutOfBoundsError('Left window limit reached.')
         self.slice_start -= distance
+        logger.debug(f'Stepping left to {self.slice_start}')
 
     def step_right(self):
         distance = self.scheme.step_distance
         if (self.slice_end + distance) > self.right_limit:
+            logger.debug(f'Right limit reached')
             raise SliceOutOfBoundsError('Right window limit reached.')
         self.slice_start += distance
+        logger.debug(f'Stepping right to {self.slice_start}')
 
     def reset_slice(self):
         self.slice_start = self._initial_slice_start
@@ -165,6 +173,8 @@ class Region(Window):
         self.candidate_pairs = []
         self.top_pair = None
         super().__init__(*args, **kwargs)  # init Window
+
+        logger.debug(f'Region {region_num}, pool {self.pool}')
     
     def find_primers(self):
         """
@@ -197,9 +207,13 @@ class Region(Window):
 
     def _find_primers_for_slice(self):
         """Try to find sufficient primers for the current slice"""
+        logger.debug(
+            f'Finding primers for slice [{self.slice_start}:{self.slice_end}]')
 
         pairs = design_primers(self.ref_slice, self.scheme.p3_global,
                                self.scheme.min_unique, offset=self.slice_start)
+
+        logger.debug(f'Primer3 returned {len(pairs[0])} unique pairs')
 
         name = f'{self.scheme.prefix}_{self.region_num}'
         for i in range(len(pairs[0])):
@@ -215,6 +229,7 @@ class Region(Window):
         
         self._pick_pair()
 
+
     def _sort_candidate_pairs(self):
         """Sort the list of candidate pairs in place"""
         self.candidate_pairs.sort(key=lambda x: (x.mean_percent_identity,
@@ -223,6 +238,17 @@ class Region(Window):
     def _pick_pair(self):
         self._sort_candidate_pairs()
         self.top_pair = self.candidate_pairs[0]
+
+        logger.debug(f'Picked: {self.top_pair.left}')
+        for alignment in self.top_pair.left.alignments:
+            logger.debug(alignment.formatted_alignment)
+        for alignment in self.top_pair.right.alignments:
+            logger.debug(alignment.formatted_alignment)
+        for i, pair in enumerate(self.candidate_pairs):
+            logger.debug(
+                f'Candidate pair {i}: '
+                f'{round(pair.mean_percent_identity, 2)} mean % identity, '
+                f'right end {pair.right.end}')
 
 
 

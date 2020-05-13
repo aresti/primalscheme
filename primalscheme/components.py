@@ -38,6 +38,9 @@ class Primer(object):
         self.seq = seq
         self.start = start
 
+    def __str__(self):
+        return f'{self.direction}:{self.seq}:{self.start}'
+
     @property
     def length(self):
         return len(self.seq)

@@ -44,8 +44,8 @@ class MultiplexReporter(MultiplexScheme):
         self.write_schemadelica_plot(path=path)
 
     def write_bed(self, path='./'):
-        logger.info('Writing BED')
         filepath = os.path.join(path, '{}.scheme.bed'.format(self.prefix))
+        logger.info(f'Writing {filepath}')
         with open(filepath, 'w') as bedhandle:
             for r in self.regions:
                 print(*map(str,
@@ -59,8 +59,8 @@ class MultiplexReporter(MultiplexScheme):
                       sep='\t', file=bedhandle)
 
     def write_tsv(self, path='./'):
-        logger.info('Writing TSV')
         filepath = os.path.join(path, '{}.tsv'.format(self.prefix))
+        logger.info(f'Writing {filepath}')
         with open(filepath, 'w') as tsvhandle:
             print(*['name', 'pool', 'seq', 'length', '%gc', 'tm (use 65)'],
                   sep='\t', file=tsvhandle)
@@ -78,14 +78,14 @@ class MultiplexReporter(MultiplexScheme):
                 
 
     def write_pickle(self, path='./'):
-        logger.info('Writing pickles')
         filepath = os.path.join(path, '{}.pickle'.format(self.prefix))
+        logger.info(f'Writing {filepath}')
         with open(filepath, 'wb') as pickleobj:
             pickle.dump(self, pickleobj)
 
     def write_refs(self, path='./'):
-        logger.info('Writing references')
         filepath = os.path.join(path, '{}.reference.fasta'.format(self.prefix))
+        logger.info(f'Writing {filepath}')
         with open(filepath, 'w'):
             SeqIO.write(self.references, filepath, 'fasta')
 
@@ -160,8 +160,6 @@ class MultiplexReporter(MultiplexScheme):
             return (g - c) / float(g + c)
 
     def write_schemadelica_plot(self, path='./'):
-        logger.info('Writing plot')
-
         gd_diagram = GenomeDiagram.Diagram("Primer Scheme", track_size=0.15)
         primer_feature_set = GenomeDiagram.FeatureSet()
 
@@ -216,5 +214,7 @@ class MultiplexReporter(MultiplexScheme):
 
         pdf_filepath = os.path.join(path, '{}.pdf'.format(self.prefix))
         svg_filepath = os.path.join(path, '{}.svg'.format(self.prefix))
+        logger.info(f'Writing {pdf_filepath}')
+        logger.info(f'Writing {svg_filepath}')
         gd_diagram.write(pdf_filepath, 'PDF', dpi=300)
         gd_diagram.write(svg_filepath, 'SVG', dpi=300)
