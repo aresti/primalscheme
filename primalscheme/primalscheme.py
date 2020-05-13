@@ -73,7 +73,7 @@ def multiplex(config, args):
 
     for i, record in enumerate(references):
         logger.info(
-            f'{"PRIMARY" if i == 0 else ""} Reference {i + 1}: {record.id}')
+            f'{"PRIMARY " if i == 0 else ""}Reference {i + 1}: {record.id}')
 
     # update p3_global from args
     p3_global = config['primer3']
@@ -86,7 +86,7 @@ def multiplex(config, args):
     scheme = MultiplexReporter(
         references, args.amplicon_size, args.amplicon_max_variation,
         args.target_overlap, args.step_distance, args.min_unique, args.prefix,
-        p3_global)
+        p3_global, progress_func=stdout_progress)
     scheme.design_scheme()
 
     scheme.write_all(args.output_path)
@@ -229,6 +229,18 @@ def get_arguments(defaults):
     # Generate args
     args = parser.parse_args()
     return args
+
+
+def stdout_progress(count, total):
+    bar_len = 60
+    filled_len = int(round(bar_len * count / float(total)))
+
+    percents = round(100.0 * count / float(total), 1)
+    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+
+    sys.stdout.write(f'[{bar}] {percents}%' +
+                     ('\n' if count == total else '\r'))
+    sys.stdout.flush()
 
 
 if __name__ == '__main__':

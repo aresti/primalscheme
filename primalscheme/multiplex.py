@@ -32,7 +32,8 @@ class MultiplexScheme(object):
     """A complete multiplex primer scheme."""
 
     def __init__(self, references, amplicon_size, amplicon_max_variation,
-                 target_overlap, step_distance, min_unique, prefix, p3_global):
+                 target_overlap, step_distance, min_unique, prefix, p3_global,
+                 progress_func=None):
 
         self.references = references
         self.amplicon_size = amplicon_size
@@ -42,6 +43,7 @@ class MultiplexScheme(object):
         self.min_unique = min_unique
         self.prefix = prefix
         self.p3_global = p3_global
+        self.progress_func = progress_func
 
         # derived
         self.primary_ref = references[0]
@@ -100,8 +102,12 @@ class MultiplexScheme(object):
                     raise e  # we've got nothing
                 break
             regions.append(region)
+            if self.progress_func:
+                self.progress_func(region.top_pair.right.start, self.ref_len)
         
         self.regions = regions
+        if self.progress_func:
+            self.progress_func(self.ref_len, self.ref_len)
 
 
 class Window:
@@ -217,6 +223,7 @@ class Region(Window):
     def _pick_pair(self):
         self._sort_candidate_pairs()
         self.top_pair = self.candidate_pairs[0]
+
 
 
 class NoSuitablePrimersError(Exception):
