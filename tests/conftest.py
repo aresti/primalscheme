@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 STORED_TEST_INPUTS = {
-    'chikv': 'CHIKV_demo.50ca2db6b3ff.fa',
+    'chikv': 'CHIKV_demo.fa',
 }
 
 def seq_record_factory(seq_len=500, alphabet='acgt', id=''):
