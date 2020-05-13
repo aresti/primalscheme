@@ -196,7 +196,7 @@ def get_arguments(defaults):
     parser_scheme.add_argument(
         'fasta', help='FASTA file')
     parser_scheme.add_argument(
-        'prefix', default=defaults['prefix'],
+        '--prefix', default=defaults['prefix'],
         help='Prefix for primer names (default: %(default)s)')
     parser_scheme.add_argument(
         '--amplicon-size', type=int, default=defaults['amplicon_size'],
