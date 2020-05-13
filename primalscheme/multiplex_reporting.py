@@ -50,12 +50,13 @@ class MultiplexReporter(MultiplexScheme):
             for r in self.regions:
                 print(*map(str,
                            [self.primary_ref.id, r.top_pair.left.start,
-                            r.top_pair.left.end, r.top_pair.left.name, r.pool]
+                            r.top_pair.left.end, r.top_pair.left.name, r.pool,
+                            '+']
                            ), sep='\t', file=bedhandle)
                 print(*map(str,
                            [self.primary_ref.id, r.top_pair.right.end,
                             r.top_pair.right.start, r.top_pair.right.name,
-                            r.pool]),
+                            r.pool, '-']),
                       sep='\t', file=bedhandle)
 
     def write_tsv(self, path='./'):

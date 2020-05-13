@@ -33,10 +33,7 @@ def design_primers(seq, p3_global, min_unique, offset=0):
             penalty = float(p3_output[f'PRIMER_{text_dir[d]}_{i}_PENALTY'])
             start = offset + int(p3_output[f'PRIMER_{text_dir[d]}_{i}'][0])
             if d == 1:
-                """
-                This is a deliberate re-introduction of bug,
-                to compare refactored output to old working version
-                """
+                # maintains forward-strand coordinate system
                 start += 1
             pairs[d].append(SimplePrimer(seq, start, penalty))
     
