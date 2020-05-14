@@ -147,18 +147,13 @@ class MultiplexReporter(MultiplexScheme):
 
         return results      # Return the list of (position, value) results
 
-    def calc_gc_skew(self, sequence):
-        """Return the (G-C)/(G+C) GC skew in a passed sequence.
-        Arguments:
-            - sequence   - a Bio.Seq.Seq object.
-        calc_gc_skew(sequence)
+    def calc_gc(self, sequence):
+        """
+        Return gc content as fraction
         """
         g = sequence.count('G') + sequence.count('g')
         c = sequence.count('C') + sequence.count('c')
-        if g + c == 0:
-            return 0.0  # TODO - return NaN or None here?
-        else:
-            return (g - c) / float(g + c)
+        return (g + c) / len(sequence)
 
     def write_schemadelica_plot(self, path='./'):
         gd_diagram = GenomeDiagram.Diagram("Primer Scheme", track_size=0.15)
@@ -166,12 +161,12 @@ class MultiplexReporter(MultiplexScheme):
 
         # make the gc track
         window = 50
-        gc_set = GenomeDiagram.GraphSet('GC skew')
+        gc_set = GenomeDiagram.GraphSet('GC content')
         graphdata1 = self.apply_to_window(
-            self.primary_ref.seq, window, self.calc_gc_skew)
-        gc_set.new_graph(graphdata1, 'GC Skew', style='line',
+            self.primary_ref.seq, window, self.calc_gc)
+        gc_set.new_graph(graphdata1, 'GC content', style='line',
                          color=colors.violet, altcolor=colors.purple)
-        gc_track = GenomeDiagram.Track('GC Skew', height=1.5, greytrack=0,
+        gc_track = GenomeDiagram.Track('GC content', height=1.5, greytrack=0,
                                        scale_largetick_interval=1e3)
         gc_track.add_set(gc_set)
 
