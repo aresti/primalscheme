@@ -3,9 +3,9 @@ PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
-This module contains the main script for PrimalScheme.
+This module contains the CLI for PrimalScheme.
 It is executed when the user runs 'primalscheme' after installation,
-or 'primal.py' (directly from the source directory).
+or 'python3 -m primalscheme'.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -40,12 +40,11 @@ logger = logging.getLogger('primalscheme')
 
 def main():
     """
-    Entry point for primalscheme. Proccesses args, sets up logging and calls
-    the appropriate scheme function.
+    Entry point for primalscheme.
+    Proccess args, set up logging and call the command function.
     """
 
-    config = get_config()
-    args = get_arguments(config['scheme'])
+    args = get_arguments()
     output_path = args.output_path
 
     try:
@@ -57,16 +56,16 @@ def main():
             logger.debug('{}: {}'.format(arg, str(vars(args)[arg])))
 
         # Run
-        args.func(config, args)  # TODO get rid of subparser
+        args.func(args)
     except Exception as e:
         logger.error('Error: {}'.format(e))
         raise e
         sys.exit()
 
 
-def multiplex(config, args):
+def multiplex(args):
     """
-    Multipex scheme runner.
+    Multipex scheme command.
     """
 
     references = process_fasta(args.fasta)
@@ -75,18 +74,10 @@ def multiplex(config, args):
         logger.info(
             f'{"PRIMARY " if i == 0 else ""}Reference {i + 1}: {record.id}')
 
-    # update p3_global from args
-    p3_global = config['primer3']
-    p3_global['PRIMER_NUM_RETURN'] = args.max_candidates
-    p3_global['PRIMER_PRODUCT_SIZE_RANGE'] = [[
-        args.amplicon_size - args.amplicon_max_variation,
-        args.amplicon_size + args.amplicon_max_variation
-    ]]
-
     scheme = MultiplexReporter(
         references, args.amplicon_size, args.amplicon_max_variation,
         args.target_overlap, args.step_distance, args.min_unique, args.prefix,
-        p3_global, progress_func=stdout_progress)
+        args.primer3, progress_func=stdout_progress)
     scheme.design_scheme()
 
     scheme.write_all(args.output_path)
@@ -110,11 +101,13 @@ def process_fasta(file_path):
 
     # Check for no references
     if not references:
-        raise ValueError('The input FASTA file does not contain any valid references.')
+        raise ValueError(
+            'The input FASTA file does not contain any valid references.')
 
     # Check for too many references
     if len(references) > 100:
-        raise ValueError('A maximum of 100 reference genomes is currently supported.')
+        raise ValueError(
+            'A maximum of 100 reference genomes is currently supported.')
 
     # Check for max difference in length between references
     primary_ref = references[0]
@@ -175,36 +168,38 @@ def check_output_dir(output_path, force=False):
         os.mkdir(output_path)
 
 
-def get_config():
-    config_file = Path(__file__).parent / 'config.json'
-    return json.loads(config_file.read_text())
-
-    
-def get_arguments(defaults):
+def get_arguments(test=[]):
     """
-    Parse command line arguments
+    Parse command line arguments, update config
     """
+    # Setup parsers
     parser = argparse.ArgumentParser(
         prog='primalscheme',
-        description='A primer3 wrapper for designing multiplex primer schemes.',
+        description=(
+            'A primer3 wrapper for designing multiplex primer schemes.'),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    subparsers = parser.add_subparsers(title='[subcommands]', dest='command', required=True)
+    subparsers = parser.add_subparsers(
+        title='[subcommands]', dest='command', required=True)
 
-    # Standard multiplex scheme
     parser_scheme = subparsers.add_parser(
         'multiplex', help='Multiplex PCR scheme')
+
+    # Set func and defaults from config file
+    config_file = Path(__file__).parent / 'config.json'
+    config = json.loads(config_file.read_text())
+    parser_scheme.set_defaults(func=multiplex, **config)
+
     parser_scheme.add_argument(
         'fasta', help='FASTA file')
     parser_scheme.add_argument(
-        '--prefix', default=defaults['prefix'],
+        '--prefix', 
         help='Prefix used for primer names and output files '
              '(default: %(default)s)')
     parser_scheme.add_argument(
-        '--amplicon-size', type=int, default=defaults['amplicon_size'],
+        '--amplicon-size', type=int,
         help='Desired amplicon size (default: %(default)i)')
     parser_scheme.add_argument(
         '--amplicon-max-variation', type=int,
-        default=defaults['amplicon_max_variation'],
         help='Maximum amplicon variation (default: %(default)i)')
     parser_scheme.add_argument(
         '--debug', action='store_true', help=f'Verbose logging')
@@ -213,24 +208,33 @@ def get_arguments(defaults):
         help='Force output to an existing directory and overwrite output '
              'files.')
     parser_scheme.add_argument(
-        '--target-overlap', type=int, default=defaults['target_overlap'],
+        '--target-overlap', type=int,
         help='Target overlap size (default: %(default)i)')
     parser_scheme.add_argument(
-        '--min-unique', type=int, default=defaults['min_unique'],
+        '--min-unique', type=int,
         help='Minimum unique candiate pairs (default: %(default)i)')
     parser_scheme.add_argument(
-        '--max-candidates', type=int, default=defaults['max_candidates'],
+        '--max-candidates', type=int,
         help='Maximum candidate pairs (default: %(default)i)')
     parser_scheme.add_argument(
-        '--output-path', default='./output',
+        '--output-path',
         help='Output directory (default: %(default)s)')
     parser_scheme.add_argument(
-        '--step-distance', type=int, default=defaults['step_distance'],
+        '--step-distance', type=int,
         help='Distance to step between find attempts (default: %(default)i)')
-    parser_scheme.set_defaults(func=multiplex)
 
     # Generate args
-    args = parser.parse_args()
+    args = parser.parse_args(test if test else None)
+
+    # update primer3 with derivatives
+    args.__dict__['primer3'].update({
+        'PRIMER_NUM_RETURN': args.max_candidates,
+        'PRIMER_PRODUCT_SIZE_RANGE': [[
+            args.amplicon_size - args.amplicon_max_variation,
+            args.amplicon_size + args.amplicon_max_variation
+        ]],
+    })
+
     return args
 
 

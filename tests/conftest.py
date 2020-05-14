@@ -8,10 +8,6 @@ from Bio.SeqRecord import SeqRecord
 from pathlib import Path
 
 
-STORED_TEST_INPUTS = {
-    'chikv': 'CHIKV_demo.fa',
-}
-
 def seq_record_factory(seq_len=500, alphabet='acgt', id=''):
     """Generate a random SeqRecord for testing purposes"""
     id = id or f'random_seq_{uuid.uuid4()}'
@@ -76,7 +72,20 @@ def input_fasta_length_difference_over_500(temp_inputs_path):
     SeqIO.write(records, fh, 'fasta')
     return fh
 
-@pytest.fixture(scope='session')
-def input_fasta_chikv(stored_inputs_path):
-    """Return CHIKV test fasta"""
-    return stored_inputs_path / STORED_TEST_INPUTS['chikv']
+
+STORED_INPUTS = [
+    'CHIKV_demo.fa',
+    'Ebov-10-Pan.fasta',
+]
+
+
+@pytest.fixture(params=STORED_INPUTS)
+def all_stored_inputs(request, stored_inputs_path):
+    """Return all stored input paths"""
+    return stored_inputs_path / request.param
+
+
+@pytest.fixture
+def chikv_input(stored_inputs_path):
+    """Return all stored input paths"""
+    return stored_inputs_path / STORED_INPUTS[0]

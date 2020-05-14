@@ -1,13 +1,12 @@
 {
-    "scheme": {
-        "prefix": "scheme",
-        "amplicon_size": 400,
-        "amplicon_max_variation": 20,
-        "max_candidates": 10,
-        "target_overlap": 0,
-        "min_unique": 3,
-        "step_distance": 11
-    },
+    "prefix": "scheme",
+    "amplicon_size": 400,
+    "amplicon_max_variation": 20,
+    "max_candidates": 10,
+    "target_overlap": 0,
+    "min_unique": 3,
+    "step_distance": 11,
+    "output_path": "./output",
     "primer3": {
         "PRIMER_OPT_SIZE": 22,
         "PRIMER_MIN_SIZE": 22,
