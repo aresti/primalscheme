@@ -33,7 +33,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from primalscheme.multiplex_reporting import MultiplexReporter
+from primalscheme.reporting import MultiplexReporter
 
 logger = logging.getLogger('primalscheme')
 
