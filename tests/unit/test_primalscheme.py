@@ -5,7 +5,7 @@ from Bio.SeqRecord import SeqRecord
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", PendingDeprecationWarning)
-    from primalscheme.primalscheme import process_fasta
+    from primalscheme.cli import process_fasta
 
 
 def test_process_fasta_empty_input(input_fasta_empty):
