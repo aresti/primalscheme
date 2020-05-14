@@ -197,18 +197,21 @@ def get_arguments(defaults):
         'fasta', help='FASTA file')
     parser_scheme.add_argument(
         '--prefix', default=defaults['prefix'],
-        help='Prefix for primer names (default: %(default)s)')
+        help='Prefix used for primer names and output files '
+             '(default: %(default)s)')
     parser_scheme.add_argument(
         '--amplicon-size', type=int, default=defaults['amplicon_size'],
         help='Desired amplicon size (default: %(default)i)')
     parser_scheme.add_argument(
         '--amplicon-max-variation', type=int,
         default=defaults['amplicon_max_variation'],
-        help='Maximum amplicon variation (default: %(default)i')
+        help='Maximum amplicon variation (default: %(default)i)')
     parser_scheme.add_argument(
         '--debug', action='store_true', help=f'Verbose logging')
     parser_scheme.add_argument(
-        '--force', action='store_true', help=f'Force overwrite')
+        '--force', action='store_true',
+        help='Force output to an existing directory and overwrite output '
+             'files.')
     parser_scheme.add_argument(
         '--target-overlap', type=int, default=defaults['target_overlap'],
         help='Target overlap size (default: %(default)i)')
