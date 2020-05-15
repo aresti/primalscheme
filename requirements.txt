@@ -5,4 +5,3 @@ Pillow==7.0.0
 primer3-py==0.6.0
 reportlab==3.5.42
 parasail==1.2
-git+https://github.com/aresti/primalscheme#egg=primalscheme

@@ -37,13 +37,11 @@ def test_chikv_scheme_has_no_gaps(default_chikv_scheme):
     regions = default_chikv_scheme.regions
     inserts = [(r.top_pair.left.end + 1, r.top_pair.right.end)
                for r in regions]
-    covered_coords = set()
-    for insert in inserts:
-        covered_coords.update(range(insert[0], insert[1]))
+    covered_coords = set([x for insert in inserts for x in range(*insert)])
     all_coords = set(range(regions[0].top_pair.left.end + 1,
                            regions[-1].top_pair.right.end))
 
-    assert all_coords - covered_coords == set()
+    assert all_coords.issubset(covered_coords)
 
 
 def test_scheme_pools_do_not_have_collisions(all_stored_inputs):
