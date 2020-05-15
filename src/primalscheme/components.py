@@ -3,8 +3,7 @@ PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
-This module contains classes that constitute the various components of a
-multiplex primer scheme.
+This module contains supporting scheme components.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,7 +30,7 @@ logger = logging.getLogger("primalscheme")
 
 
 class Primer(object):
-    """A simple primer."""
+    """A primer."""
 
     def __init__(self, seq, start, direction):
         self.direction = direction
@@ -120,7 +119,6 @@ def get_alignment(primer, reference):
     aln_query = traceback.query[ref_end - query_end : ref_end + 1]
     cigar = traceback.comp[ref_end - query_end : ref_end + 1]
     aln_ref = traceback.ref[ref_end - query_end : ref_end + 1]
-    aln_ref_comp = Seq(str(aln_ref)).complement()
 
     # Identity for glocal alignment
     identity = cigar.count("|") / len(cigar)
@@ -130,15 +128,13 @@ def get_alignment(primer, reference):
         return None
 
     # Format alignment
-    formatted_query = f"\n{primer.name: <30} {1: >6} {aln_query} {query_end}"
+    refid = reference.id[:30]
+    name = primer.name[:30]
+    formatted_query = f"\n{name: <30} {1: >6} {aln_query} {query_end}"
     if primer.direction == "LEFT":
-        formatted_ref = (
-            f"\n{reference.id: <30} {ref_end - query_end: >6} {aln_ref} {ref_end}"
-        )
+        formatted_ref = f"\n{refid: <30} {ref_end - query_end: >6} {aln_ref} {ref_end}"
     elif primer.direction == "RIGHT":
-        formatted_ref = (
-            f"\n{reference.id: <30} {ref_end: >6} {aln_ref} {ref_end - query_end}"
-        )
+        formatted_ref = f"\n{refid: <30} {ref_end: >6} {aln_ref} {ref_end - query_end}"
 
     formatted_alignment = (
         formatted_query + f"\n{'': <30} {'': >6} {cigar}" + formatted_ref

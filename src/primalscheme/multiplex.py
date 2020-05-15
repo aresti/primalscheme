@@ -3,8 +3,7 @@ PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
-This module contains the MutilplexScheme. Instantiation of this object
-will result in a complete multiplex primer scheme.  # TODO
+This module contains MultiplexScheme and supporting classes.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,7 +27,7 @@ from primalscheme.components import (CandidatePrimer, CandidatePrimerPair)
 logger = logging.getLogger('primalscheme')
 
 
-class MultiplexScheme(object):
+class MultiplexScheme:
     """A complete multiplex primer scheme."""
 
     def __init__(self, references, amplicon_size, amplicon_max_variation,
@@ -54,6 +53,8 @@ class MultiplexScheme(object):
         self.regions = []
 
     def design_scheme(self):
+        """Design a multiplex primer scheme"""
+
         regions = []
         region_num = 0
         is_last = False
@@ -62,7 +63,7 @@ class MultiplexScheme(object):
             region_num += 1
             prev = regions[-1].top_pair if regions else None
             prev_in_pool = regions[-2].top_pair if region_num > 2 else None
-            
+ 
             # determine left limit
             if region_num == 1:
                 left_limit = 0
@@ -104,7 +105,7 @@ class MultiplexScheme(object):
             regions.append(region)
             if self.progress_func:
                 self.progress_func(region.top_pair.right.start, self.ref_len)
-        
+
         self.regions = regions
         if self.progress_func:
             self.progress_func(self.ref_len, self.ref_len)
@@ -125,7 +126,7 @@ class Window:
         self._initial_slice_start = self.slice_start
 
         logger.debug(
-            f'Window: left_limit {left_limit}, initial slice_start {slice_start}, '
+            f'Window: left_limit {left_limit}, slice_start {slice_start}, '
             f'right_limit {self.right_limit}')
 
         # check bounds
@@ -175,7 +176,7 @@ class Region(Window):
         super().__init__(*args, **kwargs)  # init Window
 
         logger.debug(f'Region {region_num}, pool {self.pool}')
-    
+
     def find_primers(self):
         """
         Try <-> step window logic:
@@ -191,9 +192,7 @@ class Region(Window):
                         # step right, retry
                         self.step_right()
                     except SliceOutOfBoundsError:
-                        raise NoSuitablePrimersError(
-                            'Unable to find suitable primers for region {}.'
-                            .format(self.region_num))
+                        raise NoSuitablePrimersError('Right limit reached.')
                 else:
                     try:
                         # step left, retry
@@ -207,6 +206,7 @@ class Region(Window):
 
     def _find_primers_for_slice(self):
         """Try to find sufficient primers for the current slice"""
+
         logger.debug(
             f'Finding primers for slice [{self.slice_start}:{self.slice_end}]')
 
@@ -226,15 +226,15 @@ class Region(Window):
             left.align(self.scheme.references)
             right.align(self.scheme.references)
             self.candidate_pairs.append(CandidatePrimerPair(left, right))
-        
-        self._pick_pair()
 
+        self._pick_pair()
 
     def _sort_candidate_pairs(self):
         """Sort the list of candidate pairs in place"""
+
         self.candidate_pairs.sort(key=lambda x: (x.mean_identity,
                                                  x.right.end), reverse=True)
-    
+
     def _pick_pair(self):
         self._sort_candidate_pairs()
         self.top_pair = self.candidate_pairs[0]
@@ -249,7 +249,6 @@ class Region(Window):
                 f'Candidate pair {i}: '
                 f'{round(pair.mean_identity, 2)} identity, '
                 f'right end {pair.right.end}')
-
 
 
 class NoSuitablePrimersError(Exception):

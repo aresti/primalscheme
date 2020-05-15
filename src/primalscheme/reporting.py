@@ -28,6 +28,7 @@ from Bio import SeqIO
 from Bio.Graphics import GenomeDiagram
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
+
 from primalscheme.multiplex import MultiplexScheme
 
 logger = logging.getLogger('primalscheme')
@@ -36,16 +37,17 @@ logger = logging.getLogger('primalscheme')
 class MultiplexReporter(MultiplexScheme):
     """Reporting methods to extend MultiplexScheme"""
 
-    def write_all(self, path='./'):
-        self.write_bed(path=path)
-        self.write_pickle(path=path)
-        self.write_tsv(path=path)
-        self.write_refs(path=path)
-        self.write_schemadelica_plot(path=path)
+    def write_all(self, path):
+        self.write_bed(path)
+        self.write_pickle(path)
+        self.write_tsv(path)
+        self.write_refs(path)
+        self.write_schemadelica_plot(path)
 
-    def write_bed(self, path='./'):
-        filepath = os.path.join(path, '{}.scheme.bed'.format(self.prefix))
+    def write_bed(self, path):
+        filepath = path / f'{self.prefix}.scheme.bed'
         logger.info(f'Writing {filepath}')
+
         with open(filepath, 'w') as bedhandle:
             for r in self.regions:
                 print(*map(str,
@@ -59,8 +61,8 @@ class MultiplexReporter(MultiplexScheme):
                             r.pool, '-']),
                       sep='\t', file=bedhandle)
 
-    def write_tsv(self, path='./'):
-        filepath = os.path.join(path, '{}.tsv'.format(self.prefix))
+    def write_tsv(self, path):
+        filepath = path / f'{self.prefix}.tsv'
         logger.info(f'Writing {filepath}')
         with open(filepath, 'w') as tsvhandle:
             print(*['name', 'pool', 'seq', 'length', '%gc', 'tm (use 65)'],
@@ -77,15 +79,14 @@ class MultiplexReporter(MultiplexScheme):
                             '%.2f' % right.gc, '%.2f' % right.tm]),
                       sep='\t', file=tsvhandle)
                 
-
-    def write_pickle(self, path='./'):
-        filepath = os.path.join(path, '{}.pickle'.format(self.prefix))
+    def write_pickle(self, path):
+        filepath = path / f'{self.prefix}.pickle'
         logger.info(f'Writing {filepath}')
         with open(filepath, 'wb') as pickleobj:
             pickle.dump(self, pickleobj)
 
-    def write_refs(self, path='./'):
-        filepath = os.path.join(path, '{}.reference.fasta'.format(self.prefix))
+    def write_refs(self, path):
+        filepath = path / f'{self.prefix}.reference.fasta'
         logger.info(f'Writing {filepath}')
         with open(filepath, 'w'):
             SeqIO.write(self.references, filepath, 'fasta')
@@ -155,7 +156,7 @@ class MultiplexReporter(MultiplexScheme):
         c = sequence.count('C') + sequence.count('c')
         return (g + c) / len(sequence)
 
-    def write_schemadelica_plot(self, path='./'):
+    def write_schemadelica_plot(self, path):
         gd_diagram = GenomeDiagram.Diagram("Primer Scheme", track_size=0.15)
         primer_feature_set = GenomeDiagram.FeatureSet()
 

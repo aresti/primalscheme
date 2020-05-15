@@ -23,7 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 import json
 import sys
-import os
 import argparse
 import logging
 
@@ -33,6 +32,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+from primalscheme.multiplex import NoSuitablePrimersError
 from primalscheme.reporting import MultiplexReporter
 
 logger = logging.getLogger('primalscheme')
@@ -41,45 +41,61 @@ logger = logging.getLogger('primalscheme')
 def main():
     """
     Entry point for primalscheme.
-    Proccess args, set up logging and call the command function.
+    Process args, set up logging and call the command function.
     """
 
     args = get_arguments()
-    output_path = args.output_path
-
     try:
-        check_output_dir(output_path, force=args.force)
-        setup_logging(output_path, debug=args.debug, prefix=args.prefix)
+        output_path = get_output_path(args.output_path, force=args.force)
+    except IOError as e:
+        print(f'Error: {e}')
+        sys.exit(1)
 
-        for arg in vars(args):
-            logger.debug('{}: {}'.format(arg, str(vars(args)[arg])))
+    setup_logging(output_path, debug=args.debug, prefix=args.prefix)
 
-        # Run
-        args.func(args)
-    except Exception as e:
-        logger.error('Error: {}'.format(e))
-        raise e
-        sys.exit()
+    for arg in vars(args):
+        logger.debug('{}: {}'.format(arg, str(vars(args)[arg])))
+
+    # Run
+    args.func(args, output_path)
 
 
-def multiplex(args):
+def multiplex(args, output_path):
     """
     Multipex scheme command.
     """
 
-    references = process_fasta(args.fasta)
+    # Process FASTA input
+    try:
+        references = process_fasta(args.fasta)
+    except ValueError as e:
+        logger.error(f'Error: {e}')
+        sys.exit(2)
 
+    # Log references
     logger.info(f'Designing primers using reference: {references[0].id}')
     for ref in references[1:]:
         logger.info(f'Checking alignments against reference: {ref.id}')
 
-    scheme = MultiplexReporter(
-        references, args.amplicon_size, args.amplicon_max_variation,
-        args.target_overlap, args.step_distance, args.min_unique, args.prefix,
-        args.primer3, progress_func=stdout_progress)
-    scheme.design_scheme()
+    # Create scheme
+    try:
+        scheme = MultiplexReporter(
+            references, args.amplicon_size, args.amplicon_max_variation,
+            args.target_overlap, args.step_distance, args.min_unique,
+            args.prefix, args.primer3, progress_func=stdout_progress)
+        scheme.design_scheme()
+    except NoSuitablePrimersError:
+        # Unable to find primers for at least one region
+        logger.error('Error: Unable to find suitable primers')
+        sys.exit(10)
+    except Exception as e:
+        # Unexpected error
+        logger.error(f'Error: {e}')
+        raise e
 
-    scheme.write_all(args.output_path)
+    # Write outputs
+    scheme.write_all(output_path)
+    sys.exit(0)
 
 
 def process_fasta(file_path):
@@ -141,7 +157,7 @@ def setup_logging(output_path, debug=False, prefix='primalscheme'):
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
     # File handler
-    log_filepath = os.path.join(output_path, '{}.log'.format(prefix))
+    log_filepath = output_path / f'{prefix}.log'
     fh = logging.FileHandler(log_filepath)
     fh.setLevel(logging.DEBUG)
     fh_formatter = logging.Formatter(
@@ -159,16 +175,20 @@ def setup_logging(output_path, debug=False, prefix='primalscheme'):
     logger.info(f'Writing log to {log_filepath}')
 
 
-def check_output_dir(output_path, force=False):
+def get_output_path(output_path, force=False):
     """
     Check for an existing output dir, require --force to overwrite.
-    Otherwise, create a new one.
+    Create dir, return path object.
     """
+    path = Path(output_path)
 
-    if os.path.isdir(output_path) and not force:
+    if path.exists() and not force:
         raise IOError('Directory exists add --force to overwrite')
-    if not os.path.isdir(output_path):
-        os.mkdir(output_path)
+    elif not path.is_dir():
+        raise IOError('The output path is not a directory.')
+
+    path.mkdir(exist_ok=True)
+    return path
 
 
 def get_arguments(test=[]):
@@ -242,6 +262,7 @@ def get_arguments(test=[]):
 
 
 def stdout_progress(count, total):
+    """Update a simple stdout progress bar"""
     bar_len = 60
     filled_len = int(round(bar_len * count / float(total)))
 
