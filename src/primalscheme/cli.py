@@ -50,7 +50,6 @@ def main():
     try:
         check_output_dir(output_path, force=args.force)
         setup_logging(output_path, debug=args.debug, prefix=args.prefix)
-        logger.info('PrimalScheme started...')
 
         for arg in vars(args):
             logger.debug('{}: {}'.format(arg, str(vars(args)[arg])))
@@ -70,9 +69,9 @@ def multiplex(args):
 
     references = process_fasta(args.fasta)
 
-    for i, record in enumerate(references):
-        logger.info(
-            f'{"PRIMARY " if i == 0 else ""}Reference {i + 1}: {record.id}')
+    logger.info(f'Designing primers using reference: {references[0].id}')
+    for ref in references[1:]:
+        logger.info(f'Checking alignments against reference: {ref.id}')
 
     scheme = MultiplexReporter(
         references, args.amplicon_size, args.amplicon_max_variation,
@@ -141,19 +140,23 @@ def setup_logging(output_path, debug=False, prefix='primalscheme'):
 
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
-    fh = logging.FileHandler(
-        os.path.join(output_path, '{}.log'.format(prefix)))
+    # File handler
+    log_filepath = os.path.join(output_path, '{}.log'.format(prefix))
+    fh = logging.FileHandler(log_filepath)
     fh.setLevel(logging.DEBUG)
     fh_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(fh_formatter)
     logger.addHandler(fh)
 
+    # Stream handler STDOUT
     sh = logging.StreamHandler(sys.stdout)
     sh.setLevel(logging.INFO)
     sh_formatter = logging.Formatter('%(message)s')
     sh.setFormatter(sh_formatter)
     logger.addHandler(sh)
+
+    logger.info(f'Writing log to {log_filepath}')
 
 
 def check_output_dir(output_path, force=False):
@@ -245,8 +248,9 @@ def stdout_progress(count, total):
     percents = round(100.0 * count / float(total), 1)
     bar = '=' * filled_len + '-' * (bar_len - filled_len)
 
-    sys.stdout.write(f'[{bar}] {percents}%' +
-                     ('\n' if count == total else '\r'))
+    sys.stdout.write(f'\r[{bar}] {percents}%')
+    if count == total:
+        sys.stdout.write('\n')
     sys.stdout.flush()
 
 

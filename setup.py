@@ -22,7 +22,7 @@ setup(
         'Cython>=0,<1',
         'primer3-py>=0,<1',
         'reportlab>=3,<4',
-        'porechop @ git+https://github.com/joshquick/Porechop'
+        'parasail==1.2'
     ],
     entry_points={
         "console_scripts": [

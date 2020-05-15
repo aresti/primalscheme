@@ -232,7 +232,7 @@ class Region(Window):
 
     def _sort_candidate_pairs(self):
         """Sort the list of candidate pairs in place"""
-        self.candidate_pairs.sort(key=lambda x: (x.mean_percent_identity,
+        self.candidate_pairs.sort(key=lambda x: (x.mean_identity,
                                                  x.right.end), reverse=True)
     
     def _pick_pair(self):
@@ -241,13 +241,13 @@ class Region(Window):
 
         logger.debug(f'Picked: {self.top_pair.left}')
         for alignment in self.top_pair.left.alignments:
-            logger.debug(alignment.formatted_alignment)
+            logger.debug(alignment[1])
         for alignment in self.top_pair.right.alignments:
-            logger.debug(alignment.formatted_alignment)
+            logger.debug(alignment[1])
         for i, pair in enumerate(self.candidate_pairs):
             logger.debug(
                 f'Candidate pair {i}: '
-                f'{round(pair.mean_percent_identity, 2)} mean % identity, '
+                f'{round(pair.mean_identity, 2)} identity, '
                 f'right end {pair.right.end}')
 
 

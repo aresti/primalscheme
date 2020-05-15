@@ -22,10 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 
 import logging
+import parasail
 
 from Bio.Seq import Seq
-from primer3 import calcTm, calcHairpin, calcHomodimer
-from porechop.cpp_function_wrappers import adapter_alignment
+from primer3 import calcTm
 
 logger = logging.getLogger("primalscheme")
 
@@ -39,7 +39,7 @@ class Primer(object):
         self.start = start
 
     def __str__(self):
-        return f'{self.direction}:{self.seq}:{self.start}'
+        return f"{self.direction}:{self.seq}:{self.start}"
 
     @property
     def length(self):
@@ -50,28 +50,25 @@ class CandidatePrimer(Primer):
     """A candidate primer."""
 
     def __init__(self, seq, start, direction, name="", penalty=None):
-        super().__init__(seq, start, direction)  # TODO tidy up
+        super().__init__(seq, start, direction)
         self.name = name
         self.penalty = penalty
-
-        self.percent_identity = 0
+        self.identity = 0
         self.tm = calcTm(self.seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6)
-        self.homodimer = calcHomodimer(
-            self.seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6
-        ).tm
-        self.hairpin = calcHairpin(self.seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6).tm
         self.gc = 100.0 * (seq.count("G") + seq.count("C")) / len(seq)
         self.alignments = []
 
     def align(self, references):
-        for ref in references:
-            alignment = CAlignment(self, ref)
-            self.alignments.append(alignment)
+        for ref in references[1:]:  # no need to align against primary
+            alignment = get_alignment(self, ref)
+            if alignment:
+                self.alignments.append(alignment)
+
         # Calculate average percent identity
-        idents = [i.percent_identity for i in self.alignments if i.percent_identity]
-        if idents:
-            self.percent_identity = sum(idents) / len(idents)
-        return self
+        if self.alignments:
+            scores = [a[0] for a in self.alignments]
+            self.identity = sum(scores) / len(scores)
+            return
 
     @property
     def end(self):
@@ -89,104 +86,64 @@ class CandidatePrimerPair(object):
         self.right = right
 
     @property
-    def mean_percent_identity(self):
-        return (self.left.percent_identity + self.right.percent_identity) / 2
+    def mean_identity(self):
+        return (self.left.identity + self.right.identity) / 2
 
     @property
     def product_length(self):
         return self.right.start - self.left.start + 1
 
 
-class CAlignment(object):
+def get_alignment(primer, reference):
     """An seqan alignment of a primer against a reference."""
 
-    MISMATCHES = [
-        set(["A", "A"]),
-        set(["A", "C"]),
-        set(["C", "C"]),
-        set(["G", "A"]),
-        set(["G", "G"]),
-    ]
+    MATRIX = parasail.matrix_create("ACGT", 2, -1)
+    OPEN = 2
+    EXTEND = 1
+    IDENTITY_THRESHOLD = 0.7
 
-    def __init__(self, primer, ref):
-        self.start = None
-        self.end = None
-        self.length = None
-        self.percent_identity = None
-        self.aln_query = None
-        self.aln_ref = None
-        self.aln_ref_comp = None
-        self.ref_id = None
-        self.mm_3prime = None
-        self.cigar = None
-        self.formatted_alignment = None
+    if primer.direction == "LEFT":
+        query = primer.seq
+    elif primer.direction == "RIGHT":
+        query = str(Seq(primer.seq).reverse_complement())
 
-        if primer.direction == "LEFT":
-            alignment_result = adapter_alignment(
-                str(ref.seq), str(primer.seq), [2, -1, -2, -1]
-            )
-        elif primer.direction == "RIGHT":
-            alignment_result = adapter_alignment(
-                str(ref.seq.reverse_complement()), str(primer.seq), [2, -1, -2, -1]
-            )
-        result_parts = alignment_result.split(",")
-        ref_start = int(result_parts[0])
-        full_primer_percent_identity = float(result_parts[6])
+    # Semi-Global, do not penalize gaps at beginning and end of s2/database
+    trace = parasail.sg_dx_trace_striped_sat(
+        query, str(reference.seq), OPEN, EXTEND, MATRIX
+    )
+    traceback = trace.get_traceback()
 
-        # If the read start is -1, that indicates that the alignment
-        # failed completely.
-        if ref_start == -1 or full_primer_percent_identity < 70:
-            return
-        else:
-            ref_end = int(result_parts[1]) + 1
+    query_end = trace.end_query
+    ref_end = trace.end_ref
 
-            if primer.direction == "LEFT":
-                self.start = ref_start
-                self.end = ref_end
-                self.length = self.end - self.start
-            else:
-                self.start = len(ref) - ref_start
-                self.end = len(ref) - (int(result_parts[1]) + 1)
-                self.length = self.start - self.end
+    # Get alignment strings
+    aln_query = traceback.query[ref_end - query_end : ref_end + 1]
+    cigar = traceback.comp[ref_end - query_end : ref_end + 1]
+    aln_ref = traceback.ref[ref_end - query_end : ref_end + 1]
+    aln_ref_comp = Seq(str(aln_ref)).complement()
 
-            # Percentage identity for glocal alignment
-            self.percent_identity = full_primer_percent_identity
+    # Identity for glocal alignment
+    identity = cigar.count("|") / len(cigar)
 
-            # Get alignment strings
-            self.aln_query = result_parts[8][ref_start:ref_end]
-            self.aln_ref = result_parts[7][ref_start:ref_end]
-            self.aln_ref_comp = Seq(str(self.aln_ref)).complement()
-            self.ref_id = ref.id
-            self.mm_3prime = False
+    # Alignment failed
+    if identity < IDENTITY_THRESHOLD:
+        return None
 
-            # Make cigar
-            self.cigar = ""
-            for a, b in zip(self.aln_query, self.aln_ref):
-                if a == "-" or b == "-":
-                    self.cigar += " "
-                    continue
-                if a != b:
-                    self.cigar += "*"
-                    continue
-                else:
-                    self.cigar += "|"
+    # Format alignment
+    formatted_query = f"\n{primer.name: <30} {1: >6} {aln_query} {query_end}"
+    if primer.direction == "LEFT":
+        formatted_ref = (
+            f"\n{reference.id: <30} {ref_end - query_end: >6} {aln_ref} {ref_end}"
+        )
+    elif primer.direction == "RIGHT":
+        formatted_ref = (
+            f"\n{reference.id: <30} {ref_end: >6} {aln_ref} {ref_end - query_end}"
+        )
 
-            # Format alignment
-            short_primer = primer.name[:30] if len(primer.name) > 30 else primer.name
-            short_ref = ref.id[:30] if len(ref.id) > 30 else ref.id
-            self.formatted_alignment = "\n{: <30}5'-{}-3'\n{: <33}{}\n{: <30}3'-{}-5'".format(
-                short_primer,
-                self.aln_query,
-                "",
-                self.cigar,
-                short_ref,
-                self.aln_ref_comp,
-            )
+    formatted_alignment = (
+        formatted_query + f"\n{'': <30} {'': >6} {cigar}" + formatted_ref
+    )
 
-            # Check 3' mismatches
-            if (
-                set([self.aln_query[-1], self.aln_ref_comp[-1]])
-                in CAlignment.MISMATCHES
-            ):
-                self.mm_3prime = True
-                self.percent_identity = 0
+    del trace
+
+    return (identity, formatted_alignment)

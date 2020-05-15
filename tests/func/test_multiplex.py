@@ -1,8 +1,6 @@
 
 import pytest
 
-from functools import reduce
-
 from primalscheme.cli import get_arguments, process_fasta
 from primalscheme.multiplex import MultiplexScheme
 
