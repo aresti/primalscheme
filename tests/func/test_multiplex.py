@@ -5,7 +5,7 @@ from primalscheme.cli import get_arguments, process_fasta
 from primalscheme.multiplex import MultiplexScheme
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def default_chikv_scheme(chikv_input):
     args = get_arguments(test=['multiplex', str(chikv_input)])
     return scheme_for_args(args)

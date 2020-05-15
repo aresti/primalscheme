@@ -85,7 +85,7 @@ def all_stored_inputs(request, stored_inputs_path):
     return stored_inputs_path / request.param
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def chikv_input(stored_inputs_path):
     """Return all stored input paths"""
     return stored_inputs_path / STORED_INPUTS[0]
