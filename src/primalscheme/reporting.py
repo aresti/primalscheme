@@ -31,7 +31,7 @@ from reportlab.lib import colors
 
 from primalscheme.multiplex import MultiplexScheme
 
-logger = logging.getLogger('primalscheme')
+logger = logging.getLogger("primalscheme")
 
 
 class MultiplexReporter(MultiplexScheme):
@@ -45,51 +45,96 @@ class MultiplexReporter(MultiplexScheme):
         self.write_schemadelica_plot(path)
 
     def write_bed(self, path):
-        filepath = path / f'{self.prefix}.scheme.bed'
-        logger.info(f'Writing {filepath}')
+        filepath = path / f"{self.prefix}.scheme.bed"
+        logger.info(f"Writing {filepath}")
 
-        with open(filepath, 'w') as bedhandle:
+        with open(filepath, "w") as bedhandle:
             for r in self.regions:
-                print(*map(str,
-                           [self.primary_ref.id, r.top_pair.left.start,
-                            r.top_pair.left.end, r.top_pair.left.name, r.pool,
-                            '+']
-                           ), sep='\t', file=bedhandle)
-                print(*map(str,
-                           [self.primary_ref.id, r.top_pair.right.end,
-                            r.top_pair.right.start, r.top_pair.right.name,
-                            r.pool, '-']),
-                      sep='\t', file=bedhandle)
+                print(
+                    *map(
+                        str,
+                        [
+                            self.primary_ref.id,
+                            r.top_pair.left.start,
+                            r.top_pair.left.end,
+                            r.top_pair.left.name,
+                            r.pool,
+                            "+",
+                        ],
+                    ),
+                    sep="\t",
+                    file=bedhandle,
+                )
+                print(
+                    *map(
+                        str,
+                        [
+                            self.primary_ref.id,
+                            r.top_pair.right.end,
+                            r.top_pair.right.start,
+                            r.top_pair.right.name,
+                            r.pool,
+                            "-",
+                        ],
+                    ),
+                    sep="\t",
+                    file=bedhandle,
+                )
 
     def write_tsv(self, path):
-        filepath = path / f'{self.prefix}.tsv'
-        logger.info(f'Writing {filepath}')
-        with open(filepath, 'w') as tsvhandle:
-            print(*['name', 'pool', 'seq', 'length', '%gc', 'tm (use 65)'],
-                  sep='\t', file=tsvhandle)
+        filepath = path / f"{self.prefix}.tsv"
+        logger.info(f"Writing {filepath}")
+        with open(filepath, "w") as tsvhandle:
+            print(
+                *["name", "pool", "seq", "length", "%gc", "tm (use 65)"],
+                sep="\t",
+                file=tsvhandle,
+            )
             for r in self.regions:
                 left = r.top_pair.left
                 right = r.top_pair.right
-                print(*map(str,
-                           [left.name, r.pool, left.seq, left.length,
-                            '%.2f' % left.gc, '%.2f' % left.tm]),
-                      sep='\t', file=tsvhandle)
-                print(*map(str,
-                           [right.name, r.pool, right.seq, right.length,
-                            '%.2f' % right.gc, '%.2f' % right.tm]),
-                      sep='\t', file=tsvhandle)
-                
+                print(
+                    *map(
+                        str,
+                        [
+                            left.name,
+                            r.pool,
+                            left.seq,
+                            left.length,
+                            "%.2f" % left.gc,
+                            "%.2f" % left.tm,
+                        ],
+                    ),
+                    sep="\t",
+                    file=tsvhandle,
+                )
+                print(
+                    *map(
+                        str,
+                        [
+                            right.name,
+                            r.pool,
+                            right.seq,
+                            right.length,
+                            "%.2f" % right.gc,
+                            "%.2f" % right.tm,
+                        ],
+                    ),
+                    sep="\t",
+                    file=tsvhandle,
+                )
+
     def write_pickle(self, path):
-        filepath = path / f'{self.prefix}.pickle'
-        logger.info(f'Writing {filepath}')
-        with open(filepath, 'wb') as pickleobj:
+        filepath = path / f"{self.prefix}.pickle"
+        logger.info(f"Writing {filepath}")
+        with open(filepath, "wb") as pickleobj:
             pickle.dump(self, pickleobj)
 
     def write_refs(self, path):
-        filepath = path / f'{self.prefix}.reference.fasta'
-        logger.info(f'Writing {filepath}')
-        with open(filepath, 'w'):
-            SeqIO.write(self.references, filepath, 'fasta')
+        filepath = path / f"{self.prefix}.reference.fasta"
+        logger.info(f"Writing {filepath}")
+        with open(filepath, "w"):
+            SeqIO.write(self.references, filepath, "fasta")
 
     def apply_to_window(self, sequence, window_size, function, step=None):
         """
@@ -146,14 +191,14 @@ class MultiplexReporter(MultiplexScheme):
             value = function(fragment)
             results.append((middle, value))  # Add results to list
 
-        return results      # Return the list of (position, value) results
+        return results  # Return the list of (position, value) results
 
     def calc_gc(self, sequence):
         """
         Return gc content as fraction
         """
-        g = sequence.count('G') + sequence.count('g')
-        c = sequence.count('C') + sequence.count('c')
+        g = sequence.count("G") + sequence.count("g")
+        c = sequence.count("C") + sequence.count("c")
         return (g + c) / len(sequence)
 
     def write_schemadelica_plot(self, path):
@@ -162,13 +207,18 @@ class MultiplexReporter(MultiplexScheme):
 
         # make the gc track
         window = 50
-        gc_set = GenomeDiagram.GraphSet('GC content')
-        graphdata1 = self.apply_to_window(
-            self.primary_ref.seq, window, self.calc_gc)
-        gc_set.new_graph(graphdata1, 'GC content', style='line',
-                         color=colors.violet, altcolor=colors.purple)
-        gc_track = GenomeDiagram.Track('GC content', height=1.5, greytrack=0,
-                                       scale_largetick_interval=1e3)
+        gc_set = GenomeDiagram.GraphSet("GC content")
+        graphdata1 = self.apply_to_window(self.primary_ref.seq, window, self.calc_gc)
+        gc_set.new_graph(
+            graphdata1,
+            "GC content",
+            style="line",
+            color=colors.violet,
+            altcolor=colors.purple,
+        )
+        gc_track = GenomeDiagram.Track(
+            "GC content", height=1.5, greytrack=0, scale_largetick_interval=1e3
+        )
         gc_track.add_set(gc_set)
 
         # make the primer track
@@ -177,26 +227,34 @@ class MultiplexReporter(MultiplexScheme):
             strand = 1 if r.region_num % 2 else -1
 
             fwd_feature = SeqFeature(
-                FeatureLocation(r.top_pair.left.start,
-                                r.top_pair.left.end, strand=strand))
+                FeatureLocation(
+                    r.top_pair.left.start, r.top_pair.left.end, strand=strand
+                )
+            )
             rev_feature = SeqFeature(
-                FeatureLocation(r.top_pair.right.end,
-                                r.top_pair.right.start, strand=strand))
+                FeatureLocation(
+                    r.top_pair.right.end, r.top_pair.right.start, strand=strand
+                )
+            )
             region_feature = SeqFeature(
-                FeatureLocation(r.top_pair.left.start,
-                                r.top_pair.right.start, strand=strand))
+                FeatureLocation(
+                    r.top_pair.left.start, r.top_pair.right.start, strand=strand
+                )
+            )
 
             primer_color = colors.red
             region_color = colors.palevioletred
 
             primer_feature_set.add_feature(
-                region_feature, color=region_color, name=region, label=True,
+                region_feature,
+                color=region_color,
+                name=region,
+                label=True,
                 label_position="middle",
-                label_angle=0 if strand == 1 else -180)
-            primer_feature_set.add_feature(fwd_feature, color=primer_color,
-                                           name=region)
-            primer_feature_set.add_feature(rev_feature, color=primer_color,
-                                           name=region)
+                label_angle=0 if strand == 1 else -180,
+            )
+            primer_feature_set.add_feature(fwd_feature, color=primer_color, name=region)
+            primer_feature_set.add_feature(rev_feature, color=primer_color, name=region)
 
         primer_track = GenomeDiagram.Track(name="Annotated Features", height=1)
         primer_track.add_set(primer_feature_set)
@@ -205,13 +263,17 @@ class MultiplexReporter(MultiplexScheme):
         gd_diagram.add_track(gc_track, 1)
 
         rows = max(2, int(round(len(self.primary_ref) / 10000.0)))
-        gd_diagram.draw(format='linear', pagesize=(300 * rows, 200 * rows),
-                        fragments=rows, start=0,
-                        end=len(self.primary_ref))
+        gd_diagram.draw(
+            format="linear",
+            pagesize=(300 * rows, 200 * rows),
+            fragments=rows,
+            start=0,
+            end=len(self.primary_ref),
+        )
 
-        pdf_filepath = os.path.join(path, '{}.pdf'.format(self.prefix))
-        svg_filepath = os.path.join(path, '{}.svg'.format(self.prefix))
-        logger.info(f'Writing {pdf_filepath}')
-        logger.info(f'Writing {svg_filepath}')
-        gd_diagram.write(pdf_filepath, 'PDF', dpi=300)
-        gd_diagram.write(svg_filepath, 'SVG', dpi=300)
+        pdf_filepath = os.path.join(path, "{}.pdf".format(self.prefix))
+        svg_filepath = os.path.join(path, "{}.svg".format(self.prefix))
+        logger.info(f"Writing {pdf_filepath}")
+        logger.info(f"Writing {svg_filepath}")
+        gd_diagram.write(pdf_filepath, "PDF", dpi=300)
+        gd_diagram.write(svg_filepath, "SVG", dpi=300)

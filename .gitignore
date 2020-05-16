@@ -11,8 +11,7 @@
 .DS_Store
 .vscode
 venv/
-test_outputs/
-outputdir/
+output/
 
 # Distribution / packaging
 .Python

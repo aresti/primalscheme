@@ -21,17 +21,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 import logging
 
-from primalscheme.wrapper import (design_primers, InsufficientPrimersError)
-from primalscheme.components import (CandidatePrimer, CandidatePrimerPair)
+from primalscheme.wrapper import design_primers, InsufficientPrimersError
+from primalscheme.components import CandidatePrimer, CandidatePrimerPair
 
-logger = logging.getLogger('primalscheme')
+logger = logging.getLogger("primalscheme")
 
 
 class MultiplexScheme:
     """A complete multiplex primer scheme."""
 
-    def __init__(self, references, p3_global, target_overlap, step_distance,
-                 min_unique, prefix, progress_func=None):
+    def __init__(
+        self,
+        references,
+        p3_global,
+        target_overlap,
+        step_distance,
+        min_unique,
+        prefix,
+        progress_func=None,
+    ):
 
         self.references = references
         self.p3_global = p3_global
@@ -44,10 +52,10 @@ class MultiplexScheme:
         # derived
         self.primary_ref = references[0]
         self.ref_len = len(self.primary_ref)
-        self.amplicon_size_min = p3_global['PRIMER_PRODUCT_SIZE_RANGE'][0][0]
-        self.amplicon_size_max = p3_global['PRIMER_PRODUCT_SIZE_RANGE'][0][1]
+        self.amplicon_size_min = p3_global["PRIMER_PRODUCT_SIZE_RANGE"][0][0]
+        self.amplicon_size_max = p3_global["PRIMER_PRODUCT_SIZE_RANGE"][0][1]
         self.amplicon_max_variation = self.amplicon_size_max - self.amplicon_size_min
-        self.primer_max_size = p3_global['PRIMER_MAX_SIZE']
+        self.primer_max_size = p3_global["PRIMER_MAX_SIZE"]
 
         self.regions = []
 
@@ -62,13 +70,12 @@ class MultiplexScheme:
             region_num += 1
             prev = regions[-1].top_pair if regions else None
             prev_in_pool = regions[-2].top_pair if region_num > 2 else None
- 
+
             # determine left limit
             if region_num == 1:
                 left_limit = 0
             elif region_num == 2 or prev.left.start > prev_in_pool.right.start:
-                # first region in second pool, or we have a gap
-                # avoids finding the same primer again
+                # first region in second pool, or we have a gap. Force progress.
                 left_limit = prev.left.end + 1
             else:
                 # default case (just don't crash into prev in pool)
@@ -79,8 +86,9 @@ class MultiplexScheme:
                 slice_start = 0
             else:
                 insert_start = prev.right.end - self.target_overlap - 1
-                slice_start = (insert_start - self.primer_max_size -
-                               self.amplicon_max_variation)
+                slice_start = (
+                    insert_start - self.primer_max_size - self.amplicon_max_variation
+                )
 
                 # if target overlap is impossible, take left_limit
                 slice_start = max(slice_start, left_limit)
@@ -125,40 +133,41 @@ class Window:
         self._initial_slice_start = self.slice_start
 
         logger.debug(
-            f'Window: left_limit {left_limit}, slice_start {slice_start}, '
-            f'right_limit {self.right_limit}')
+            f"Window: left_limit {left_limit}, slice_start {slice_start}, "
+            f"right_limit {self.right_limit}"
+        )
 
         # check bounds
-        if (slice_start < left_limit or self.slice_end > self.right_limit):
-            raise SliceOutOfBoundsError('The window slice is out of bounds.')
+        if slice_start < left_limit or self.slice_end > self.right_limit:
+            raise SliceOutOfBoundsError("The window slice is out of bounds.")
 
     def step_left(self):
         distance = self.scheme.step_distance
         if (self.slice_start - distance) < self.left_limit:
-            logger.debug(f'Left limit reached')
-            raise SliceOutOfBoundsError('Left window limit reached.')
+            logger.debug(f"Left limit reached")
+            raise SliceOutOfBoundsError("Left window limit reached.")
         self.slice_start -= distance
-        logger.debug(f'Stepping left to {self.slice_start}')
+        logger.debug(f"Stepping left to {self.slice_start}")
 
     def step_right(self):
         distance = self.scheme.step_distance
         if (self.slice_end + distance) > self.right_limit:
-            logger.debug(f'Right limit reached')
-            raise SliceOutOfBoundsError('Right window limit reached.')
+            logger.debug(f"Right limit reached")
+            raise SliceOutOfBoundsError("Right window limit reached.")
         self.slice_start += distance
-        logger.debug(f'Stepping right to {self.slice_start}')
+        logger.debug(f"Stepping right to {self.slice_start}")
 
     def reset_slice(self):
         self.slice_start = self._initial_slice_start
 
     @property
     def slice_end(self):
-        return (self.slice_start + self.scheme.amplicon_size_max)
+        return self.slice_start + self.scheme.amplicon_size_max
 
     @property
     def ref_slice(self):
         primary_ref = self.scheme.primary_ref.seq  # Seq object
-        return str(primary_ref[self.slice_start:self.slice_end])
+        return str(primary_ref[self.slice_start : self.slice_end])
 
 
 class Region(Window):
@@ -173,7 +182,7 @@ class Region(Window):
         self.top_pair = None
         super().__init__(*args, **kwargs)  # init Window
 
-        logger.debug(f'Region {region_num}, pool {self.pool}')
+        logger.debug(f"Region {region_num}, pool {self.pool}")
 
     def find_primers(self):
         """
@@ -190,7 +199,7 @@ class Region(Window):
                         # step right, retry
                         self.step_right()
                     except SliceOutOfBoundsError:
-                        raise NoSuitablePrimersError('Right limit reached.')
+                        raise NoSuitablePrimersError("Right limit reached.")
                 else:
                     try:
                         # step left, retry
@@ -205,20 +214,31 @@ class Region(Window):
     def _find_primers_for_slice(self):
         """Try to find sufficient primers for the current slice"""
 
-        logger.debug(
-            f'Finding primers for slice [{self.slice_start}:{self.slice_end}]')
+        logger.debug(f"Finding primers for slice [{self.slice_start}:{self.slice_end}]")
 
-        pairs = design_primers(self.ref_slice, self.scheme.p3_global,
-                               self.scheme.min_unique, offset=self.slice_start)
+        pairs = design_primers(
+            self.ref_slice,
+            self.scheme.p3_global,
+            self.scheme.min_unique,
+            offset=self.slice_start,
+        )
 
-        name = f'{self.scheme.prefix}_{self.region_num}'
+        name = f"{self.scheme.prefix}_{self.region_num}"
         for i in range(len(pairs[0])):
             left = CandidatePrimer(
-                pairs[0][i].seq, pairs[0][i].start, 'LEFT', f'{name}_LEFT',
-                penalty=pairs[0][i].penalty)
+                pairs[0][i].seq,
+                pairs[0][i].start,
+                "LEFT",
+                f"{name}_LEFT",
+                penalty=pairs[0][i].penalty,
+            )
             right = CandidatePrimer(
-                pairs[1][i].seq, pairs[1][i].start, 'RIGHT', f'{name}_RIGHT',
-                penalty=pairs[1][i].penalty)
+                pairs[1][i].seq,
+                pairs[1][i].start,
+                "RIGHT",
+                f"{name}_RIGHT",
+                penalty=pairs[1][i].penalty,
+            )
             left.align(self.scheme.references)
             right.align(self.scheme.references)
             self.candidate_pairs.append(CandidatePrimerPair(left, right))
@@ -228,30 +248,34 @@ class Region(Window):
     def _sort_candidate_pairs(self):
         """Sort the list of candidate pairs in place"""
 
-        self.candidate_pairs.sort(key=lambda x: (x.mean_identity,
-                                                 x.right.end), reverse=True)
+        self.candidate_pairs.sort(
+            key=lambda x: (x.mean_identity, x.right.end), reverse=True
+        )
 
     def _pick_pair(self):
         self._sort_candidate_pairs()
         self.top_pair = self.candidate_pairs[0]
 
-        logger.debug(f'Picked: {self.top_pair.left}')
+        logger.debug(f"Picked: {self.top_pair.left}")
         for alignment in self.top_pair.left.alignments:
             logger.debug(alignment[1])
         for alignment in self.top_pair.right.alignments:
             logger.debug(alignment[1])
         for i, pair in enumerate(self.candidate_pairs):
             logger.debug(
-                f'Candidate pair {i}: '
-                f'{round(pair.mean_identity, 2)} identity, '
-                f'right end {pair.right.end}')
+                f"Candidate pair {i}: "
+                f"{round(pair.mean_identity, 2)} identity, "
+                f"right end {pair.right.end}"
+            )
 
 
 class NoSuitablePrimersError(Exception):
     """No suitable primers found."""
+
     pass
 
 
 class SliceOutOfBoundsError(Exception):
     """The requested start position would put the slice out of bounds."""
+
     pass

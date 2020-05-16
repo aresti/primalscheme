@@ -58,7 +58,8 @@ class CandidatePrimer(Primer):
         self.alignments = []
 
     def align(self, references):
-        for ref in references[1:]:  # no need to align against primary
+        for ref in references[1:]:
+            # align against non-primary references
             alignment = get_alignment(self, ref)
             if alignment:
                 self.alignments.append(alignment)
