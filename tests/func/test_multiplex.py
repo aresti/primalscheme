@@ -1,22 +1,22 @@
 
 import pytest
 
-from primalscheme.cli import get_arguments, process_fasta
+from primalscheme.cli import get_config, process_fasta
 from primalscheme.multiplex import MultiplexScheme
 
 
 @pytest.fixture(scope='session')
 def default_chikv_scheme(chikv_input):
-    args = get_arguments(test=['multiplex', str(chikv_input)])
-    return scheme_for_args(args)
+    return get_scheme(chikv_input)
 
 
-def scheme_for_args(args):
-    references = process_fasta(args.fasta)
+def get_scheme(fasta, config=None):
+    if not config:
+        config = get_config()
+    references = process_fasta(fasta)
     scheme = MultiplexScheme(
-        references, args.amplicon_size, args.amplicon_max_variation,
-        args.target_overlap, args.step_distance, args.min_unique, args.prefix,
-        args.primer3)
+        references, config.get('primer3'), config.get('target_overlap'), config.get('step_distance'),
+        config.get('min_unique'), config.get('prefix'))
     scheme.design_scheme()
     return scheme
 
@@ -44,33 +44,34 @@ def test_chikv_scheme_has_no_gaps(default_chikv_scheme):
     assert all_coords.issubset(covered_coords)
 
 
-def test_scheme_pools_do_not_have_collisions(all_stored_inputs):
-    args = get_arguments(test=['multiplex', str(all_stored_inputs)])
-    scheme = scheme_for_args(args)
-
+def test_no_collisions_in_any_test_scheme(all_stored_inputs):
+    scheme = get_scheme(all_stored_inputs)
     assert no_collisions(scheme.regions)
 
 
-@pytest.mark.parametrize('amplicon_size', range(200, 900, 200))
-def test_scheme_varying_amplicon_sizes(amplicon_size, chikv_input):
-    max_variation = int(0.1 * amplicon_size / 2)
-    args = get_arguments(test=[
-        'multiplex', str(chikv_input),
-        '--amplicon-size', str(amplicon_size),
-        '--amplicon-max-variation', str(max_variation)])
-    scheme = scheme_for_args(args)
+@pytest.mark.parametrize('amplicon_size', range(200, 801, 200))
+def test_scheme_varying_amplicon_sizes(default_config, amplicon_size, chikv_input):
+    config = default_config
+    variation = int(0.1 * amplicon_size / 2)
+    amplicon_size_min = amplicon_size - variation
+    amplicon_size_max = amplicon_size + variation
+    config['primer3'].update({
+        "PRIMER_PRODUCT_SIZE_RANGE": [[
+            amplicon_size_min,
+            amplicon_size_max
+        ]]
+    })
+    scheme = get_scheme(chikv_input, config)
 
     regions = scheme.regions
     for region in regions[:4]:
         product_size = region.top_pair.product_length
-        assert product_size <= amplicon_size + max_variation
-        assert product_size >= amplicon_size - max_variation
+        assert product_size <= amplicon_size_max
+        assert product_size >= amplicon_size_min
 
 
-def test_large_target_overlap_does_not_result_in_collision(chikv_input):
-    args = get_arguments(test=[
-        'multiplex', str(chikv_input),
-        '--target-overlap', str(200)])
-    scheme = scheme_for_args(args)
+def test_large_target_overlap_does_not_result_in_collision(default_config, chikv_input):
+    config = default_config.update({"target_overlap": 300})
+    scheme = get_scheme(chikv_input, config)
 
     assert no_collisions(scheme.regions)

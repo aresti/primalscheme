@@ -52,25 +52,25 @@ def test_cli_fails_without_fasta():
 
 @pytest.mark.parametrize('option, value', [
     ('--prefix', 'myScheme'),
-    ('--amplicon-size', '400'),
-    ('--amplicon-max-variation', '20'),
-    ('--debug', None),
-    ('--force', None),
+    ('--amplicon-size-min', '380'),
+    ('--amplicon-size-max', '420'),
     ('--target-overlap', '0'),
     ('--min-unique', '3'),
     ('--max-candidates', '10'),
     ('--output-path', './scheme'),
     ('--step-distance', '11'),
+    ('--debug', None),
+    ('--force', None),
 ])
-def test_availability_of_options(option, value):
+def test_availability_of_options(option, value, default_config):
     """
     Are options available?
     """
-    test_cmd = ['multiplex', 'some.fa', option]
+    args = ['multiplex', 'some.fa', option]
     if value:
-        test_cmd.append(value)
-    args = primalscheme.cli.get_arguments(test=test_cmd)
-    assert isinstance(args, Namespace)
+        args.append(value)
+    parsed = primalscheme.cli.parse_arguments(args, default_config)
+    assert isinstance(parsed, Namespace)
 
 
 def test_cli_fails_with_invalid_option(chikv_input):

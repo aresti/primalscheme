@@ -30,24 +30,23 @@ logger = logging.getLogger('primalscheme')
 class MultiplexScheme:
     """A complete multiplex primer scheme."""
 
-    def __init__(self, references, amplicon_size, amplicon_max_variation,
-                 target_overlap, step_distance, min_unique, prefix, p3_global,
-                 progress_func=None):
+    def __init__(self, references, p3_global, target_overlap, step_distance,
+                 min_unique, prefix, progress_func=None):
 
         self.references = references
-        self.amplicon_size = amplicon_size
-        self.amplicon_max_variation = amplicon_max_variation
+        self.p3_global = p3_global
         self.target_overlap = target_overlap
         self.step_distance = step_distance
         self.min_unique = min_unique
         self.prefix = prefix
-        self.p3_global = p3_global
         self.progress_func = progress_func
 
         # derived
         self.primary_ref = references[0]
         self.ref_len = len(self.primary_ref)
-        self.amplicon_max_size = amplicon_size + amplicon_max_variation
+        self.amplicon_size_min = p3_global['PRIMER_PRODUCT_SIZE_RANGE'][0][0]
+        self.amplicon_size_max = p3_global['PRIMER_PRODUCT_SIZE_RANGE'][0][1]
+        self.amplicon_max_variation = self.amplicon_size_max - self.amplicon_size_min
         self.primer_max_size = p3_global['PRIMER_MAX_SIZE']
 
         self.regions = []
@@ -81,16 +80,16 @@ class MultiplexScheme:
             else:
                 insert_start = prev.right.end - self.target_overlap - 1
                 slice_start = (insert_start - self.primer_max_size -
-                               self.amplicon_max_variation * 2)
+                               self.amplicon_max_variation)
 
                 # if target overlap is impossible, take left_limit
                 slice_start = max(slice_start, left_limit)
 
                 # handle last region
                 remaining_distance = self.ref_len - prev.right.start
-                is_last = remaining_distance <= self.amplicon_max_size
+                is_last = remaining_distance <= self.amplicon_size_max
                 if is_last:
-                    right_aligned = self.ref_len - self.amplicon_max_size
+                    right_aligned = self.ref_len - self.amplicon_size_max
                     # if forced to choose, take a gap at the end
                     slice_start = min(slice_start, right_aligned)
 
@@ -154,8 +153,7 @@ class Window:
 
     @property
     def slice_end(self):
-        return (self.slice_start + self.scheme.amplicon_max_variation +
-                self.scheme.amplicon_size)
+        return (self.slice_start + self.scheme.amplicon_size_max)
 
     @property
     def ref_slice(self):
@@ -212,8 +210,6 @@ class Region(Window):
 
         pairs = design_primers(self.ref_slice, self.scheme.p3_global,
                                self.scheme.min_unique, offset=self.slice_start)
-
-        logger.debug(f'Primer3 returned {len(pairs[0])} unique pairs')
 
         name = f'{self.scheme.prefix}_{self.region_num}'
         for i in range(len(pairs[0])):

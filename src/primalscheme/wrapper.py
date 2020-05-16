@@ -1,6 +1,10 @@
+import logging
 import primer3
 
 from collections import namedtuple
+
+
+logger = logging.getLogger('primalscheme')
 
 
 class InsufficientPrimersError(Exception):
@@ -36,9 +40,13 @@ def design_primers(seq, p3_global, min_unique, offset=0):
                 # maintains forward-strand coordinate system
                 start += 1
             pairs[d].append(SimplePrimer(seq, start, penalty))
-    
+
     # If we don't have min unique left and right, then raise
-    if any(len(set(side)) < min_unique for side in pairs):
+    unique_count = min(len(set(pairs[0])), len(set(pairs[1])))
+    logger.debug(f'Primer3 returned {unique_count} unique pairs')
+
+    if unique_count < min_unique:
+        logger.debug(f'Does not satisfy {min_unique} min unique')
         raise InsufficientPrimersError(
             f'Failed to find {min_unique} unique left or right primers.')
 

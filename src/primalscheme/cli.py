@@ -44,7 +44,9 @@ def main():
     Process args, set up logging and call the command function.
     """
 
-    args = get_arguments()
+    config = get_config()
+    args = parse_arguments(sys.argv[1:], config)
+
     try:
         output_path = get_output_path(args.output_path, force=args.force)
     except IOError as e:
@@ -80,9 +82,8 @@ def multiplex(args, output_path):
     # Create scheme
     try:
         scheme = MultiplexReporter(
-            references, args.amplicon_size, args.amplicon_max_variation,
-            args.target_overlap, args.step_distance, args.min_unique,
-            args.prefix, args.primer3, progress_func=stdout_progress)
+            references, args.primer3, args.target_overlap, args.step_distance,
+            args.min_unique, args.prefix, progress_func=stdout_progress)
         scheme.design_scheme()
     except NoSuitablePrimersError:
         # Unable to find primers for at least one region
@@ -191,9 +192,14 @@ def get_output_path(output_path, force=False):
     return path
 
 
-def get_arguments(test=[]):
+def get_config():
+    config_file = Path(__file__).parent / 'config.json'
+    return json.loads(config_file.read_text())
+
+
+def parse_arguments(args, config):
     """
-    Parse command line arguments, update config
+    Parse command line arguments.
     """
     # Setup parsers
     parser = argparse.ArgumentParser(
@@ -207,11 +213,10 @@ def get_arguments(test=[]):
     parser_scheme = subparsers.add_parser(
         'multiplex', help='Multiplex PCR scheme')
 
-    # Set func and defaults from config file
-    config_file = Path(__file__).parent / 'config.json'
-    config = json.loads(config_file.read_text())
+    # Set func and defaults from config
     parser_scheme.set_defaults(func=multiplex, **config)
 
+    # Add arguments to parser
     parser_scheme.add_argument(
         'fasta', help='FASTA file')
     parser_scheme.add_argument(
@@ -219,46 +224,49 @@ def get_arguments(test=[]):
         help='Prefix used for primer names and output files '
              '(default: %(default)s)')
     parser_scheme.add_argument(
-        '--amplicon-size', type=int,
-        help='Desired amplicon size (default: %(default)i)')
+        '--amplicon-size-min', type=int,
+        default=config['primer3'].get('PRIMER_PRODUCT_SIZE_RANGE')[0][0],
+        help='Minimum amplicon size (default: %(default)i)')
     parser_scheme.add_argument(
-        '--amplicon-max-variation', type=int,
-        help='Maximum amplicon variation (default: %(default)i)')
+        '--amplicon-size-max', type=int,
+        default=config['primer3'].get('PRIMER_PRODUCT_SIZE_RANGE')[0][1],
+        help='Maximum amplicon size (default: %(default)i)')
+    parser_scheme.add_argument(
+        '--min-unique', type=int,
+        help='Minimum unique candiate pairs (default: %(default)i)')
+    parser_scheme.add_argument(
+        '--max-candidates', type=int,
+        default=config['primer3'].get('PRIMER_NUM_RETURN'),
+        help='Maximum candidate pairs (default: %(default)i)')
+    parser_scheme.add_argument(
+        '--output-path',
+        help='Output directory (default: %(default)s)')
+    parser_scheme.add_argument(
+        '--target-overlap', type=int,
+        help='Target overlap size (default: %(default)i)')
+    parser_scheme.add_argument(
+        '--step-distance', type=int,
+        help='Distance to step between find attempts (default: %(default)i)')
     parser_scheme.add_argument(
         '--debug', action='store_true', help=f'Verbose logging')
     parser_scheme.add_argument(
         '--force', action='store_true',
         help='Force output to an existing directory and overwrite output '
              'files.')
-    parser_scheme.add_argument(
-        '--target-overlap', type=int,
-        help='Target overlap size (default: %(default)i)')
-    parser_scheme.add_argument(
-        '--min-unique', type=int,
-        help='Minimum unique candiate pairs (default: %(default)i)')
-    parser_scheme.add_argument(
-        '--max-candidates', type=int,
-        help='Maximum candidate pairs (default: %(default)i)')
-    parser_scheme.add_argument(
-        '--output-path',
-        help='Output directory (default: %(default)s)')
-    parser_scheme.add_argument(
-        '--step-distance', type=int,
-        help='Distance to step between find attempts (default: %(default)i)')
 
     # Generate args
-    args = parser.parse_args(test if test else None)
+    parsed = parser.parse_args(args)
 
-    # update primer3 with derivatives
-    args.__dict__['primer3'].update({
-        'PRIMER_NUM_RETURN': args.max_candidates,
+    # override primer3 config
+    parsed.__dict__['primer3'].update({
+        'PRIMER_NUM_RETURN': parsed.max_candidates,
         'PRIMER_PRODUCT_SIZE_RANGE': [[
-            args.amplicon_size - args.amplicon_max_variation,
-            args.amplicon_size + args.amplicon_max_variation
+            parsed.amplicon_size_min,
+            parsed.amplicon_size_max
         ]],
     })
 
-    return args
+    return parsed
 
 
 def stdout_progress(count, total):
