@@ -90,7 +90,7 @@ class CandidatePrimerPair(object):
 
     @property
     def product_length(self):
-        return self.right.start - self.left.start + 1
+        return self.right.start - self.left.start
 
 
 def get_alignment(primer, reference):
