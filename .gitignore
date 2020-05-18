@@ -9,7 +9,9 @@
 *.bed
 *.svg
 .DS_Store
-.vscode
+.vscode/
+.tox/
+.python-version
 venv/
 output/
 

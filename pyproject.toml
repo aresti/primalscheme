@@ -33,3 +33,14 @@ test = [
     "pytest >=2.7.3",
     "pytest-cov",
 ]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+isolated_build = True
+envlist = py36, py37, py38
+
+[testenv]
+deps = pytest >= 3.0.0, <4
+commands = pytest
+"""
