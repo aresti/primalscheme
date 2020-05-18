@@ -214,9 +214,8 @@ def parse_arguments(args, config):
         description=("A primer3 wrapper for designing multiplex primer schemes."),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    subparsers = parser.add_subparsers(
-        title="[subcommands]", dest="command", required=True
-    )
+    subparsers = parser.add_subparsers(title="[subcommands]", dest="command")
+    subparsers.required = True
 
     parser_scheme = subparsers.add_parser("multiplex", help="Multiplex PCR scheme")
 
