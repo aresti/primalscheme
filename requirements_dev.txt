@@ -1,4 +1,0 @@
--e .
-pre-commit
-black
-
