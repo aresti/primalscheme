@@ -11,6 +11,7 @@
 .vscode/
 .tox/
 .python-version
+.coverage
 venv/
 output/
 
