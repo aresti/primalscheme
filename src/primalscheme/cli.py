@@ -260,7 +260,7 @@ def parse_arguments(args, config):
         type=int,
         help="Distance to step between find attempts (default: %(default)i)",
     )
-    parser_scheme.add_argument("--debug", action="store_true", help=f"Verbose logging")
+    parser_scheme.add_argument("--debug", action="store_true", help="Verbose logging")
     parser_scheme.add_argument(
         "--force",
         action="store_true",

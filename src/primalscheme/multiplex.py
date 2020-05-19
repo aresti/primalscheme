@@ -144,7 +144,7 @@ class Window:
     def step_left(self):
         distance = self.scheme.step_distance
         if (self.slice_start - distance) < self.left_limit:
-            logger.debug(f"Left limit reached")
+            logger.debug("Left limit reached")
             raise SliceOutOfBoundsError("Left window limit reached.")
         self.slice_start -= distance
         logger.debug(f"Stepping left to {self.slice_start}")
@@ -152,7 +152,7 @@ class Window:
     def step_right(self):
         distance = self.scheme.step_distance
         if (self.slice_end + distance) > self.right_limit:
-            logger.debug(f"Right limit reached")
+            logger.debug("Right limit reached")
             raise SliceOutOfBoundsError("Right window limit reached.")
         self.slice_start += distance
         logger.debug(f"Stepping right to {self.slice_start}")
