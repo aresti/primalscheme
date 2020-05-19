@@ -48,7 +48,7 @@ class Primer(object):
 class CandidatePrimer(Primer):
     """A candidate primer."""
 
-    def __init__(self, seq, start, direction, name="", penalty=None):
+    def __init__(self, seq, start, direction, name="", penalty=0):
         super().__init__(seq, start, direction)
         self.name = name
         self.penalty = penalty
@@ -92,6 +92,10 @@ class CandidatePrimerPair(object):
     @property
     def product_length(self):
         return self.right.start - self.left.start
+
+    @property
+    def combined_penalty(self):
+        return self.left.penalty + self.right.penalty
 
 
 def get_alignment(primer, reference):

@@ -249,7 +249,7 @@ class Region(Window):
         """Sort the list of candidate pairs in place"""
 
         self.candidate_pairs.sort(
-            key=lambda x: (x.mean_identity, x.right.end), reverse=True
+            key=lambda x: (x.mean_identity, x.combined_penalty), reverse=True
         )
 
     def _pick_pair(self):
@@ -265,7 +265,7 @@ class Region(Window):
             logger.debug(
                 f"Candidate pair {i}: "
                 f"{round(pair.mean_identity, 2)} identity, "
-                f"right end {pair.right.end}"
+                f"penalty {pair.combined_penalty}"
             )
 
 
