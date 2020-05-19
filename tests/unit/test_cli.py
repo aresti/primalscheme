@@ -100,3 +100,8 @@ def test_cli_version_output(option, capsys, default_config):
         pass
     out, err = capsys.readouterr()
     assert re.match(r"^primalscheme \d{1,2}.\d{1,2}.\d{1,2}[a-zA-Z]{0,3}\d*$", out)
+
+
+def test_force_not_required_when_output_path_does_not_exist(tmp_path):
+    path = tmp_path / "output"
+    primalscheme.cli.get_output_path(output_path=path)

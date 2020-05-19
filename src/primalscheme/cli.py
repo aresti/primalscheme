@@ -191,7 +191,7 @@ def get_output_path(output_path, force=False):
 
     if path.exists() and not force:
         raise IOError("Directory exists add --force to overwrite")
-    elif not path.is_dir():
+    elif path.exists() and not path.is_dir():
         raise IOError("The output path is not a directory.")
 
     path.mkdir(exist_ok=True)
