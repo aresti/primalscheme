@@ -3,6 +3,7 @@ Tests for command line interface (CLI)
 """
 import os
 import pytest
+import re
 
 import primalscheme.cli
 
@@ -84,3 +85,18 @@ def test_cli_fails_with_invalid_option(chikv_input):
         f"primalscheme multiplex {str(chikv_input)} --force --badOption"
     )
     assert exit_status != 0
+
+
+@pytest.mark.parametrize(
+    "option", ["-V", "--version"],
+)
+def test_cli_version_output(option, capsys, default_config):
+    """
+    Does CLI output a sensible version number for -V and --version?
+    """
+    try:
+        primalscheme.cli.parse_arguments([option], default_config)
+    except SystemExit:
+        pass
+    out, err = capsys.readouterr()
+    assert re.match(r"^primalscheme \d{1,2}.\d{1,2}.\d{1,2}[a-zA-Z]{0,3}\d*$", out)

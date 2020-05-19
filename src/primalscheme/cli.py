@@ -32,6 +32,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+from primalscheme import __version__ as version
 from primalscheme.multiplex import NoSuitablePrimersError
 from primalscheme.reporting import MultiplexReporter
 
@@ -265,6 +266,9 @@ def parse_arguments(args, config):
         "--force",
         action="store_true",
         help="Force output to an existing directory and overwrite output " "files.",
+    )
+    parser.add_argument(
+        "-V", "--version", action="version", version=f"%(prog)s {version}"
     )
 
     # Generate args
