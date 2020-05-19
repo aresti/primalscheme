@@ -28,7 +28,6 @@ pip install primalscheme
 ```
 
 ### installation from source
-If you prefer to install from source:
 ```
 git clone https://github.com/aresti/primalscheme.git primalscheme
 cd primalscheme
@@ -46,7 +45,7 @@ flit install --symlink
 ```
 
 ### usage
-Download our CHIKV_demo.fa file from <a href="https://github.com/aresti/primalscheme/blob/master/tests/inputs/CHIKV_demo.fa">tests/inputs/CHIKV_demo.fa</a>
+Download our CHIKV_demo.fa file from <a href="https://raw.githubusercontent.com/aresti/primalscheme/master/tests/inputs/CHIKV_demo.fa">tests/inputs/CHIKV_demo.fa</a>
 
 ```
 primalscheme multiplex path/to/CHIKV_demo.fa
