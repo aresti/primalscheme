@@ -76,3 +76,18 @@ def test_large_target_overlap_does_not_result_in_collision(default_config, chikv
     scheme = get_scheme(chikv_input, config)
 
     assert no_collisions(scheme.regions)
+
+
+def test_candidates_are_correctly_sorted(default_chikv_scheme):
+    region = default_chikv_scheme.regions[0]
+    identity = region.top_pair.mean_identity
+    penalty = region.top_pair.combined_penalty
+    for candidate in region.candidate_pairs:
+        if candidate.mean_identity > identity:
+            pytest.fail("Candidates are not sorted first by mean identity")
+        elif (
+            candidate.mean_identity == identity and candidate.combined_penalty < penalty
+        ):
+            pytest.fail("Candidates are not sorted second by penalty")
+        identity = candidate.mean_identity
+        penalty = candidate.combined_penalty

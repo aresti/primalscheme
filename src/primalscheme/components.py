@@ -151,3 +151,19 @@ def get_alignment(primer, reference):
     del trace
 
     return (identity, formatted_alignment)
+
+
+class reversor:
+    """Decorator to reverse sort comparisons"""
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return other.obj == self.obj
+
+    def __lt__(self, other):
+        return other.obj < self.obj
+
+    def __gt__(self, other):
+        return other.obj > self.obj

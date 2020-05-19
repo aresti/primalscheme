@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 import logging
 
 from primalscheme.wrapper import design_primers, InsufficientPrimersError
-from primalscheme.components import CandidatePrimer, CandidatePrimerPair
+from primalscheme.components import CandidatePrimer, CandidatePrimerPair, reversor
 
 logger = logging.getLogger("primalscheme")
 
@@ -249,7 +249,7 @@ class Region(Window):
         """Sort the list of candidate pairs in place"""
 
         self.candidate_pairs.sort(
-            key=lambda x: (x.mean_identity, x.combined_penalty), reverse=True
+            key=lambda x: (reversor(x.mean_identity), x.combined_penalty)
         )
 
     def _pick_pair(self):
@@ -264,7 +264,7 @@ class Region(Window):
         for i, pair in enumerate(self.candidate_pairs):
             logger.debug(
                 f"Candidate pair {i}: "
-                f"{round(pair.mean_identity, 2)} identity, "
+                f"{pair.mean_identity} identity, "
                 f"penalty {pair.combined_penalty}"
             )
 
