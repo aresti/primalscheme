@@ -1,16 +1,14 @@
 # primalscheme
-==============
-A primer3 wrapper for designing multiplex primer schemes.
---------------
 ![Build](https://github.com/aresti/primalscheme/workflows/Build/badge.svg)
---------------
+---
+A primer3 wrapper for designing multiplex primer schemes.
 
-# requirements
+### requirements
 * Linux, macOS or Windows
 * Python 3.5+
 
 
-# installation from PyPI using pip
+### installation from PyPI using pip
 Create & activate a virutal env (recommended):
 ```
 python3 -m venv /path/to/primal-venv
@@ -27,7 +25,7 @@ Install primalscheme with pip:
 pip install primalscheme
 ```
 
-# installation from source
+### installation from source
 If you prefer to install from source:
 ```
 git clone https://github.com/aresti/primalscheme.git
@@ -39,7 +37,7 @@ flit install --symlink
 ```
 Note: --symlink will allow you to modify the package locally.
 
-# usage
+### usage
 Download our CHIKV_demo.fa file from <a href="https://github.com/aresti/primalscheme/blob/master/tests/inputs/CHIKV_demo.fa">tests/inputs/CHIKV_demo.fa</a>
 
 ```
@@ -50,7 +48,7 @@ or
 primalscheme multiplex path/to/CHIKV_demo.fa
 ```
 
-# about
+### about
 Primal Scheme is a tool for designing multiplex PCR primers for generating tiling amplicons. It was developed for sequencing large numbers of viral isolates of known lineages e.g. outbreak strains. It requires only two PCR reactions to generate the products which should cover at least 90% of the target region without optimisation. Full coverage is possible by fine tuning of primer concentration or exchanging poor performers.
 ​
 The primal scheme software is a wrapper for primer3 which is used to generate candidate primers from the primary reference (the first reference in the FASTA file). The minimum requirements are a single reference in FASTA format but if additional references are supplied it then aligns the primers to all reference genomes before selecting the pair with the highest mean identity. The input FASTA file should contain complete genomes representative of the lineages you would expect to find in your samples. The first genome in the fasta file is used to generate the candidates so it is the most important, see guidelines below.
