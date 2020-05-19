@@ -44,3 +44,8 @@ def test_process_fasta_chikv_demo(chikv_input):
 def test_process_fasta_gaps_removed(input_fasta_valid_with_gaps):
     references = process_fasta(input_fasta_valid_with_gaps)
     assert "-" not in references[0]
+
+
+def test_process_fasta_too_short_input(input_fasta_short_500):
+    with pytest.raises(ValueError, match="too short"):
+        process_fasta(input_fasta_short_500, min_ref_size=900)

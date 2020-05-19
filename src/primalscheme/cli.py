@@ -70,7 +70,8 @@ def multiplex(args, output_path):
 
     # Process FASTA input
     try:
-        references = process_fasta(args.fasta)
+        min_ref_size = args.amplicon_size_max * 2
+        references = process_fasta(args.fasta, min_ref_size=min_ref_size)
     except ValueError as e:
         logger.error(f"Error: {e}")
         sys.exit(2)
@@ -106,7 +107,7 @@ def multiplex(args, output_path):
     sys.exit(0)
 
 
-def process_fasta(file_path):
+def process_fasta(file_path, min_ref_size=None):
     """
     Parse and validate the fasta file.
     """
@@ -126,6 +127,13 @@ def process_fasta(file_path):
     # Check for no references
     if not references:
         raise ValueError("The input FASTA file does not contain any valid references.")
+
+    # Check for too short references
+    if min_ref_size and any(len(ref) < min_ref_size for ref in references):
+        raise ValueError(
+            "One or more of your references is too short. Based on your target "
+            f"amplicon size, the minimum reference size is {min_ref_size} nt."
+        )
 
     # Check for too many references
     if len(references) > 100:

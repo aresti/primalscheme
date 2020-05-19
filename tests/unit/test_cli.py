@@ -120,8 +120,22 @@ def test_force_allows_existing_output_path(tmp_path):
     primalscheme.cli.get_output_path(output_path=path, force=True)
 
 
-def test_existing_output_path_not_dir_raises(tmp_path):
+def test_existing_output_path_not_dir(tmp_path):
     path = tmp_path / "output"
     path.write_text("text")
     with pytest.raises(IOError):
         primalscheme.cli.get_output_path(output_path=path, force=True)
+
+
+def test_too_short_fasta_length_vs_amplicon_size(
+    input_fasta_short_500, default_config, tmp_path, caplog
+):
+    args = ["multiplex", str(input_fasta_short_500)]
+    parsed = primalscheme.cli.parse_arguments(args, default_config)
+    outpath = tmp_path / "output"
+    output_path = primalscheme.cli.get_output_path(outpath)
+
+    with pytest.raises(SystemExit):
+        primalscheme.cli.multiplex(parsed, output_path)
+    messages = [log.message for log in caplog.records]
+    assert any("too short" in msg for msg in messages)

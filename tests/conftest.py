@@ -11,7 +11,7 @@ from Bio.SeqRecord import SeqRecord
 from primalscheme.cli import get_config
 
 
-def seq_record_factory(seq_len=500, alphabet="acgt", id=""):
+def seq_record_factory(seq_len=5000, alphabet="acgt", id=""):
     """Generate a random SeqRecord for testing purposes"""
     id = id or f"random_seq_{uuid.uuid4()}"
     seq = "".join([random.choice(alphabet) for i in range(seq_len)])
@@ -69,24 +69,32 @@ def input_fasta_5_random_valid(temp_inputs_path):
 def input_fasta_101_random_valid(temp_inputs_path):
     """Generate a random multi-FASTA with 101 records"""
     fh = temp_inputs_path / "valid_random_101_fasta.fa"
-    SeqIO.write(multi_seq_generator(101, seq_len=10), fh, "fasta")
+    SeqIO.write(multi_seq_generator(101), fh, "fasta")
     return fh
 
 
 @pytest.fixture(scope="session")
 def input_fasta_valid_with_gaps(temp_inputs_path):
     """Generate a FASTA that includes gaps - """
-    fh = temp_inputs_path / "valid_random_1_fasta_with_gaps.fa"
-    SeqIO.write(seq_record_factory(seq_len=500, alphabet="acgt-"), fh, "fasta")
+    fh = temp_inputs_path / "valid_fasta_with_gaps.fa"
+    SeqIO.write(seq_record_factory(alphabet="acgt-"), fh, "fasta")
     return fh
 
 
 @pytest.fixture(scope="session")
 def input_fasta_length_difference_over_500(temp_inputs_path):
     """Generate a FASTA where the  record is over 500nt longer than the first"""
-    fh = temp_inputs_path / "valid_random_1_fasta_with_gaps.fa"
-    records = [seq_record_factory(seq_len=10), seq_record_factory(seq_len=511)]
+    fh = temp_inputs_path / "invalid_different.fa"
+    records = [seq_record_factory(seq_len=5000), seq_record_factory(seq_len=5501)]
     SeqIO.write(records, fh, "fasta")
+    return fh
+
+
+@pytest.fixture(scope="session")
+def input_fasta_short_500(temp_inputs_path):
+    """Generate a FASTA where the record is short"""
+    fh = temp_inputs_path / "invalid_short.fa"
+    SeqIO.write(seq_record_factory(seq_len=500), fh, "fasta")
     return fh
 
 
