@@ -1,5 +1,7 @@
 # primalscheme
+
 ![Build](https://github.com/aresti/primalscheme/workflows/Build/badge.svg)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 ---
 A primer3 wrapper for designing multiplex primer schemes.
 
@@ -28,14 +30,20 @@ pip install primalscheme
 ### installation from source
 If you prefer to install from source:
 ```
-git clone https://github.com/aresti/primalscheme.git
+git clone https://github.com/aresti/primalscheme.git primalscheme
+cd primalscheme
+
+python3 -m venv venv
+source venv/bin/activate
+
+pip install .
 ```
-create virtualenv then:
+
+Note: if you'd like your installation to be editable, use:
 ```
 pip install flit
 flit install --symlink
 ```
-Note: --symlink will allow you to modify the package locally.
 
 ### usage
 Download our CHIKV_demo.fa file from <a href="https://github.com/aresti/primalscheme/blob/master/tests/inputs/CHIKV_demo.fa">tests/inputs/CHIKV_demo.fa</a>
