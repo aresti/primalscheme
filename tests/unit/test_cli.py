@@ -43,12 +43,13 @@ def test_cli_fails_without_command():
         pytest.fail("CLI doesn't abort asking for a command argument")
 
 
-def test_cli_fails_without_fasta():
+def test_cli_fails_without_fasta(default_config):
     """
     Does CLI stop execution w/o a positional fasta arg?
     """
-    exit_status = os.system("primalscheme multiplex")
-    assert exit_status != 0
+    with pytest.raises(SystemExit):
+        args = ["multiplex"]
+        primalscheme.cli.parse_arguments(args, default_config)
 
 
 @pytest.mark.parametrize(
@@ -66,7 +67,7 @@ def test_cli_fails_without_fasta():
         ("--force", None),
     ],
 )
-def test_availability_of_options(option, value, default_config):
+def test_availability_of_cli_options(option, value, default_config):
     """
     Are options available?
     """
@@ -77,14 +78,13 @@ def test_availability_of_options(option, value, default_config):
     assert isinstance(parsed, Namespace)
 
 
-def test_cli_fails_with_invalid_option(chikv_input):
+def test_cli_fails_with_invalid_option(chikv_input, default_config):
     """
     Does CLI stop execution with an invalid option?
     """
-    exit_status = os.system(
-        f"primalscheme multiplex {str(chikv_input)} --force --badOption"
-    )
-    assert exit_status != 0
+    with pytest.raises(SystemExit):
+        args = ["multiplex", f"{str(chikv_input)}", "--force", "--badOption"]
+        primalscheme.cli.parse_arguments(args, default_config)
 
 
 @pytest.mark.parametrize(
