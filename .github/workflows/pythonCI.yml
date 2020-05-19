@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [ feat-core-logic-refactor ]
+    branches: [ master ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ master ]
 
 jobs:
   build:
