@@ -45,7 +45,7 @@ primalscheme multiplex path/to/CHIKV_demo.fa
 ```
 or
 ```
-primalscheme multiplex path/to/CHIKV_demo.fa
+python -m primalscheme multiplex path/to/CHIKV_demo.fa
 ```
 
 ### about
