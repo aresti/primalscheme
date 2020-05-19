@@ -105,3 +105,23 @@ def test_cli_version_output(option, capsys, default_config):
 def test_force_not_required_when_output_path_does_not_exist(tmp_path):
     path = tmp_path / "output"
     primalscheme.cli.get_output_path(output_path=path)
+
+
+def test_force_required_when_output_path_does_exist(tmp_path):
+    path = tmp_path / "output"
+    path.mkdir()
+    with pytest.raises(IOError):
+        primalscheme.cli.get_output_path(output_path=path)
+
+
+def test_force_allows_existing_output_path(tmp_path):
+    path = tmp_path / "output"
+    path.mkdir()
+    primalscheme.cli.get_output_path(output_path=path, force=True)
+
+
+def test_existing_output_path_not_dir_raises(tmp_path):
+    path = tmp_path / "output"
+    path.write_text("text")
+    with pytest.raises(IOError):
+        primalscheme.cli.get_output_path(output_path=path, force=True)
