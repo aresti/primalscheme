@@ -44,6 +44,25 @@ class MultiplexReporter(MultiplexScheme):
         self.write_refs(path)
         self.write_schemadelica_plot(path)
 
+    @property
+    def inserts(self):
+        return [(r.top_pair.left.end + 1, r.top_pair.right.end) for r in self.regions]
+
+    @property
+    def gap_count(self):
+        gaps = 0
+        last_covered = self.inserts[0][1]
+        for insert in self.inserts:
+            if insert[0] > last_covered:
+                gaps += 1
+            last_covered = insert[1]
+        return gaps
+
+    @property
+    def percent_coverage(self):
+        covered_coords = set([x for insert in self.inserts for x in range(*insert)])
+        return round(len(covered_coords) / self.ref_len * 100, 2)
+
     def write_bed(self, path):
         filepath = path / f"{self.prefix}.scheme.bed"
         logger.info(f"Writing {filepath}")

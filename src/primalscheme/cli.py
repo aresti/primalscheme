@@ -107,6 +107,11 @@ def multiplex(args, output_path):
         raise e
 
     # Write outputs
+    logger.info(
+        f"All done! Scheme created with {len(scheme.regions)} regions, "
+        f"{scheme.gap_count } gap{'' if scheme.gap_count == 1 else 's'}, "
+        f"{scheme.percent_coverage}% coverage"
+    )
     scheme.write_all(output_path)
     sys.exit(0)
 
