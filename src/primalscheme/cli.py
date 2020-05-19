@@ -5,7 +5,7 @@ www.github.com/aresti/primalscheme
 
 This module contains the CLI for PrimalScheme.
 It is executed when the user runs 'primalscheme' after installation,
-or 'python3 -m primalscheme'.
+or 'python -m primalscheme'.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
