@@ -46,7 +46,11 @@ def main():
     """
 
     config = get_config()
-    args = parse_arguments(sys.argv[1:], config)
+    try:
+        args = parse_arguments(sys.argv[1:], config)
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
     try:
         output_path = get_output_path(args.output_path, force=args.force)
@@ -237,24 +241,24 @@ def parse_arguments(args, config):
     )
     parser_scheme.add_argument(
         "--amplicon-size-min",
-        type=int,
+        type=positive_int,
         default=config["primer3"].get("PRIMER_PRODUCT_SIZE_RANGE")[0][0],
         help="Minimum amplicon size (default: %(default)i)",
     )
     parser_scheme.add_argument(
         "--amplicon-size-max",
-        type=int,
+        type=positive_int,
         default=config["primer3"].get("PRIMER_PRODUCT_SIZE_RANGE")[0][1],
         help="Maximum amplicon size (default: %(default)i)",
     )
     parser_scheme.add_argument(
         "--min-unique",
-        type=int,
+        type=positive_int,
         help="Minimum unique candiate pairs (default: %(default)i)",
     )
     parser_scheme.add_argument(
         "--max-candidates",
-        type=int,
+        type=positive_int,
         default=config["primer3"].get("PRIMER_NUM_RETURN"),
         help="Maximum candidate pairs (default: %(default)i)",
     )
@@ -262,11 +266,13 @@ def parse_arguments(args, config):
         "--output-path", help="Output directory (default: %(default)s)"
     )
     parser_scheme.add_argument(
-        "--target-overlap", type=int, help="Target overlap size (default: %(default)i)"
+        "--target-overlap",
+        type=positive_int,
+        help="Target overlap size (default: %(default)i)",
     )
     parser_scheme.add_argument(
         "--step-distance",
-        type=int,
+        type=positive_int,
         help="Distance to step between find attempts (default: %(default)i)",
     )
     parser_scheme.add_argument("--debug", action="store_true", help="Verbose logging")
@@ -282,6 +288,10 @@ def parse_arguments(args, config):
     # Generate args
     parsed = parser.parse_args(args)
 
+    # Post parsing checks
+    if parsed.amplicon_size_max < parsed.amplicon_size_min:
+        raise ValueError("--amplicon-size-min cannot exceed --amplicon-size-max")
+
     # override primer3 config
     parsed.__dict__["primer3"].update(
         {
@@ -293,6 +303,13 @@ def parse_arguments(args, config):
     )
 
     return parsed
+
+
+def positive_int(string):
+    value = int(string)
+    if value < 0:
+        raise argparse.ArgumentTypeError("positive integer required.")
+    return value
 
 
 def stdout_progress(count, total):
