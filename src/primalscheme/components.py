@@ -85,6 +85,9 @@ class CandidatePrimerPair(object):
         self.left = left
         self.right = right
 
+    def __str__(self):
+        return f"{self.left} -:- {self.right}"
+
     @property
     def mean_identity(self):
         return (self.left.identity + self.right.identity) / 2

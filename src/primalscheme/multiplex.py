@@ -256,7 +256,7 @@ class Region(Window):
         self._sort_candidate_pairs()
         self.top_pair = self.candidate_pairs[0]
 
-        logger.debug(f"Picked: {self.top_pair.left}")
+        logger.debug(f"Picked: {self.top_pair}")
         for alignment in self.top_pair.left.alignments:
             logger.debug(alignment[1])
         for alignment in self.top_pair.right.alignments:
