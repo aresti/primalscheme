@@ -147,8 +147,8 @@ def process_fasta(file_path):
     for r in references:
         if any(base not in VALID_ALPHABET for base in set(r.seq)):
             raise ValueError(
-                f"One or more of your fasta sequences contain invalid "
-                "nucleotide codes. The supported alphabet is '{VALID_ALPHABET}'. "
+                "One or more of your fasta sequences contain invalid "
+                f"nucleotide codes. The supported alphabet is '{VALID_ALPHABET}'. "
                 "Ambiguity codes and gaps are not currently supported."
             )
 
