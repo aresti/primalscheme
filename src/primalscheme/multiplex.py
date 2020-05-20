@@ -22,7 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 import logging
 
 from primalscheme.wrapper import design_primers, InsufficientPrimersError
-from primalscheme.components import CandidatePrimer, CandidatePrimerPair, reversor
+from primalscheme.components import (
+    CandidatePrimer,
+    CandidatePrimerPair,
+    reversor,
+)
 
 logger = logging.getLogger("primalscheme")
 
@@ -228,14 +232,14 @@ class Region(Window):
             left = CandidatePrimer(
                 pairs[0][i].seq,
                 pairs[0][i].start,
-                "LEFT",
+                CandidatePrimer.Direction.left,
                 f"{name}_LEFT",
                 penalty=pairs[0][i].penalty,
             )
             right = CandidatePrimer(
                 pairs[1][i].seq,
                 pairs[1][i].start,
-                "RIGHT",
+                CandidatePrimer.Direction.right,
                 f"{name}_RIGHT",
                 penalty=pairs[1][i].penalty,
             )

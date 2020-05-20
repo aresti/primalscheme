@@ -19,9 +19,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
-
 import logging
 import parasail
+
+from enum import Enum
 
 from Bio.Seq import Seq
 from primer3 import calcTm
@@ -31,6 +32,10 @@ logger = logging.getLogger("primalscheme")
 
 class Primer(object):
     """A primer."""
+
+    class Direction(Enum):
+        left = 1
+        right = -1
 
     def __init__(self, seq, start, direction):
         self.direction = direction
@@ -46,9 +51,9 @@ class Primer(object):
 
     @property
     def end(self):
-        if self.direction == "LEFT":
+        if self.direction == Primer.Direction.left:
             return self.start + self.size - 1
-        elif self.direction == "RIGHT":
+        elif self.direction == Primer.Direction.right:
             return self.start - self.size + 1
 
 
@@ -109,9 +114,9 @@ def get_alignment(primer, reference):
     EXTEND = 1
     IDENTITY_THRESHOLD = 0.7
 
-    if primer.direction == "LEFT":
+    if primer.direction == Primer.Direction.left:
         query = primer.seq
-    elif primer.direction == "RIGHT":
+    elif primer.direction == Primer.Direction.right:
         query = str(Seq(primer.seq).reverse_complement())
 
     # Semi-Global, do not penalize gaps at beginning and end of s2/database
@@ -139,11 +144,11 @@ def get_alignment(primer, reference):
     refid = reference.id[:30]
     name = primer.name[:30]
     formatted_query = f"{name: <30} {1: >6} {aln_query} {query_end + 1}"
-    if primer.direction == "LEFT":
+    if primer.direction == Primer.Direction.left:
         formatted_ref = (
             f"{refid: <30} {ref_end - query_end: >6} {aln_ref} {ref_end + 1}"
         )
-    elif primer.direction == "RIGHT":
+    elif primer.direction == Primer.Direction.right:
         rev_start = len(reference) - ref_end
         formatted_ref = (
             f"{refid: <30} {rev_start + query_end: >6} {aln_ref} {rev_start - 1}"

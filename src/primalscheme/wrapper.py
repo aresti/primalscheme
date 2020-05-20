@@ -3,7 +3,6 @@ import primer3
 
 from collections import namedtuple
 
-
 logger = logging.getLogger("primalscheme")
 
 
