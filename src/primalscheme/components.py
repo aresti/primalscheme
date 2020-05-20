@@ -138,14 +138,19 @@ def get_alignment(primer, reference):
     # Format alignment
     refid = reference.id[:30]
     name = primer.name[:30]
-    formatted_query = f"\n{name: <30} {1: >6} {aln_query} {query_end}"
+    formatted_query = f"{name: <30} {1: >6} {aln_query} {query_end + 1}"
     if primer.direction == "LEFT":
-        formatted_ref = f"\n{refid: <30} {ref_end - query_end: >6} {aln_ref} {ref_end}"
+        formatted_ref = (
+            f"{refid: <30} {ref_end - query_end: >6} {aln_ref} {ref_end + 1}"
+        )
     elif primer.direction == "RIGHT":
-        formatted_ref = f"\n{refid: <30} {ref_end: >6} {aln_ref} {ref_end - query_end}"
-
-    formatted_alignment = (
-        formatted_query + f"\n{'': <30} {'': >6} {cigar}" + formatted_ref
+        rev_start = len(reference) - ref_end
+        formatted_ref = (
+            f"{refid: <30} {rev_start + query_end: >6} {aln_ref} {rev_start - 1}"
+        )
+    formatted_cigar = f"{'': <30} {'': >6} {cigar}"
+    formatted_alignment = "\n".join(
+        ["", formatted_query, formatted_cigar, formatted_ref]
     )
 
     del trace
