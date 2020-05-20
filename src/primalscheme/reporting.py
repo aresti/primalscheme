@@ -75,7 +75,7 @@ class MultiplexReporter(MultiplexScheme):
                         [
                             self.primary_ref.id,
                             r.top_pair.left.start,
-                            r.top_pair.left.end,
+                            r.top_pair.left.end + 1,
                             r.top_pair.left.name,
                             r.pool,
                             "+",
@@ -90,7 +90,7 @@ class MultiplexReporter(MultiplexScheme):
                         [
                             self.primary_ref.id,
                             r.top_pair.right.end,
-                            r.top_pair.right.start,
+                            r.top_pair.right.start + 1,
                             r.top_pair.right.name,
                             r.pool,
                             "-",

@@ -1,5 +1,7 @@
 import pytest
 
+from Bio.Seq import Seq
+
 from primalscheme.cli import get_config, process_fasta
 from primalscheme.multiplex import MultiplexScheme
 
@@ -91,3 +93,21 @@ def test_candidates_are_correctly_sorted(default_chikv_scheme):
             pytest.fail("Candidates are not sorted second by penalty")
         identity = candidate.mean_identity
         penalty = candidate.combined_penalty
+
+
+def test_left_primer_seq_matches_ref_slice(default_chikv_scheme):
+    primary_ref = str(default_chikv_scheme.primary_ref.seq)
+    left = default_chikv_scheme.regions[0].top_pair.left
+    ref_slice = primary_ref[left.start : left.end + 1]
+
+    assert len(left.seq) == left.length
+    assert ref_slice == left.seq
+
+
+def test_right_primer_seq_matches_ref_slice(default_chikv_scheme):
+    primary_ref = str(default_chikv_scheme.primary_ref.seq)
+    right = default_chikv_scheme.regions[0].top_pair.right
+    ref_slice = str(Seq(primary_ref[right.end : right.start + 1]).reverse_complement())
+
+    assert len(right.seq) == right.length
+    assert ref_slice == right.seq

@@ -44,6 +44,13 @@ class Primer(object):
     def length(self):
         return len(self.seq)
 
+    @property
+    def end(self):
+        if self.direction == "LEFT":
+            return self.start + self.length - 1
+        elif self.direction == "RIGHT":
+            return self.start - self.length + 1
+
 
 class CandidatePrimer(Primer):
     """A candidate primer."""
@@ -70,13 +77,6 @@ class CandidatePrimer(Primer):
             self.identity = sum(scores) / len(scores)
             return
 
-    @property
-    def end(self):
-        if self.direction == "LEFT":
-            return self.start + self.length
-        else:
-            return self.start - self.length
-
 
 class CandidatePrimerPair(object):
     """A pair of candidate primers."""
@@ -94,7 +94,7 @@ class CandidatePrimerPair(object):
 
     @property
     def product_length(self):
-        return self.right.start - self.left.start
+        return self.right.start - self.left.start + 1
 
     @property
     def combined_penalty(self):
