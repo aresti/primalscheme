@@ -127,7 +127,7 @@ def test_existing_output_path_not_dir(tmp_path):
         primalscheme.cli.get_output_path(output_path=path, force=True)
 
 
-def test_too_short_fasta_length_vs_amplicon_size(
+def test_too_short_fasta_size_vs_amplicon_size(
     input_fasta_short_500, default_config, tmp_path, caplog
 ):
     args = ["multiplex", str(input_fasta_short_500)]

@@ -23,11 +23,9 @@ def test_process_fasta_too_many_records(input_fasta_101_random_valid):
         process_fasta(input_fasta_101_random_valid)
 
 
-def test_process_fasta_length_difference_over_500(
-    input_fasta_length_difference_over_500,
-):
-    with pytest.raises(ValueError, match="too different in length"):
-        process_fasta(input_fasta_length_difference_over_500)
+def test_process_fasta_size_difference_over_500(input_fasta_size_difference_over_500,):
+    with pytest.raises(ValueError, match="too different in size"):
+        process_fasta(input_fasta_size_difference_over_500)
 
 
 def test_process_fasta_returns_list_of_seq_records(input_fasta_5_random_valid):

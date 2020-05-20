@@ -82,7 +82,7 @@ def input_fasta_valid_with_gaps(temp_inputs_path):
 
 
 @pytest.fixture(scope="session")
-def input_fasta_length_difference_over_500(temp_inputs_path):
+def input_fasta_size_difference_over_500(temp_inputs_path):
     """Generate a FASTA where the  record is over 500nt longer than the first"""
     fh = temp_inputs_path / "invalid_different.fa"
     records = [seq_record_factory(seq_len=5000), seq_record_factory(seq_len=5501)]

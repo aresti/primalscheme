@@ -68,7 +68,7 @@ def test_scheme_varying_amplicon_sizes(default_config, amplicon_size, chikv_inpu
 
     regions = scheme.regions
     for region in regions[:4]:
-        product_size = region.top_pair.product_length
+        product_size = region.top_pair.product_size
         assert product_size <= amplicon_size_max
         assert product_size >= amplicon_size_min
 
@@ -100,7 +100,7 @@ def test_left_primer_seq_matches_ref_slice(default_chikv_scheme):
     left = default_chikv_scheme.regions[0].top_pair.left
     ref_slice = primary_ref[left.start : left.end + 1]
 
-    assert len(left.seq) == left.length
+    assert len(left.seq) == left.size
     assert ref_slice == left.seq
 
 
@@ -109,5 +109,5 @@ def test_right_primer_seq_matches_ref_slice(default_chikv_scheme):
     right = default_chikv_scheme.regions[0].top_pair.right
     ref_slice = str(Seq(primary_ref[right.end : right.start + 1]).reverse_complement())
 
-    assert len(right.seq) == right.length
+    assert len(right.seq) == right.size
     assert ref_slice == right.seq

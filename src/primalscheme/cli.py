@@ -148,13 +148,13 @@ def process_fasta(file_path, min_ref_size=None):
     if len(references) > 100:
         raise ValueError("A maximum of 100 reference genomes is currently supported.")
 
-    # Check for max difference in length between references
+    # Check for max difference in size between references
     primary_ref = references[0]
     primary_ref_len = len(primary_ref)
 
     if any(abs(len(r) - primary_ref_len) > 500 for r in references):
         raise ValueError(
-            "One or more of your references is too different in length to "
+            "One or more of your references is too different in size to "
             "the primary (first) reference. The maximum difference is "
             "500 nt."
         )

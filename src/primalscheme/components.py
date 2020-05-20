@@ -41,15 +41,15 @@ class Primer(object):
         return f"{self.direction}:{self.seq}:{self.start}"
 
     @property
-    def length(self):
+    def size(self):
         return len(self.seq)
 
     @property
     def end(self):
         if self.direction == "LEFT":
-            return self.start + self.length - 1
+            return self.start + self.size - 1
         elif self.direction == "RIGHT":
-            return self.start - self.length + 1
+            return self.start - self.size + 1
 
 
 class CandidatePrimer(Primer):
@@ -93,7 +93,7 @@ class CandidatePrimerPair(object):
         return (self.left.identity + self.right.identity) / 2
 
     @property
-    def product_length(self):
+    def product_size(self):
         return self.right.start - self.left.start + 1
 
     @property

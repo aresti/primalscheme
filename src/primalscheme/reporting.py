@@ -108,7 +108,7 @@ class MultiplexReporter(MultiplexScheme):
         logger.info(f"Writing {filepath}")
         with open(filepath, "w") as tsvhandle:
             print(
-                *["name", "pool", "seq", "length", "%gc", "tm (use 65)"],
+                *["name", "pool", "seq", "size", "%gc", "tm (use 65)"],
                 sep="\t",
                 file=tsvhandle,
             )
@@ -122,7 +122,7 @@ class MultiplexReporter(MultiplexScheme):
                             left.name,
                             r.pool,
                             left.seq,
-                            left.length,
+                            left.size,
                             "%.2f" % left.gc,
                             "%.2f" % left.tm,
                         ],
@@ -137,7 +137,7 @@ class MultiplexReporter(MultiplexScheme):
                             right.name,
                             r.pool,
                             right.seq,
-                            right.length,
+                            right.size,
                             "%.2f" % right.gc,
                             "%.2f" % right.tm,
                         ],
