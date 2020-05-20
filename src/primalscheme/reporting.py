@@ -64,6 +64,9 @@ class MultiplexReporter(MultiplexScheme):
         return round(len(covered_coords) / self.ref_len * 100, 2)
 
     def write_bed(self, path):
+        """
+        Write BED format to file.
+        """
         filepath = path / f"{self.prefix}.scheme.bed"
         logger.info(f"Writing {filepath}")
 
@@ -75,7 +78,7 @@ class MultiplexReporter(MultiplexScheme):
                         [
                             self.primary_ref.id,
                             r.top_pair.left.start,
-                            r.top_pair.left.end + 1,
+                            r.top_pair.left.end + 1,  # BED end is 1-based
                             r.top_pair.left.name,
                             r.pool,
                             "+",
