@@ -2,6 +2,7 @@ import logging
 import primer3
 
 from collections import namedtuple
+from primer3 import calcTm
 
 logger = logging.getLogger("primalscheme")
 
@@ -34,7 +35,8 @@ def design_primers(seq, p3_global, min_unique, offset=0):
         num_returned = p3_output[f"PRIMER_{text_dir[d]}_NUM_RETURNED"]
         for i in range(num_returned):
             seq = str(p3_output[f"PRIMER_{text_dir[d]}_{i}_SEQUENCE"])
-            penalty = float(p3_output[f"PRIMER_{text_dir[d]}_{i}_PENALTY"])
+            #penalty = float(p3_output[f"PRIMER_{text_dir[d]}_{i}_PENALTY"])
+            penalty = calcualte_penalty(seq, p3_global)
             start = offset + int(p3_output[f"PRIMER_{text_dir[d]}_{i}"][0])
             pairs[d].append(SimplePrimer(seq, start, penalty))
 
@@ -49,3 +51,43 @@ def design_primers(seq, p3_global, min_unique, offset=0):
         )
 
     return pairs
+
+
+def calcualte_penalty(seq, p3_global):
+    """As per penalty scoring routine described in http://primer3.ut.ee/primer3web_help.htm"""
+    #High Tm
+    penalty = 0
+    tm = calc_tm(seq)
+    gc = calc_gc(seq)
+    length = calc_length(seq)
+    if tm > p3_global['PRIMER_OPT_TM']:
+        penalty += p3_global['PRIMER_WT_TM_GT'] * (tm - p3_global['PRIMER_OPT_TM'])
+    #Low Tm
+    if tm < p3_global['PRIMER_OPT_TM']:
+        penalty += p3_global['PRIMER_WT_TM_LT'] * (p3_global['PRIMER_OPT_TM'] - tm)
+    #High GC
+    if gc > p3_global['PRIMER_OPT_GC_PERCENT']:
+        penalty += p3_global['PRIMER_WT_GC_PERCENT_GT'] * (gc - p3_global['PRIMER_OPT_GC_PERCENT'])
+    #Low GC
+    if gc < p3_global['PRIMER_OPT_GC_PERCENT']:
+        penalty += p3_global['PRIMER_WT_GC_PERCENT_LT'] * (p3_global['PRIMER_OPT_GC_PERCENT'] - gc)
+    #High size
+    if length > p3_global['PRIMER_OPT_SIZE']:
+        penalty += p3_global['PRIMER_WT_SIZE_GT'] * (length - p3_global['PRIMER_OPT_SIZE'])
+    #Low size
+    if length < p3_global['PRIMER_OPT_SIZE']:
+        penalty += p3_global['PRIMER_WT_SIZE_LT'] * (p3_global['PRIMER_OPT_SIZE'] - length)
+
+    return penalty
+
+#Calc Tm
+def calc_tm(seq):
+    return calcTm(seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6)
+
+#Calc GC content
+def calc_gc(seq):
+    return 100.0 * (seq.count('G') + seq.count('C')) / len(seq)
+
+#Calc length of primer
+def calc_length(seq):
+    return len(seq)
