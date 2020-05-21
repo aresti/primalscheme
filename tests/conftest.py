@@ -114,3 +114,9 @@ def all_stored_inputs(request, stored_inputs_path):
 def chikv_input(stored_inputs_path):
     """Return all stored input paths"""
     return stored_inputs_path / STORED_INPUTS[0]
+
+
+@pytest.fixture(scope="session")
+def random_reference_slice():
+    record = seq_record_factory(seq_len=500)
+    return str(record.seq)
