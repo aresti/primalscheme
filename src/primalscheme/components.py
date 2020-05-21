@@ -24,7 +24,6 @@ import parasail
 
 from enum import Enum
 
-from Bio.Seq import Seq
 from primer3 import calcTm
 
 logger = logging.getLogger("primalscheme")
@@ -115,23 +114,23 @@ def get_alignment(primer, reference):
     IDENTITY_THRESHOLD = 0.7
 
     if primer.direction == Primer.Direction.left:
-        query = primer.seq
+        ref = reference.seq
     elif primer.direction == Primer.Direction.right:
-        query = str(Seq(primer.seq).reverse_complement())
+        ref = reference.reverse_complement().seq
 
     # Semi-Global, do not penalize gaps at beginning and end of s2/database
     trace = parasail.sg_dx_trace_striped_sat(
-        query, str(reference.seq), OPEN, EXTEND, MATRIX
+        str(primer.seq), str(ref), OPEN, EXTEND, MATRIX
     )
     traceback = trace.get_traceback()
 
-    query_end = trace.end_query
-    ref_end = trace.end_ref
+    query_end = trace.end_query + 1
+    ref_end = trace.end_ref + 1
 
     # Get alignment strings
-    aln_query = traceback.query[ref_end - query_end : ref_end + 1]
-    cigar = traceback.comp[ref_end - query_end : ref_end + 1]
-    aln_ref = traceback.ref[ref_end - query_end : ref_end + 1]
+    aln_query = traceback.query[ref_end - query_end : ref_end]
+    cigar = traceback.comp[ref_end - query_end : ref_end]
+    aln_ref = traceback.ref[ref_end - query_end : ref_end]
 
     # Identity for glocal alignment
     identity = cigar.count("|") / len(cigar)
@@ -143,15 +142,15 @@ def get_alignment(primer, reference):
     # Format alignment
     refid = reference.id[:30]
     name = primer.name[:30]
-    formatted_query = f"{name: <30} {1: >6} {aln_query} {query_end + 1}"
+    formatted_query = f"{name: <30} {1: >6} {aln_query} {query_end}"
     if primer.direction == Primer.Direction.left:
         formatted_ref = (
-            f"{refid: <30} {ref_end - query_end: >6} {aln_ref} {ref_end + 1}"
+            f"{refid: <30} {ref_end - query_end + 1: >6} {aln_ref} {ref_end}"
         )
     elif primer.direction == Primer.Direction.right:
         rev_start = len(reference) - ref_end
         formatted_ref = (
-            f"{refid: <30} {rev_start + query_end: >6} {aln_ref} {rev_start - 1}"
+            f"{refid: <30} {rev_start + query_end: >6} {aln_ref} {rev_start + 1}"
         )
     formatted_cigar = f"{'': <30} {'': >6} {cigar}"
     formatted_alignment = "\n".join(
