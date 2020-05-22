@@ -75,7 +75,7 @@ class CandidatePrimer(Primer):
             if alignment:
                 self.alignments.append(alignment)
 
-        # Calculate average percent identity
+        # Calculate average
         if self.alignments:
             scores = [a[0] for a in self.alignments]
             self.identity = sum(scores) / len(scores)

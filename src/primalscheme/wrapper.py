@@ -1,7 +1,9 @@
 import logging
 import primer3
+from Bio import Seq
 
 from collections import namedtuple
+from itertools import groupby
 
 
 logger = logging.getLogger("primalscheme")
@@ -16,34 +18,77 @@ class InsufficientPrimersError(Exception):
 def design_primers(seq, p3_global, min_unique, offset=0):
     """Find primer pairs for a sequence slice."""
 
-    SimplePrimer = namedtuple("SimplePrimer", "seq start penalty")
+    SimplePrimer = namedtuple(
+        "SimplePrimer", "seq start gc tm hairpin max_homo penalty"
+    )
 
-    p3_seq = {
-        "SEQUENCE_TEMPLATE": seq,
-        "SEQUENCE_PRIMER_PAIR_OK_REGION_LIST": [-1, -1, -1, -1],
-        "SEQUENCE_INCLUDED_REGION": [-1, -1],
-    }
+    # Digest seq into k-mers
+    all_kmers = set()
+    for kmer_size in range(
+        p3_global["PRIMER_MIN_SIZE"], p3_global["PRIMER_MAX_SIZE"] + 1
+    ):
+        all_kmers.update(digestSeq(seq, kmer_size))
 
-    # Call primer3
-    p3_output = primer3.bindings.designPrimers(p3_seq, p3_global)
+    # Filter for valid start position only
+    fwd_kmers = [k for k in all_kmers if 0 <= k[1] < 40]
+    rev_kmers = [k for k in all_kmers if 380 <= k[1] + len(k[0]) < 420]
+    rev_kmers = [
+        (str(Seq.Seq(k[0]).reverse_complement()), k[1] + len(k[0])) for k in rev_kmers
+    ]
 
-    # Parse result
+    # Generate SimplePrimer
+    fwd_candidates = [
+        SimplePrimer(
+            k[0],
+            offset + k[1],
+            calc_gc(k[0]),
+            calc_tm(k[0]),
+            calc_hairpin(k[0]),
+            calc_max_homo(k[0]),
+            calc_penalty(k[0], p3_global),
+        )
+        for k in fwd_kmers
+    ]
+    rev_candidates = [
+        SimplePrimer(
+            k[0],
+            offset + k[1],
+            calc_gc(k[0]),
+            calc_tm(k[0]),
+            calc_hairpin(k[0]),
+            calc_max_homo(k[0]),
+            calc_penalty(k[0], p3_global),
+        )
+        for k in rev_kmers
+    ]
+
+    # Filter function
+    def hard_filter(p):
+        return (
+            (30 <= p.gc <= 55)
+            and (60 <= p.tm <= 63)
+            and (p.hairpin <= 50.0)
+            and (p.max_homo <= 5)
+        )
+
+    # Perform the hard filtering
+    fwd_thermo = [p for p in fwd_candidates if hard_filter(p)]
+    rev_thermo = [p for p in rev_candidates if hard_filter(p)]
+
+    # Filter for valid length
+    filt_pairs = [
+        (f, r)
+        for f in fwd_thermo
+        for r in rev_thermo
+        if 380 <= r.start - f.start + 1 <= 420
+    ]
+
     pairs = ([], [])
-    text_dir = ("LEFT", "RIGHT")
-
     for d in range(2):
-        num_returned = p3_output[f"PRIMER_{text_dir[d]}_NUM_RETURNED"]
-        for i in range(num_returned):
-            seq = str(p3_output[f"PRIMER_{text_dir[d]}_{i}_SEQUENCE"])
-            penalty = calc_penalty(seq, p3_global)
-            start = offset + int(p3_output[f"PRIMER_{text_dir[d]}_{i}"][0])
-            pairs[d].append(SimplePrimer(seq, start, penalty))
+        for i in sorted(filt_pairs, key=lambda x: (x[0].penalty + x[1].penalty))[:10]:
+            pairs[d].append(i[d])
 
-    # If we don't have min unique left and right, then raise
-    unique_count = min(len(set(pairs[0])), len(set(pairs[1])))
-    logger.debug(f"Primer3 returned {unique_count} unique pairs")
-
-    if unique_count < min_unique:
+    if len(filt_pairs) < min_unique:
         logger.debug(f"Does not satisfy {min_unique} min unique")
         raise InsufficientPrimersError(
             f"Failed to find {min_unique} unique left or right primers."
@@ -110,3 +155,18 @@ def calc_gc(seq):
 # Calc length of primer
 def calc_length(seq):
     return len(seq)
+
+
+# Calc max homopolymer length using itertools
+def calc_max_homo(seq):
+    return sorted([(len(list(g))) for k, g in groupby(seq)], reverse=True)[0]
+
+
+# Calc hairpin stability
+def calc_hairpin(seq):
+    return primer3.calcHairpin(seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6).tm
+
+
+# Digest seq into k-mers
+def digestSeq(seq, kmer_size):
+    return [(seq[i : i + kmer_size], i) for i in range((len(seq) - kmer_size) + 1)]
