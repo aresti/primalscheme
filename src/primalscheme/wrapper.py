@@ -15,8 +15,7 @@ class InsufficientPrimersError(Exception):
     pass
 
 
-def design_primers(seq, p3_global, min_unique, offset=0):
-    """Find primer pairs for a sequence slice."""
+def generate(seq, offset, p3_global, direction):
 
     SimplePrimer = namedtuple(
         "SimplePrimer", "seq start gc tm hairpin max_homo penalty"
@@ -27,39 +26,23 @@ def design_primers(seq, p3_global, min_unique, offset=0):
     for kmer_size in range(
         p3_global["PRIMER_MIN_SIZE"], p3_global["PRIMER_MAX_SIZE"] + 1
     ):
-        all_kmers.update(digestSeq(seq, kmer_size))
+        all_kmers.update(digest_seq(seq, kmer_size))
 
     # Filter for valid start position only
-    fwd_kmers = [k for k in all_kmers if 0 <= k[1] < 40]
-    rev_kmers = [k for k in all_kmers if 380 <= k[1] + len(k[0]) < 420]
-    rev_kmers = [
-        (str(Seq.Seq(k[0]).reverse_complement()), k[1] + len(k[0])) for k in rev_kmers
-    ]
+    valid_positions = [k for k in all_kmers if 0 <= k[1] < 40]
 
-    # Generate SimplePrimer
-    fwd_candidates = [
+    # Generate SimplePrimers
+    simple_primers = [
         SimplePrimer(
             k[0],
-            offset + k[1],
+            offset + k[1] if direction == "left" else offset + len(seq) - k[1],
             calc_gc(k[0]),
             calc_tm(k[0]),
             calc_hairpin(k[0]),
             calc_max_homo(k[0]),
             calc_penalty(k[0], p3_global),
         )
-        for k in fwd_kmers
-    ]
-    rev_candidates = [
-        SimplePrimer(
-            k[0],
-            offset + k[1],
-            calc_gc(k[0]),
-            calc_tm(k[0]),
-            calc_hairpin(k[0]),
-            calc_max_homo(k[0]),
-            calc_penalty(k[0], p3_global),
-        )
-        for k in rev_kmers
+        for k in valid_positions
     ]
 
     # Filter function
@@ -72,17 +55,19 @@ def design_primers(seq, p3_global, min_unique, offset=0):
         )
 
     # Perform the hard filtering
-    fwd_thermo = [p for p in fwd_candidates if hard_filter(p)]
-    rev_thermo = [p for p in rev_candidates if hard_filter(p)]
+    filtered_primers = [p for p in simple_primers if hard_filter(p)]
+    return filtered_primers
 
-    # Filter for valid length
-    filt_pairs = [
-        (f, r)
-        for f in fwd_thermo
-        for r in rev_thermo
-        if 380 <= r.start - f.start + 1 <= 420
-    ]
 
+def design_primers(seq, p3_global, min_unique, offset=0):
+    """Find primer pairs for a sequence slice."""
+
+    left_primers = generate(seq, offset, p3_global, "left")
+    right_primers = generate(
+        str(Seq.Seq(seq).reverse_complement()), offset, p3_global, "right"
+    )
+
+    filt_pairs = [(f, r) for f in left_primers for r in right_primers]
     pairs = ([], [])
     for d in range(2):
         for i in sorted(filt_pairs, key=lambda x: (x[0].penalty + x[1].penalty))[:10]:
@@ -168,5 +153,5 @@ def calc_hairpin(seq):
 
 
 # Digest seq into k-mers
-def digestSeq(seq, kmer_size):
+def digest_seq(seq, kmer_size):
     return [(seq[i : i + kmer_size], i) for i in range((len(seq) - kmer_size) + 1)]
