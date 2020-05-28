@@ -21,12 +21,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 import logging
 import parasail
-
+from collections import namedtuple
+from itertools import groupby
 from enum import Enum
-
-from primer3 import calcTm
+from primer3 import calcTm, calcHairpin
 
 logger = logging.getLogger("primalscheme")
+
+Kmer = namedtuple("Kmer", "seq start")
+Alignment = namedtuple("Alignment", "mismatches formatted_alignment")
+SimplePrimer = namedtuple("SimplePrimer", "seq start direction gc tm hairpin max_homo")
+
+
+class FailedAlignmentError(Exception):
+    """No aligment between the primer and the refernce"""
+
+    pass
 
 
 class Primer(object):
@@ -59,14 +69,18 @@ class Primer(object):
 class CandidatePrimer(Primer):
     """A candidate primer."""
 
-    def __init__(self, seq, start, direction, name="", penalty=0):
-        super().__init__(seq, start, direction)
+    MISMATCH_PENALTY = 1
+
+    def __init__(self, simple_primer, penalty, name=""):
+        super().__init__(
+            simple_primer.seq, simple_primer.start, simple_primer.direction
+        )
         self.name = name
+        self.tm = simple_primer.tm
+        self.gc = simple_primer.gc
+        self.alignments = []
         self.penalty = penalty
         self.identity = 0
-        self.tm = calcTm(self.seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6)
-        self.gc = 100.0 * (seq.count("G") + seq.count("C")) / len(seq)
-        self.alignments = []
 
     def align(self, references):
         for ref in references[1:]:
@@ -74,10 +88,15 @@ class CandidatePrimer(Primer):
             alignment = get_alignment(self, ref)
             if alignment:
                 self.alignments.append(alignment)
+            else:
+                raise FailedAlignmentError
+            self.penalty += CandidatePrimer.MISMATCH_PENALTY * alignment.mismatches
 
         # Calculate average
         if self.alignments:
-            scores = [a[0] for a in self.alignments]
+            scores = [
+                (len(self.seq) - a.mismatches) / len(self.seq) for a in self.alignments
+            ]
             self.identity = sum(scores) / len(scores)
             return
 
@@ -111,7 +130,7 @@ def get_alignment(primer, reference):
     MATRIX = parasail.matrix_create("ACGT", 2, -1)
     OPEN = 2
     EXTEND = 1
-    IDENTITY_THRESHOLD = 0.7
+    MISMATCH_THRESHOLD = 2
 
     if primer.direction == Primer.Direction.left:
         ref = reference.seq
@@ -132,11 +151,10 @@ def get_alignment(primer, reference):
     cigar = traceback.comp[ref_end - query_end : ref_end]
     aln_ref = traceback.ref[ref_end - query_end : ref_end]
 
-    # Identity for glocal alignment
-    identity = cigar.count("|") / len(cigar)
+    mismatches = cigar.count(".")
 
     # Alignment failed
-    if identity < IDENTITY_THRESHOLD:
+    if mismatches < MISMATCH_THRESHOLD:
         return None
 
     # Format alignment
@@ -159,20 +177,129 @@ def get_alignment(primer, reference):
 
     del trace
 
-    return (identity, formatted_alignment)
+    return Alignment(mismatches, formatted_alignment)
 
 
-class reversor:
-    """Decorator to reverse sort comparisons"""
+class InsufficientPrimersError(Exception):
+    """Unable to find sufficient unique primers at the current cursor position."""
 
-    def __init__(self, obj):
-        self.obj = obj
+    pass
 
-    def __eq__(self, other):
-        return other.obj == self.obj
 
-    def __lt__(self, other):
-        return other.obj < self.obj
+def design_primers(seq, offset, p3_global, reverse=False):
 
-    def __gt__(self, other):
-        return other.obj > self.obj
+    # Digest seq into k-mers
+    all_kmers = set()
+    for kmer_size in range(
+        p3_global["PRIMER_MIN_SIZE"], p3_global["PRIMER_MAX_SIZE"] + 1
+    ):
+        all_kmers.update(digest_seq(seq, kmer_size))
+
+    # Filter for valid start position only
+    valid_positions = [k for k in all_kmers if 0 <= k.start < 40]
+
+    # Generate SimplePrimers
+    simple_primers = [
+        SimplePrimer(
+            kmer.seq,
+            offset + len(seq) - 1 - kmer.start if reverse else offset + kmer.start,
+            Primer.Direction.right if reverse else Primer.Direction.left,
+            calc_gc(kmer.seq),
+            calc_tm(kmer.seq),
+            calc_hairpin(kmer.seq),
+            calc_max_homo(kmer.seq),
+        )
+        for kmer in valid_positions
+    ]
+
+    # Filter function
+    def hard_filter(p):
+        return (
+            (30 <= p.gc <= 55)
+            and (60 <= p.tm <= 63)
+            and (p.hairpin <= 50.0)
+            and (p.max_homo <= 5)
+        )
+
+    # Perform the hard filtering
+    filtered_primers = [
+        CandidatePrimer(p, calc_base_penalty(p.seq, p3_global))
+        for p in simple_primers
+        if hard_filter(p)
+    ]
+    return filtered_primers
+
+
+def calc_base_penalty(seq, p3_global):
+    """
+    Calculate primer penalty score.
+    As per proutine described in http://primer3.ut.ee/primer3web_help.htm
+    """
+
+    penalty = 0
+    tm = calc_tm(seq)
+    gc = calc_gc(seq)
+    length = calc_length(seq)
+
+    # High Tm
+    if tm > p3_global["PRIMER_OPT_TM"]:
+        penalty += p3_global["PRIMER_WT_TM_GT"] * (tm - p3_global["PRIMER_OPT_TM"])
+
+    # Low Tm
+    if tm < p3_global["PRIMER_OPT_TM"]:
+        penalty += p3_global["PRIMER_WT_TM_LT"] * (p3_global["PRIMER_OPT_TM"] - tm)
+
+    # High GC
+    if gc > p3_global["PRIMER_OPT_GC_PERCENT"]:
+        penalty += p3_global["PRIMER_WT_GC_PERCENT_GT"] * (
+            gc - p3_global["PRIMER_OPT_GC_PERCENT"]
+        )
+
+    # Low GC
+    if gc < p3_global["PRIMER_OPT_GC_PERCENT"]:
+        penalty += p3_global["PRIMER_WT_GC_PERCENT_LT"] * (
+            p3_global["PRIMER_OPT_GC_PERCENT"] - gc
+        )
+
+    # High size
+    if length > p3_global["PRIMER_OPT_SIZE"]:
+        penalty += p3_global["PRIMER_WT_SIZE_GT"] * (
+            length - p3_global["PRIMER_OPT_SIZE"]
+        )
+    # Low size
+    if length < p3_global["PRIMER_OPT_SIZE"]:
+        penalty += p3_global["PRIMER_WT_SIZE_LT"] * (
+            p3_global["PRIMER_OPT_SIZE"] - length
+        )
+
+    return penalty
+
+
+# Calc Tm
+def calc_tm(seq):
+    return calcTm(seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6)
+
+
+# Calc GC content
+def calc_gc(seq):
+    return 100.0 * (seq.count("G") + seq.count("C")) / len(seq)
+
+
+# Calc length of primer
+def calc_length(seq):
+    return len(seq)
+
+
+# Calc max homopolymer length using itertools
+def calc_max_homo(seq):
+    return sorted([(len(list(g))) for k, g in groupby(seq)], reverse=True)[0]
+
+
+# Calc hairpin stability
+def calc_hairpin(seq):
+    return calcHairpin(seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6).tm
+
+
+# Digest seq into k-mers
+def digest_seq(seq, kmer_size):
+    return [Kmer(seq[i : i + kmer_size], i) for i in range((len(seq) - kmer_size) + 1)]
