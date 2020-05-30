@@ -21,13 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 import logging
 
-from Bio import Seq
-
 from primalscheme.components import (
     CandidatePrimerPair,
     design_primers,
     InsufficientPrimersError,
     FailedAlignmentError,
+    align_secondary_reference,
 )
 
 logger = logging.getLogger("primalscheme")
@@ -173,7 +172,7 @@ class Window:
     @property
     def ref_slice(self):
         primary_ref = self.scheme.primary_ref.seq  # Seq object
-        return str(primary_ref[self.slice_start : self.slice_end])
+        return primary_ref[self.slice_start : self.slice_end]
 
 
 class Region(Window):
@@ -219,51 +218,85 @@ class Region(Window):
 
     def _find_primers_for_slice(self):
         """Try to find sufficient primers for the current slice"""
-
-        PENALTY_THRESHOLD = 5
+        MISMATCH_PENALTY = 1.5
+        PENALTY_THRESHOLD = 4
 
         logger.debug(f"Finding primers for slice [{self.slice_start}:{self.slice_end}]")
+
+        left_alignments = []
+        right_alignments = []
+        primer_max_size = self.scheme.p3_global["PRIMER_MAX_SIZE"]
+        limit = (
+            self.scheme.amplicon_size_max
+            - self.scheme.amplicon_size_min
+            + primer_max_size
+        )
+
+        for ref in self.scheme.references[1:]:  # TODO can't currently handle single ref
+            try:
+                left_alignments.append(
+                    align_secondary_reference(self.ref_slice, ref, limit=limit)
+                )
+                right_alignments.append(
+                    align_secondary_reference(self.ref_slice, ref, limit=-limit)
+                )
+            except FailedAlignmentError:
+                raise InsufficientPrimersError  # TODO
 
         candidates = ([], [])
 
         candidates[0].extend(
             design_primers(self.ref_slice, self.slice_start, self.scheme.p3_global)
         )
-        rev_slice = str(Seq.Seq(self.ref_slice).reverse_complement())
+        rev_slice = self.ref_slice.reverse_complement()
         candidates[1].extend(
             design_primers(
                 rev_slice, self.slice_start, self.scheme.p3_global, reverse=True
             )
         )
 
-        for direction in candidates:
-            for primer in direction:
-                try:
-                    primer.align(self.scheme.references)
-                    if primer.penalty > PENALTY_THRESHOLD:
-                        direction.remove(primer)
-                except FailedAlignmentError:
-                    direction.remove(primer)
+        passing_candidates = ([], [])
 
-        if any(not direction for direction in candidates):
+        for primer in candidates[0]:
+            for cigar in left_alignments:
+                start = primer.start - self.slice_start
+                end = start + primer.size
+                primer.penalty += cigar[start : end + 1].count(".") * MISMATCH_PENALTY
+                primer.mismatches = cigar[start : end + 1].count(".")
+                if primer.penalty <= PENALTY_THRESHOLD:
+                    passing_candidates[0].append(primer)
+
+        for primer in candidates[1]:
+            for cigar in right_alignments:
+                start = primer.end - self.slice_end + limit
+                end = start + primer.size
+                primer.penalty += cigar[start : end + 1].count(".") * MISMATCH_PENALTY
+                primer.mismatches = cigar[start : end + 1].count(".")
+                if primer.penalty <= PENALTY_THRESHOLD:
+                    passing_candidates[1].append(primer)
+
+        if any(not direction for direction in passing_candidates):
             raise InsufficientPrimersError
 
         self.candidate_pairs = [
             CandidatePrimerPair(left, right)
-            for left in candidates[0]
-            for right in candidates[1]
+            for left in passing_candidates[0]
+            for right in passing_candidates[1]
         ]
         self._pick_pair()
+        self.top_pair.left.align(self.scheme.references)
+        self.top_pair.right.align(self.scheme.references)
+        self.log_formatted()
 
     def _sort_candidate_pairs(self):
         """Sort the list of candidate pairs in place"""
-
         self.candidate_pairs.sort(key=lambda x: x.combined_penalty)
 
     def _pick_pair(self):
         self._sort_candidate_pairs()
         self.top_pair = self.candidate_pairs[0]
 
+    def log_formatted(self):
         logger.debug(f"Picked: {self.top_pair}")
         for alignment in self.top_pair.left.alignments:
             logger.debug(alignment.formatted_alignment)
@@ -273,7 +306,8 @@ class Region(Window):
             logger.debug(
                 f"Candidate pair {i}: "
                 f"penalty {pair.combined_penalty:.2f}, "
-                f"{pair.mean_identity:.2f} identity"
+                f"{pair.left.mismatches} left mismatches, "
+                f"{pair.right.mismatches} right mismatches, "
             )
 
 

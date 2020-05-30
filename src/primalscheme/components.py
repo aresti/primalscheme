@@ -86,11 +86,7 @@ class CandidatePrimer(Primer):
         for ref in references[1:]:
             # align against non-primary references
             alignment = get_alignment(self, ref)
-            if alignment:
-                self.alignments.append(alignment)
-            else:
-                raise FailedAlignmentError
-            self.penalty += CandidatePrimer.MISMATCH_PENALTY * alignment.mismatches
+            self.alignments.append(alignment)
 
         # Calculate average
         if self.alignments:
@@ -130,7 +126,7 @@ def get_alignment(primer, reference):
     MATRIX = parasail.matrix_create("ACGT", 2, -1)
     OPEN = 2
     EXTEND = 1
-    MISMATCH_THRESHOLD = 2
+    MISMATCH_THRESHOLD = 10
 
     if primer.direction == Primer.Direction.left:
         ref = reference.seq
@@ -154,8 +150,8 @@ def get_alignment(primer, reference):
     mismatches = cigar.count(".")
 
     # Alignment failed
-    if mismatches < MISMATCH_THRESHOLD:
-        return None
+    if mismatches > MISMATCH_THRESHOLD:
+        raise FailedAlignmentError
 
     # Format alignment
     refid = reference.id[:30]
@@ -180,6 +176,38 @@ def get_alignment(primer, reference):
     return Alignment(mismatches, formatted_alignment)
 
 
+def align_secondary_reference(primary_ref_slice, ref, limit=None):
+    """
+    An seqan alignment of a primary reference slice against a complete
+    secondary reference.
+    """
+
+    MATRIX = parasail.matrix_create("ACGT", 2, -1)
+    OPEN = 2
+    EXTEND = 1
+
+    # Semi-Global, do not penalize gaps at beginning and end of s2/database
+    if limit and limit > 0:
+        primary_ref_slice = primary_ref_slice[: limit + 1]
+    elif limit and limit < 0:
+        primary_ref_slice = primary_ref_slice[len(primary_ref_slice) + limit :]
+    trace = parasail.sg_dx_trace_striped_sat(
+        str(primary_ref_slice), str(ref.seq), OPEN, EXTEND, MATRIX
+    )
+    traceback = trace.get_traceback()
+    query_end = trace.end_query
+    ref_end = trace.end_ref
+    cigar = traceback.comp[ref_end - query_end : ref_end]
+
+    # Alignment failed
+    if len(cigar) > len(primary_ref_slice):
+        raise FailedAlignmentError
+
+    del trace
+
+    return cigar
+
+
 class InsufficientPrimersError(Exception):
     """Unable to find sufficient unique primers at the current cursor position."""
 
@@ -193,7 +221,7 @@ def design_primers(seq, offset, p3_global, reverse=False):
     for kmer_size in range(
         p3_global["PRIMER_MIN_SIZE"], p3_global["PRIMER_MAX_SIZE"] + 1
     ):
-        all_kmers.update(digest_seq(seq, kmer_size))
+        all_kmers.update(digest_seq(str(seq), kmer_size))
 
     # Filter for valid start position only
     valid_positions = [k for k in all_kmers if 0 <= k.start < 40]
