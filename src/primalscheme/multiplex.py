@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 import logging
 
 from primalscheme.components import (
+    Primer,
     CandidatePrimerPair,
     design_primers,
     InsufficientPrimersError,
@@ -171,8 +172,32 @@ class Window:
 
     @property
     def ref_slice(self):
-        primary_ref = self.scheme.primary_ref.seq  # Seq object
+        primary_ref = self.scheme.primary_ref.seq
         return primary_ref[self.slice_start : self.slice_end]
+
+    @property
+    def flank_size(self):
+        max_primer_size = self.scheme.p3_global["PRIMER_MAX_SIZE"]
+        max_variation = self.scheme.amplicon_size_max - self.scheme.amplicon_size_min
+        return max_variation + max_primer_size
+
+    @property
+    def left_flank(self):
+        return self.ref_slice[: self.flank_size]
+
+    @property
+    def right_flank(self):
+        return self.ref_slice[-self.flank_size :]
+
+    def get_flank_cigars(self):
+        cigars = [
+            (
+                align_secondary_reference(self.ref_slice, ref, limit=self.flank_size),
+                align_secondary_reference(self.ref_slice, ref, limit=-self.flank_size),
+            )
+            for ref in self.scheme.references[1:]
+        ]
+        return cigars
 
 
 class Region(Window):
@@ -198,7 +223,7 @@ class Region(Window):
             try:
                 self._find_primers_for_slice()
                 break
-            except InsufficientPrimersError:
+            except (FailedAlignmentError, InsufficientPrimersError):
                 if exhausted_left:
                     try:
                         # step right, retry
@@ -218,75 +243,64 @@ class Region(Window):
 
     def _find_primers_for_slice(self):
         """Try to find sufficient primers for the current slice"""
-        MISMATCH_PENALTY = 1.5
-        PENALTY_THRESHOLD = 4
+        MAX_MISMATCHES = 2
 
         logger.debug(f"Finding primers for slice [{self.slice_start}:{self.slice_end}]")
 
-        left_alignments = []
-        right_alignments = []
-        primer_max_size = self.scheme.p3_global["PRIMER_MAX_SIZE"]
-        limit = (
-            self.scheme.amplicon_size_max
-            - self.scheme.amplicon_size_min
-            + primer_max_size
+        flank_cigars = self.get_flank_cigars()
+
+        candidates = design_primers(
+            self.left_flank, self.slice_start, self.scheme.p3_global
         )
-
-        for ref in self.scheme.references[1:]:  # TODO can't currently handle single ref
-            try:
-                left_alignments.append(
-                    align_secondary_reference(self.ref_slice, ref, limit=limit)
-                )
-                right_alignments.append(
-                    align_secondary_reference(self.ref_slice, ref, limit=-limit)
-                )
-            except FailedAlignmentError:
-                raise InsufficientPrimersError  # TODO
-
-        candidates = ([], [])
-
-        candidates[0].extend(
-            design_primers(self.ref_slice, self.slice_start, self.scheme.p3_global)
-        )
-        rev_slice = self.ref_slice.reverse_complement()
-        candidates[1].extend(
+        candidates.extend(
             design_primers(
-                rev_slice, self.slice_start, self.scheme.p3_global, reverse=True
+                self.right_flank.reverse_complement(),
+                self.slice_end - self.flank_size,  # TODO out by one?
+                self.scheme.p3_global,
+                reverse=True,
             )
         )
 
-        passing_candidates = ([], [])
+        if len(self.scheme.references) > 1:
+            passing_candidates = []
+            for primer in candidates:
+                self._align_against_secondary(primer, flank_cigars)
+                if max(primer.mismatch_counts) <= MAX_MISMATCHES:
+                    passing_candidates.append(primer)
+            candidates = passing_candidates
 
-        for primer in candidates[0]:
-            for cigar in left_alignments:
-                start = primer.start - self.slice_start
-                end = start + primer.size
-                primer.penalty += cigar[start : end + 1].count(".") * MISMATCH_PENALTY
-                primer.mismatches = cigar[start : end + 1].count(".")
-                if primer.penalty <= PENALTY_THRESHOLD:
-                    passing_candidates[0].append(primer)
+        passing_left = [
+            primer for primer in candidates if primer.direction == Primer.Direction.left
+        ]
+        passing_right = [
+            primer
+            for primer in candidates
+            if primer.direction == Primer.Direction.right
+        ]
 
-        for primer in candidates[1]:
-            for cigar in right_alignments:
-                start = primer.end - self.slice_end + limit
-                end = start + primer.size
-                primer.penalty += cigar[start : end + 1].count(".") * MISMATCH_PENALTY
-                primer.mismatches = cigar[start : end + 1].count(".")
-                if primer.penalty <= PENALTY_THRESHOLD:
-                    passing_candidates[1].append(primer)
-
-        if any(not direction for direction in passing_candidates):
+        if not (passing_left and passing_right):
             raise InsufficientPrimersError
 
         self.candidate_pairs = [
             CandidatePrimerPair(left, right)
-            for left in passing_candidates[0]
-            for right in passing_candidates[1]
+            for left in passing_left[:10]
+            for right in passing_right[:10]
         ]
         self._pick_pair()
         self.top_pair.left.align(self.scheme.references)
         self.top_pair.right.align(self.scheme.references)
         self.log_formatted()
+
+    def _align_against_secondary(self, primer, flank_cigars):
+        for left, right in flank_cigars:
+            if primer.direction == Primer.Direction.left:
+                start = primer.start - self.slice_start
+                cigar = left
+            else:
+                start = primer.end - self.slice_end + self.flank_size
+                cigar = right
+            end = start + primer.size
+            primer.alignment_cigars.append(cigar[start : end + 1])
 
     def _sort_candidate_pairs(self):
         """Sort the list of candidate pairs in place"""
@@ -305,9 +319,9 @@ class Region(Window):
         for i, pair in enumerate(self.candidate_pairs[:10]):
             logger.debug(
                 f"Candidate pair {i}: "
-                f"penalty {pair.combined_penalty:.2f}, "
-                f"{pair.left.mismatches} left mismatches, "
-                f"{pair.right.mismatches} right mismatches, "
+                f"combined penalty {pair.combined_penalty:.2f}, "
+                f"{pair.left.mismatch_counts[0]} left mismatches, "
+                f"{pair.right.mismatch_counts[0]} right mismatches, "
             )
 
 

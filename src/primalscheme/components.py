@@ -71,7 +71,7 @@ class CandidatePrimer(Primer):
 
     MISMATCH_PENALTY = 1
 
-    def __init__(self, simple_primer, penalty, name=""):
+    def __init__(self, simple_primer, base_penalty, name=""):
         super().__init__(
             simple_primer.seq, simple_primer.start, simple_primer.direction
         )
@@ -79,7 +79,8 @@ class CandidatePrimer(Primer):
         self.tm = simple_primer.tm
         self.gc = simple_primer.gc
         self.alignments = []
-        self.penalty = penalty
+        self.alignment_cigars = []
+        self.base_penalty = base_penalty
         self.identity = 0
 
     def align(self, references):
@@ -95,6 +96,36 @@ class CandidatePrimer(Primer):
             ]
             self.identity = sum(scores) / len(scores)
             return
+
+    @property
+    def mismatch_counts(self):
+        return [cigar.count(".") for cigar in self.alignment_cigars]
+
+    @property
+    def mismatch_penalty_matrix(self):
+        PENALTIES = [3, 2, 1]
+        matrix = []
+        for cigar in self.alignment_cigars:
+            row = []
+            for i, base in enumerate(cigar):
+                if base == "|":
+                    row.append(0)
+                    continue
+                dist_3p = self.size - i
+                if dist_3p > len(PENALTIES) - 1:
+                    row.append(PENALTIES[-1])
+                else:
+                    row.append(PENALTIES[dist_3p])
+            matrix.append(row)
+        return matrix
+
+    @property
+    def mismatch_penalties(self):
+        return [sum(row) for row in self.mismatch_penalty_matrix]
+
+    @property
+    def total_penalty(self):
+        return self.base_penalty + sum(self.mismatch_penalties)
 
 
 class CandidatePrimerPair(object):
@@ -117,7 +148,7 @@ class CandidatePrimerPair(object):
 
     @property
     def combined_penalty(self):
-        return self.left.penalty + self.right.penalty
+        return self.left.total_penalty + self.right.total_penalty
 
 
 def get_alignment(primer, reference):
@@ -199,8 +230,8 @@ def align_secondary_reference(primary_ref_slice, ref, limit=None):
     ref_end = trace.end_ref
     cigar = traceback.comp[ref_end - query_end : ref_end]
 
-    # Alignment failed
-    if len(cigar) > len(primary_ref_slice):
+    # Alignment failed (indels)
+    if " " in cigar:
         raise FailedAlignmentError
 
     del trace
@@ -215,16 +246,14 @@ class InsufficientPrimersError(Exception):
 
 
 def design_primers(seq, offset, p3_global, reverse=False):
+    min_size = p3_global["PRIMER_MIN_SIZE"]
+    max_size = p3_global["PRIMER_MAX_SIZE"]
+    variation = max_size - min_size
 
     # Digest seq into k-mers
     all_kmers = set()
-    for kmer_size in range(
-        p3_global["PRIMER_MIN_SIZE"], p3_global["PRIMER_MAX_SIZE"] + 1
-    ):
-        all_kmers.update(digest_seq(str(seq), kmer_size))
-
-    # Filter for valid start position only
-    valid_positions = [k for k in all_kmers if 0 <= k.start < 40]
+    for kmer_size in range(min_size, max_size + 1):
+        all_kmers.update(digest_seq(str(seq[:-variation]), kmer_size))
 
     # Generate SimplePrimers
     simple_primers = [
@@ -237,25 +266,25 @@ def design_primers(seq, offset, p3_global, reverse=False):
             calc_hairpin(kmer.seq),
             calc_max_homo(kmer.seq),
         )
-        for kmer in valid_positions
+        for kmer in all_kmers
     ]
 
-    # Filter function
-    def hard_filter(p):
-        return (
-            (30 <= p.gc <= 55)
-            and (60 <= p.tm <= 63)
-            and (p.hairpin <= 50.0)
-            and (p.max_homo <= 5)
-        )
-
-    # Perform the hard filtering
-    filtered_primers = [
-        CandidatePrimer(p, calc_base_penalty(p.seq, p3_global))
-        for p in simple_primers
-        if hard_filter(p)
+    # Hard filter
+    filtered_candidates = [
+        CandidatePrimer(primer, calc_base_penalty(primer.seq, p3_global))
+        for primer in simple_primers
+        if hard_filter(primer)
     ]
-    return filtered_primers
+    return filtered_candidates
+
+
+def hard_filter(primer):
+    return (
+        (30 <= primer.gc <= 55)
+        and (60 <= primer.tm <= 63)
+        and (primer.hairpin <= 50.0)
+        and (primer.max_homo <= 5)
+    )
 
 
 def calc_base_penalty(seq, p3_global):
