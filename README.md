@@ -41,8 +41,9 @@ pip install .
 Note: if you'd like your installation to be editable, use:
 ```
 pip install flit
-flit install --symlink
+flit install --pth-file
 ```
+(`--pth-file` vs `--symlink`: maintains module visibility for IDE debuggers, and works on Windows.)
 
 ### usage
 Download our CHIKV_demo.fa file from <a href="https://raw.githubusercontent.com/aresti/primalscheme/master/tests/inputs/CHIKV_demo.fa">tests/inputs/CHIKV_demo.fa</a>
