@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 import logging
 
+from primalscheme import config
 from primalscheme.components import (
     Primer,
     CandidatePrimerPair,
@@ -37,33 +38,21 @@ class MultiplexScheme:
     """A complete multiplex primer scheme."""
 
     def __init__(
-        self,
-        references,
-        p3_global,
-        target_overlap,
-        step_distance,
-        min_unique,
-        prefix,
-        progress_func=None,
+        self, references, prefix=config.PREFIX, progress_func=None,
     ):
 
         self.references = references
-        self.p3_global = p3_global
-        self.target_overlap = target_overlap
-        self.step_distance = step_distance
-        self.min_unique = min_unique
         self.prefix = prefix
         self.progress_func = progress_func
-
-        # derived
-        self.primary_ref = references[0]
-        self.ref_len = len(self.primary_ref)
-        self.amplicon_size_min = p3_global["PRIMER_PRODUCT_SIZE_RANGE"][0][0]
-        self.amplicon_size_max = p3_global["PRIMER_PRODUCT_SIZE_RANGE"][0][1]
-        self.amplicon_max_variation = self.amplicon_size_max - self.amplicon_size_min
-        self.primer_max_size = p3_global["PRIMER_MAX_SIZE"]
-
         self.regions = []
+
+    @property
+    def primary_ref(self):
+        return self.references[0]
+
+    @property
+    def ref_len(self):
+        return len(self.primary_ref)
 
     def design_scheme(self):
         """Design a multiplex primer scheme"""
@@ -91,9 +80,11 @@ class MultiplexScheme:
             if region_num == 1:
                 slice_start = 0
             else:
-                insert_start = prev.right.end - self.target_overlap - 1
+                insert_start = prev.right.end - config.TARGET_OVERLAP - 1
                 slice_start = (
-                    insert_start - self.primer_max_size - self.amplicon_max_variation
+                    insert_start
+                    - config.PRIMER_SIZE_MAX
+                    - (config.AMPLICON_SIZE_MAX - config.AMPLICON_SIZE_MIN)
                 )
 
                 # if target overlap is impossible, take left_limit
@@ -101,9 +92,9 @@ class MultiplexScheme:
 
                 # handle last region
                 remaining_distance = self.ref_len - prev.right.start
-                is_last = remaining_distance <= self.amplicon_size_max
+                is_last = remaining_distance <= config.AMPLICON_SIZE_MAX
                 if is_last:
-                    right_aligned = self.ref_len - self.amplicon_size_max
+                    right_aligned = self.ref_len - config.AMPLICON_SIZE_MAX
                     # if forced to choose, take a gap at the end
                     slice_start = min(slice_start, right_aligned)
 
@@ -148,7 +139,7 @@ class Window:
             raise SliceOutOfBoundsError("The window slice is out of bounds.")
 
     def step_left(self):
-        distance = self.scheme.step_distance
+        distance = config.STEP_DISTANCE
         if (self.slice_start - distance) < self.left_limit:
             logger.debug("Left limit reached")
             raise SliceOutOfBoundsError("Left window limit reached.")
@@ -156,7 +147,7 @@ class Window:
         logger.debug(f"Stepping left to {self.slice_start}")
 
     def step_right(self):
-        distance = self.scheme.step_distance
+        distance = config.STEP_DISTANCE
         if (self.slice_end + distance) > self.right_limit:
             logger.debug("Right limit reached")
             raise SliceOutOfBoundsError("Right window limit reached.")
@@ -168,7 +159,7 @@ class Window:
 
     @property
     def slice_end(self):
-        return self.slice_start + self.scheme.amplicon_size_max
+        return self.slice_start + config.AMPLICON_SIZE_MAX
 
     @property
     def ref_slice(self):
@@ -177,9 +168,9 @@ class Window:
 
     @property
     def flank_size(self):
-        max_primer_size = self.scheme.p3_global["PRIMER_MAX_SIZE"]
-        max_variation = self.scheme.amplicon_size_max - self.scheme.amplicon_size_min
-        return max_variation + max_primer_size
+        return (
+            config.AMPLICON_SIZE_MAX - config.AMPLICON_SIZE_MIN + config.PRIMER_SIZE_MAX
+        )
 
     @property
     def left_flank(self):
@@ -243,20 +234,16 @@ class Region(Window):
 
     def _find_primers_for_slice(self):
         """Try to find sufficient primers for the current slice"""
-        MAX_MISMATCHES = 2
 
         logger.debug(f"Finding primers for slice [{self.slice_start}:{self.slice_end}]")
 
         flank_cigars = self.get_flank_cigars()
 
-        candidates = design_primers(
-            self.left_flank, self.slice_start, self.scheme.p3_global
-        )
+        candidates = design_primers(self.left_flank, self.slice_start)
         candidates.extend(
             design_primers(
                 self.right_flank.reverse_complement(),
-                self.slice_end - self.flank_size,  # TODO out by one?
-                self.scheme.p3_global,
+                self.slice_end - self.flank_size,
                 reverse=True,
             )
         )
@@ -265,7 +252,7 @@ class Region(Window):
             passing_candidates = []
             for primer in candidates:
                 self._align_against_secondary(primer, flank_cigars)
-                if max(primer.mismatch_counts) <= MAX_MISMATCHES:
+                if max(primer.mismatch_counts) <= config.PRIMER_MAX_MISMATCHES:
                     passing_candidates.append(primer)
             candidates = passing_candidates
 

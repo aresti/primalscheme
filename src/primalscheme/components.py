@@ -21,10 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 import logging
 import parasail
+
 from collections import namedtuple
 from itertools import groupby
 from enum import Enum
 from primer3 import calcTm, calcHairpin
+
+from primalscheme import config
 
 logger = logging.getLogger("primalscheme")
 
@@ -69,8 +72,6 @@ class Primer(object):
 class CandidatePrimer(Primer):
     """A candidate primer."""
 
-    MISMATCH_PENALTY = 1
-
     def __init__(self, simple_primer, base_penalty, name=""):
         super().__init__(
             simple_primer.seq, simple_primer.start, simple_primer.direction
@@ -103,7 +104,7 @@ class CandidatePrimer(Primer):
 
     @property
     def mismatch_penalty_matrix(self):
-        PENALTIES = [3, 2, 1]
+        penalties = config.PRIMER_MISMATCH_PENALTIES
         matrix = []
         for cigar in self.alignment_cigars:
             row = []
@@ -112,10 +113,10 @@ class CandidatePrimer(Primer):
                     row.append(0)
                     continue
                 dist_3p = self.size - i
-                if dist_3p > len(PENALTIES) - 1:
-                    row.append(PENALTIES[-1])
+                if dist_3p > len(penalties) - 1:
+                    row.append(penalties[-1])
                 else:
-                    row.append(PENALTIES[dist_3p])
+                    row.append(penalties[dist_3p])
             matrix.append(row)
         return matrix
 
@@ -157,7 +158,6 @@ def get_alignment(primer, reference):
     MATRIX = parasail.matrix_create("ACGT", 2, -1)
     OPEN = 2
     EXTEND = 1
-    MISMATCH_THRESHOLD = 10
 
     if primer.direction == Primer.Direction.left:
         ref = reference.seq
@@ -179,10 +179,6 @@ def get_alignment(primer, reference):
     aln_ref = traceback.ref[ref_end - query_end : ref_end]
 
     mismatches = cigar.count(".")
-
-    # Alignment failed
-    if mismatches > MISMATCH_THRESHOLD:
-        raise FailedAlignmentError
 
     # Format alignment
     refid = reference.id[:30]
@@ -245,9 +241,9 @@ class InsufficientPrimersError(Exception):
     pass
 
 
-def design_primers(seq, offset, p3_global, reverse=False):
-    min_size = p3_global["PRIMER_MIN_SIZE"]
-    max_size = p3_global["PRIMER_MAX_SIZE"]
+def design_primers(seq, offset, reverse=False):
+    min_size = config.PRIMER_SIZE_MIN
+    max_size = config.PRIMER_SIZE_MAX
     variation = max_size - min_size
 
     # Digest seq into k-mers
@@ -271,7 +267,7 @@ def design_primers(seq, offset, p3_global, reverse=False):
 
     # Hard filter
     filtered_candidates = [
-        CandidatePrimer(primer, calc_base_penalty(primer.seq, p3_global))
+        CandidatePrimer(primer, calc_base_penalty(primer.seq))
         for primer in simple_primers
         if hard_filter(primer)
     ]
@@ -280,14 +276,14 @@ def design_primers(seq, offset, p3_global, reverse=False):
 
 def hard_filter(primer):
     return (
-        (30 <= primer.gc <= 55)
-        and (60 <= primer.tm <= 63)
-        and (primer.hairpin <= 50.0)
-        and (primer.max_homo <= 5)
+        (config.PRIMER_MIN_GC <= primer.gc <= config.PRIMER_MAX_GC)
+        and (config.PRIMER_MIN_TM <= primer.tm <= config.PRIMER_MAX_TM)
+        and (primer.hairpin <= config.PRIMER_MAX_HAIRPIN_TH)
+        and (primer.max_homo <= config.PRIMER_MAX_HOMO)
     )
 
 
-def calc_base_penalty(seq, p3_global):
+def calc_base_penalty(seq):
     """
     Calculate primer penalty score.
     As per proutine described in http://primer3.ut.ee/primer3web_help.htm
@@ -299,42 +295,37 @@ def calc_base_penalty(seq, p3_global):
     length = calc_length(seq)
 
     # High Tm
-    if tm > p3_global["PRIMER_OPT_TM"]:
-        penalty += p3_global["PRIMER_WT_TM_GT"] * (tm - p3_global["PRIMER_OPT_TM"])
+    if tm > config.PRIMER_OPT_TM:
+        penalty += config.PRIMER_WT_TM_GT * (tm - config.PRIMER_OPT_TM)
 
     # Low Tm
-    if tm < p3_global["PRIMER_OPT_TM"]:
-        penalty += p3_global["PRIMER_WT_TM_LT"] * (p3_global["PRIMER_OPT_TM"] - tm)
+    if tm < config.PRIMER_OPT_TM:
+        penalty += config.PRIMER_WT_TM_LT * (config.PRIMER_OPT_TM - tm)
 
     # High GC
-    if gc > p3_global["PRIMER_OPT_GC_PERCENT"]:
-        penalty += p3_global["PRIMER_WT_GC_PERCENT_GT"] * (
-            gc - p3_global["PRIMER_OPT_GC_PERCENT"]
-        )
+    if gc > config.PRIMER_OPT_GC_PERCENT:
+        penalty += config.PRIMER_WT_GC_PERCENT_GT * (gc - config.PRIMER_OPT_GC_PERCENT)
 
     # Low GC
-    if gc < p3_global["PRIMER_OPT_GC_PERCENT"]:
-        penalty += p3_global["PRIMER_WT_GC_PERCENT_LT"] * (
-            p3_global["PRIMER_OPT_GC_PERCENT"] - gc
-        )
+    if gc < config.PRIMER_OPT_GC_PERCENT:
+        penalty += config.PRIMER_WT_GC_PERCENT_LT * (config.PRIMER_OPT_GC_PERCENT - gc)
 
     # High size
-    if length > p3_global["PRIMER_OPT_SIZE"]:
-        penalty += p3_global["PRIMER_WT_SIZE_GT"] * (
-            length - p3_global["PRIMER_OPT_SIZE"]
-        )
+    if length > config.PRIMER_OPT_SIZE:
+        penalty += config.PRIMER_WT_SIZE_GT * (length - config.PRIMER_OPT_SIZE)
+
     # Low size
-    if length < p3_global["PRIMER_OPT_SIZE"]:
-        penalty += p3_global["PRIMER_WT_SIZE_LT"] * (
-            p3_global["PRIMER_OPT_SIZE"] - length
-        )
+    if length < config.PRIMER_OPT_SIZE:
+        penalty += config.PRIMER_WT_SIZE_LT * (config.PRIMER_OPT_SIZE - length)
 
     return penalty
 
 
 # Calc Tm
 def calc_tm(seq):
-    return calcTm(seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6)
+    return calcTm(
+        seq, mv_conc=config.MV_CONC, dv_conc=config.DV_CONC, dntp_conc=config.DNTP_CONC
+    )
 
 
 # Calc GC content
@@ -354,7 +345,9 @@ def calc_max_homo(seq):
 
 # Calc hairpin stability
 def calc_hairpin(seq):
-    return calcHairpin(seq, mv_conc=50, dv_conc=1.5, dntp_conc=0.6).tm
+    return calcHairpin(
+        seq, mv_conc=config.MV_CONC, dv_conc=config.DV_CONC, dntp_conc=config.DNTP_CONC
+    ).tm
 
 
 # Digest seq into k-mers

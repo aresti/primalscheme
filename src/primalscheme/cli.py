@@ -21,7 +21,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
-import json
 import sys
 import argparse
 import logging
@@ -33,6 +32,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from primalscheme import __version__ as version
+from primalscheme import config
 from primalscheme.multiplex import NoSuitablePrimersError
 from primalscheme.reporting import MultiplexReporter
 
@@ -45,25 +45,30 @@ def main():
     Process args, set up logging and call the command function.
     """
 
-    config = get_config()
+    # Parse args, update config
     try:
-        args = parse_arguments(sys.argv[1:], config)
+        args = parse_arguments(sys.argv[1:])
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)
 
+    for name, val in vars(args).items():
+        setattr(config, name, val)
+
+    # Validate output path
     try:
         output_path = get_output_path(args.output_path, force=args.force)
     except IOError as e:
         print(f"Error: {e}")
         sys.exit(1)
 
+    # Setup logging
     setup_logging(output_path, debug=args.debug, prefix=args.prefix)
 
     for arg in vars(args):
         logger.debug("{}: {}".format(arg, str(vars(args)[arg])))
 
-    # Run
+    # Run subcommand
     args.func(args, output_path)
 
 
@@ -88,13 +93,7 @@ def multiplex(args, output_path):
     # Create scheme
     try:
         scheme = MultiplexReporter(
-            references,
-            args.primer3,
-            args.target_overlap,
-            args.step_distance,
-            args.min_unique,
-            args.prefix,
-            progress_func=stdout_progress,
+            references, args.prefix, progress_func=stdout_progress
         )
         scheme.design_scheme()
     except NoSuitablePrimersError:
@@ -215,12 +214,7 @@ def get_output_path(output_path, force=False):
     return path
 
 
-def get_config():
-    config_file = Path(__file__).parent / "config.json"
-    return json.loads(config_file.read_text())
-
-
-def parse_arguments(args, config):
+def parse_arguments(args):
     """
     Parse command line arguments.
     """
@@ -235,48 +229,42 @@ def parse_arguments(args, config):
 
     parser_scheme = subparsers.add_parser("multiplex", help="Multiplex PCR scheme")
 
-    # Set func and defaults from config
-    parser_scheme.set_defaults(func=multiplex, **config)
+    # Set func
+    parser_scheme.set_defaults(func=multiplex)
 
     # Add arguments to parser
     parser_scheme.add_argument("fasta", help="FASTA file")
     parser_scheme.add_argument(
         "--prefix",
+        default=config.PREFIX,
         help="Prefix used for primer names and output files " "(default: %(default)s)",
     )
     parser_scheme.add_argument(
         "--amplicon-size-min",
         type=positive_int,
-        default=config["primer3"].get("PRIMER_PRODUCT_SIZE_RANGE")[0][0],
+        default=config.AMPLICON_SIZE_MIN,
         help="Minimum amplicon size (default: %(default)i)",
     )
     parser_scheme.add_argument(
         "--amplicon-size-max",
         type=positive_int,
-        default=config["primer3"].get("PRIMER_PRODUCT_SIZE_RANGE")[0][1],
+        default=config.AMPLICON_SIZE_MAX,
         help="Maximum amplicon size (default: %(default)i)",
     )
     parser_scheme.add_argument(
-        "--min-unique",
-        type=positive_int,
-        help="Minimum unique candiate pairs (default: %(default)i)",
-    )
-    parser_scheme.add_argument(
-        "--max-candidates",
-        type=positive_int,
-        default=config["primer3"].get("PRIMER_NUM_RETURN"),
-        help="Maximum candidate pairs (default: %(default)i)",
-    )
-    parser_scheme.add_argument(
-        "--output-path", help="Output directory (default: %(default)s)"
+        "--output-path",
+        default=config.OUTPUT_PATH,
+        help="Output directory (default: %(default)s)",
     )
     parser_scheme.add_argument(
         "--target-overlap",
+        default=config.TARGET_OVERLAP,
         type=positive_int,
         help="Target overlap size (default: %(default)i)",
     )
     parser_scheme.add_argument(
         "--step-distance",
+        default=config.STEP_DISTANCE,
         type=positive_int,
         help="Distance to step between find attempts (default: %(default)i)",
     )
@@ -296,16 +284,6 @@ def parse_arguments(args, config):
     # Post parsing checks
     if parsed.amplicon_size_max < parsed.amplicon_size_min:
         raise ValueError("--amplicon-size-min cannot exceed --amplicon-size-max")
-
-    # override primer3 config
-    parsed.__dict__["primer3"].update(
-        {
-            "PRIMER_NUM_RETURN": parsed.max_candidates,
-            "PRIMER_PRODUCT_SIZE_RANGE": [
-                [parsed.amplicon_size_min, parsed.amplicon_size_max]
-            ],
-        }
-    )
 
     return parsed
 
