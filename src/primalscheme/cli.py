@@ -52,9 +52,6 @@ def main():
         print(f"Error: {e}")
         sys.exit(1)
 
-    for name, val in vars(args).items():
-        setattr(config, name, val)
-
     # Validate output path
     try:
         output_path = get_output_path(args.output_path, force=args.force)
@@ -93,7 +90,12 @@ def multiplex(args, output_path):
     # Create scheme
     try:
         scheme = MultiplexReporter(
-            references, args.prefix, progress_func=stdout_progress
+            references,
+            prefix=args.prefix,
+            amplicon_size_min=args.amplicon_size_min,
+            amplicon_size_max=args.amplicon_size_max,
+            target_overlap=args.target_overlap,
+            progress_func=stdout_progress,
         )
         scheme.design_scheme()
     except NoSuitablePrimersError:

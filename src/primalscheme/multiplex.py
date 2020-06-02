@@ -32,11 +32,23 @@ class MultiplexScheme:
     """A complete multiplex primer scheme."""
 
     def __init__(
-        self, references, prefix=config.PREFIX, progress_func=None,
+        self,
+        references,
+        prefix=config.PREFIX,
+        amplicon_size_min=config.AMPLICON_SIZE_MIN,
+        amplicon_size_max=config.AMPLICON_SIZE_MAX,
+        target_overlap=config.TARGET_OVERLAP,
+        progress_func=None,
     ):
+
+        if amplicon_size_min > amplicon_size_max:
+            raise ValueError("amplicon_size_min cannot exceed amplicon_size_max")
 
         self.references = references
         self.prefix = prefix
+        self.amplicon_size_min = amplicon_size_min
+        self.amplicon_size_max = amplicon_size_max
+        self.target_overlap = target_overlap
         self.progress_func = progress_func
         self.regions = []
 
@@ -80,7 +92,7 @@ class MultiplexScheme:
     @property
     def _is_last_region(self):
         """Is there space for only one more region?"""
-        return self._remaining_distance <= config.AMPLICON_SIZE_MAX
+        return self._remaining_distance <= self.amplicon_size_max
 
     @property
     def _left_limit(self):
@@ -104,11 +116,11 @@ class MultiplexScheme:
         if self._region_num == 1:
             return 0
 
-        insert_start = self._prev.right.end - config.TARGET_OVERLAP - 1
+        insert_start = self._prev.right.end - self.target_overlap - 1
         desired_slice_start = (
             insert_start
             - config.PRIMER_SIZE_MAX
-            - (config.AMPLICON_SIZE_MAX - config.AMPLICON_SIZE_MIN)
+            - (self.amplicon_size_max - self.amplicon_size_min)
         )
 
         # if target overlap is impossible, take left_limit
@@ -116,7 +128,7 @@ class MultiplexScheme:
 
         if self._is_last_region:
             # if forced to choose, take a gap at the end
-            right_aligned = self.ref_len - config.AMPLICON_SIZE_MAX
+            right_aligned = self.ref_len - self.amplicon_size_max
             return min(slice_start, right_aligned)
 
         return slice_start
@@ -190,7 +202,7 @@ class Window:
     @property
     def slice_end(self):
         """The slice end position"""
-        return self.slice_start + config.AMPLICON_SIZE_MAX
+        return self.slice_start + self.scheme.amplicon_size_max
 
     @property
     def ref_slice(self):
@@ -202,7 +214,8 @@ class Window:
     def flank_size(self):
         """The size of the slice flanks, where possible primers could be located"""
         return (
-            config.AMPLICON_SIZE_MAX - config.AMPLICON_SIZE_MIN + config.PRIMER_SIZE_MAX
+            int((self.scheme.amplicon_size_max - self.scheme.amplicon_size_min) / 2)
+            + config.PRIMER_SIZE_MAX
         )
 
     @property
