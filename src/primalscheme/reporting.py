@@ -46,7 +46,7 @@ class MultiplexReporter(MultiplexScheme):
 
     @property
     def inserts(self):
-        return [(r.top_pair.left.end + 1, r.top_pair.right.end) for r in self.regions]
+        return [(r.left.end + 1, r.right.end) for r in self.regions]
 
     @property
     def gap_count(self):
@@ -77,9 +77,9 @@ class MultiplexReporter(MultiplexScheme):
                         str,
                         [
                             self.primary_ref.id,
-                            r.top_pair.left.start,
-                            r.top_pair.left.end + 1,  # BED end is 1-based
-                            r.top_pair.left.name,
+                            r.left.start,
+                            r.left.end + 1,  # BED end is 1-based
+                            f"{self.prefix}_{r.region_num}_LEFT",
                             r.pool,
                             "+",
                         ],
@@ -92,9 +92,9 @@ class MultiplexReporter(MultiplexScheme):
                         str,
                         [
                             self.primary_ref.id,
-                            r.top_pair.right.end,
-                            r.top_pair.right.start + 1,
-                            r.top_pair.right.name,
+                            r.right.end,
+                            r.right.start + 1,
+                            f"{self.prefix}_{r.region_num}_RIGHT",
                             r.pool,
                             "-",
                         ],
@@ -113,13 +113,13 @@ class MultiplexReporter(MultiplexScheme):
                 file=tsvhandle,
             )
             for r in self.regions:
-                left = r.top_pair.left
-                right = r.top_pair.right
+                left = r.left
+                right = r.right
                 print(
                     *map(
                         str,
                         [
-                            left.name,
+                            f"{self.prefix}_{r.region_num}_LEFT",
                             r.pool,
                             left.seq,
                             left.size,
@@ -134,7 +134,7 @@ class MultiplexReporter(MultiplexScheme):
                     *map(
                         str,
                         [
-                            right.name,
+                            f"{self.prefix}_{r.region_num}_RIGHT",
                             r.pool,
                             right.seq,
                             right.size,
@@ -249,19 +249,13 @@ class MultiplexReporter(MultiplexScheme):
             strand = 1 if r.region_num % 2 else -1
 
             fwd_feature = SeqFeature(
-                FeatureLocation(
-                    r.top_pair.left.start, r.top_pair.left.end, strand=strand
-                )
+                FeatureLocation(r.left.start, r.left.end, strand=strand)
             )
             rev_feature = SeqFeature(
-                FeatureLocation(
-                    r.top_pair.right.end, r.top_pair.right.start, strand=strand
-                )
+                FeatureLocation(r.right.end, r.right.start, strand=strand)
             )
             region_feature = SeqFeature(
-                FeatureLocation(
-                    r.top_pair.left.start, r.top_pair.right.start, strand=strand
-                )
+                FeatureLocation(r.left.start, r.right.start, strand=strand)
             )
 
             primer_color = colors.red

@@ -22,14 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 import logging
 
 from primalscheme import config
-from primalscheme.components import (
-    Primer,
-    CandidatePrimerPair,
-    design_primers,
-    InsufficientPrimersError,
-    FailedAlignmentError,
-    align_secondary_reference,
-)
+from primalscheme.align import align_secondary_reference, FailedAlignmentError
+from primalscheme.primer import design_primers, Direction
 
 logger = logging.getLogger("primalscheme")
 
@@ -63,8 +57,8 @@ class MultiplexScheme:
 
         while not is_last:
             region_num += 1
-            prev = regions[-1].top_pair if regions else None
-            prev_in_pool = regions[-2].top_pair if region_num > 2 else None
+            prev = regions[-1] if regions else None
+            prev_in_pool = regions[-2] if region_num > 2 else None
 
             # determine left limit
             if region_num == 1:
@@ -108,7 +102,7 @@ class MultiplexScheme:
                 break
             regions.append(region)
             if self.progress_func:
-                self.progress_func(region.top_pair.right.start, self.ref_len)
+                self.progress_func(region.right.start, self.ref_len)
 
         self.regions = regions
         if self.progress_func:
@@ -183,8 +177,8 @@ class Window:
     def get_flank_cigars(self):
         cigars = [
             (
-                align_secondary_reference(self.ref_slice, ref, limit=self.flank_size),
-                align_secondary_reference(self.ref_slice, ref, limit=-self.flank_size),
+                align_secondary_reference(self.left_flank, ref),
+                align_secondary_reference(self.right_flank, ref),
             )
             for ref in self.scheme.references[1:]
         ]
@@ -199,11 +193,20 @@ class Region(Window):
     def __init__(self, region_num, *args, **kwargs):
         self.region_num = region_num
         self.pool = 1 if self.region_num % 2 == 1 else 2
-        self.candidate_pairs = []
-        self.top_pair = None
-        super().__init__(*args, **kwargs)  # init Window
+        super().__init__(*args, **kwargs)
+
+        self.left = None
+        self.right = None
+        self.left_candidates = []
+        self.right_candidates = []
 
         logger.debug(f"Region {region_num}, pool {self.pool}")
+
+    @property
+    def product_size(self):
+        if self.left and self.right:
+            return self.right.start - self.left.start + 1
+        return None
 
     def find_primers(self):
         """
@@ -257,30 +260,25 @@ class Region(Window):
             candidates = passing_candidates
 
         passing_left = [
-            primer for primer in candidates if primer.direction == Primer.Direction.left
+            primer for primer in candidates if primer.direction == Direction.left
         ]
         passing_right = [
-            primer
-            for primer in candidates
-            if primer.direction == Primer.Direction.right
+            primer for primer in candidates if primer.direction == Direction.right
         ]
 
         if not (passing_left and passing_right):
             raise InsufficientPrimersError
 
-        self.candidate_pairs = [
-            CandidatePrimerPair(left, right)
-            for left in passing_left[:10]
-            for right in passing_right[:10]
-        ]
+        self.left_candidates = passing_left
+        self.right_candidates = passing_right
         self._pick_pair()
-        self.top_pair.left.align(self.scheme.references)
-        self.top_pair.right.align(self.scheme.references)
-        self.log_formatted()
+
+        if logger.level >= logging.DEBUG:
+            self.log_formatted()
 
     def _align_against_secondary(self, primer, flank_cigars):
         for left, right in flank_cigars:
-            if primer.direction == Primer.Direction.left:
+            if primer.direction == Direction.left:
                 start = primer.start - self.slice_start
                 cigar = left
             else:
@@ -291,25 +289,49 @@ class Region(Window):
 
     def _sort_candidate_pairs(self):
         """Sort the list of candidate pairs in place"""
-        self.candidate_pairs.sort(key=lambda x: x.combined_penalty)
+        self.left_candidates.sort(key=lambda x: x.combined_penalty)
+        self.right_candidates.sort(key=lambda x: x.combined_penalty)
 
     def _pick_pair(self):
         self._sort_candidate_pairs()
-        self.top_pair = self.candidate_pairs[0]
+        self.left = self.left_candidates[0]
+        self.right = self.right_candidates[0]
 
     def log_formatted(self):
-        logger.debug(f"Picked: {self.top_pair}")
-        for alignment in self.top_pair.left.alignments:
+        self.left.align(self.scheme.references)
+        self.right.align(self.scheme.references)
+
+        logger.debug(f"Picked: {self.left}, {self.right}")
+
+        for alignment in self.left.alignments:
             logger.debug(alignment.formatted_alignment)
-        for alignment in self.top_pair.right.alignments:
-            logger.debug(alignment.formatted_alignment)
-        for i, pair in enumerate(self.candidate_pairs[:10]):
+
+        for i, primer in enumerate(self.left_candidates[:10]):
+            mismatches = primer.mismatch_counts[0]
             logger.debug(
-                f"Candidate pair {i}: "
-                f"combined penalty {pair.combined_penalty:.2f}, "
-                f"{pair.left.mismatch_counts[0]} left mismatches, "
-                f"{pair.right.mismatch_counts[0]} right mismatches, "
+                f"Left candidate {i}: "
+                f"base penalty {primer.base_penalty:.2f}, "
+                f"combined penalty {primer.combined_penalty:.2f}, "
+                f"{mismatches} mismatch{'' if mismatches == 1 else 'es'}.",
             )
+
+        for alignment in self.right.alignments:
+            logger.debug(alignment.formatted_alignment)
+
+        for i, primer in enumerate(self.right_candidates[:10]):
+            mismatches = primer.mismatch_counts[0]
+            logger.debug(
+                f"Right candidate {i}: "
+                f"base penalty {primer.base_penalty:.2f}, "
+                f"combined penalty {primer.combined_penalty:.2f}, "
+                f"{mismatches} mismatch{'' if mismatches == 1 else 'es'}.",
+            )
+
+
+class InsufficientPrimersError(Exception):
+    """Unable to find sufficient unique primers at the current cursor position."""
+
+    pass
 
 
 class NoSuitablePrimersError(Exception):
