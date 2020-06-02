@@ -42,69 +42,102 @@ class MultiplexScheme:
 
     @property
     def primary_ref(self):
+        """The first, primary reference"""
         return self.references[0]
 
     @property
     def ref_len(self):
+        """The primary reference length"""
         return len(self.primary_ref)
+
+    @property
+    def region_count(self):
+        """The number of regions in the scheme"""
+        return len(self.regions)
+
+    @property
+    def _region_num(self):
+        """The next region number"""
+        return len(self.regions) + 1
+
+    @property
+    def _prev(self):
+        """The previous region"""
+        return self.regions[-1] if self.regions else None
+
+    @property
+    def _prev_in_pool(self):
+        """The previous region in the same pool as the next"""
+        return self.regions[-2] if self.region_count > 1 else None
+
+    @property
+    def _remaining_distance(self):
+        """The distance between the last region and the primary reference end"""
+        if self.regions:
+            return self.ref_len - self._prev.right.start
+        return self.ref_len
+
+    @property
+    def _is_last_region(self):
+        """Is there space for only one more region?"""
+        return self._remaining_distance <= config.AMPLICON_SIZE_MAX
+
+    @property
+    def _left_limit(self):
+        """The left limit for the next region"""
+        if self._region_num == 1:
+            return 0
+        elif (
+            self._region_num == 2
+            or self._prev.left.start > self._prev_in_pool.right.start
+        ):
+            # first region in second pool, or we have a gap. Force progress.
+            return self._prev.left.end + 1
+        else:
+            # default case (just don't crash into prev in pool)
+            return self._prev_in_pool.right.start + 1
+
+    @property
+    def _slice_start(self):
+        """The ideal slice start position for the next region"""
+
+        if self._region_num == 1:
+            return 0
+
+        insert_start = self._prev.right.end - config.TARGET_OVERLAP - 1
+        desired_slice_start = (
+            insert_start
+            - config.PRIMER_SIZE_MAX
+            - (config.AMPLICON_SIZE_MAX - config.AMPLICON_SIZE_MIN)
+        )
+
+        # if target overlap is impossible, take left_limit
+        slice_start = max(desired_slice_start, self._left_limit)
+
+        if self._is_last_region:
+            # if forced to choose, take a gap at the end
+            right_aligned = self.ref_len - config.AMPLICON_SIZE_MAX
+            return min(slice_start, right_aligned)
+
+        return slice_start
 
     def design_scheme(self):
         """Design a multiplex primer scheme"""
-
-        regions = []
-        region_num = 0
         is_last = False
-
         while not is_last:
-            region_num += 1
-            prev = regions[-1] if regions else None
-            prev_in_pool = regions[-2] if region_num > 2 else None
-
-            # determine left limit
-            if region_num == 1:
-                left_limit = 0
-            elif region_num == 2 or prev.left.start > prev_in_pool.right.start:
-                # first region in second pool, or we have a gap. Force progress.
-                left_limit = prev.left.end + 1
-            else:
-                # default case (just don't crash into prev in pool)
-                left_limit = prev_in_pool.right.start + 1
-
-            # determine slice start
-            if region_num == 1:
-                slice_start = 0
-            else:
-                insert_start = prev.right.end - config.TARGET_OVERLAP - 1
-                slice_start = (
-                    insert_start
-                    - config.PRIMER_SIZE_MAX
-                    - (config.AMPLICON_SIZE_MAX - config.AMPLICON_SIZE_MIN)
-                )
-
-                # if target overlap is impossible, take left_limit
-                slice_start = max(slice_start, left_limit)
-
-                # handle last region
-                remaining_distance = self.ref_len - prev.right.start
-                is_last = remaining_distance <= config.AMPLICON_SIZE_MAX
-                if is_last:
-                    right_aligned = self.ref_len - config.AMPLICON_SIZE_MAX
-                    # if forced to choose, take a gap at the end
-                    slice_start = min(slice_start, right_aligned)
-
-            # create region, find primers
-            region = Region(region_num, self, left_limit, slice_start)
+            is_last = self._is_last_region
+            region = Region(self._region_num, self, self._left_limit, self._slice_start)
             try:
                 region.find_primers()
             except NoSuitablePrimersError as e:
-                if region_num == 1:
-                    raise e  # we've got nothing
+                if self._region_num == 1:
+                    raise e
                 break
-            regions.append(region)
+
+            self.regions.append(region)
             if self.progress_func:
                 self.progress_func(region.right.start, self.ref_len)
 
-        self.regions = regions
         if self.progress_func:
             self.progress_func(self.ref_len, self.ref_len)
 
@@ -133,6 +166,7 @@ class Window:
             raise SliceOutOfBoundsError("The window slice is out of bounds.")
 
     def step_left(self):
+        """Step the slice start position left, raise if limit reached"""
         distance = config.STEP_DISTANCE
         if (self.slice_start - distance) < self.left_limit:
             logger.debug("Left limit reached")
@@ -141,6 +175,7 @@ class Window:
         logger.debug(f"Stepping left to {self.slice_start}")
 
     def step_right(self):
+        """Step the slice start position right, raise if limit reached"""
         distance = config.STEP_DISTANCE
         if (self.slice_end + distance) > self.right_limit:
             logger.debug("Right limit reached")
@@ -149,32 +184,42 @@ class Window:
         logger.debug(f"Stepping right to {self.slice_start}")
 
     def reset_slice(self):
+        """Reset the slice start position to its initial value"""
         self.slice_start = self._initial_slice_start
 
     @property
     def slice_end(self):
+        """The slice end position"""
         return self.slice_start + config.AMPLICON_SIZE_MAX
 
     @property
     def ref_slice(self):
+        """The reference sequence for the slice"""
         primary_ref = self.scheme.primary_ref.seq
         return primary_ref[self.slice_start : self.slice_end]
 
     @property
     def flank_size(self):
+        """The size of the slice flanks, where possible primers could be located"""
         return (
             config.AMPLICON_SIZE_MAX - config.AMPLICON_SIZE_MIN + config.PRIMER_SIZE_MAX
         )
 
     @property
     def left_flank(self):
+        """The reference sequence for the left flank"""
         return self.ref_slice[: self.flank_size]
 
     @property
     def right_flank(self):
+        """The reference sequence for the right flank"""
         return self.ref_slice[-self.flank_size :]
 
     def get_flank_cigars(self):
+        """
+        Return cigars for alignments between the left and right flanks
+        of the primary reference, against each secondary reference
+        """
         cigars = [
             (
                 align_secondary_reference(self.left_flank, ref),
@@ -204,6 +249,7 @@ class Region(Window):
 
     @property
     def product_size(self):
+        """The product size for the picked left/right primers"""
         if self.left and self.right:
             return self.right.start - self.left.start + 1
         return None
@@ -216,7 +262,7 @@ class Region(Window):
         while True:
             try:
                 self._find_primers_for_slice()
-                break
+                return
             except (FailedAlignmentError, InsufficientPrimersError):
                 if exhausted_left:
                     try:
@@ -274,9 +320,13 @@ class Region(Window):
         self._pick_pair()
 
         if logger.level >= logging.DEBUG:
-            self.log_formatted()
+            self.log_debug()
 
     def _align_against_secondary(self, primer, flank_cigars):
+        """
+        Append to the primer the slice of each flank cigar that
+        would represent its alignment to that secondary reference.
+        """
         for left, right in flank_cigars:
             if primer.direction == Direction.left:
                 start = primer.start - self.slice_start
@@ -293,11 +343,14 @@ class Region(Window):
         self.right_candidates.sort(key=lambda x: x.combined_penalty)
 
     def _pick_pair(self):
+        """Pick the best scoring left and right primer for the region"""
         self._sort_candidate_pairs()
         self.left = self.left_candidates[0]
         self.right = self.right_candidates[0]
 
-    def log_formatted(self):
+    def log_debug(self):
+        """Log detailed debug info for the region"""
+
         self.left.align(self.scheme.references)
         self.right.align(self.scheme.references)
 

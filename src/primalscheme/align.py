@@ -23,8 +23,6 @@ import parasail
 
 from collections import namedtuple
 
-# from primalscheme.primer import Primer
-
 
 Alignment = namedtuple("Alignment", "mismatches formatted_alignment")
 
