@@ -360,7 +360,7 @@ class Region(Window):
             logger.debug(alignment.formatted_alignment)
 
         for i, primer in enumerate(self.left_candidates[:10]):
-            mismatches = primer.mismatch_counts[0]
+            mismatches = sum(primer.mismatch_counts)
             logger.debug(
                 f"Left candidate {i}: "
                 f"base penalty {primer.base_penalty:.2f}, "
@@ -372,7 +372,7 @@ class Region(Window):
             logger.debug(alignment.formatted_alignment)
 
         for i, primer in enumerate(self.right_candidates[:10]):
-            mismatches = primer.mismatch_counts[0]
+            mismatches = sum(primer.mismatch_counts)
             logger.debug(
                 f"Right candidate {i}: "
                 f"base penalty {primer.base_penalty:.2f}, "
