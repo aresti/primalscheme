@@ -43,13 +43,13 @@ def test_cli_fails_without_command():
         pytest.fail("CLI doesn't abort asking for a command argument")
 
 
-def test_cli_fails_without_fasta(default_config):
+def test_cli_fails_without_fasta():
     """
     Does CLI stop execution w/o a positional fasta arg?
     """
     with pytest.raises(SystemExit):
         args = ["multiplex"]
-        primalscheme.cli.parse_arguments(args, default_config)
+        primalscheme.cli.parse_arguments(args)
 
 
 @pytest.mark.parametrize(
@@ -59,43 +59,41 @@ def test_cli_fails_without_fasta(default_config):
         ("--amplicon-size-min", "380"),
         ("--amplicon-size-max", "420"),
         ("--target-overlap", "0"),
-        ("--min-unique", "3"),
-        ("--max-candidates", "10"),
         ("--output-path", "./scheme"),
         ("--step-distance", "11"),
         ("--debug", None),
         ("--force", None),
     ],
 )
-def test_availability_of_cli_options(option, value, default_config):
+def test_availability_of_cli_options(option, value):
     """
     Are options available?
     """
     args = ["multiplex", "some.fa", option]
     if value:
         args.append(value)
-    parsed = primalscheme.cli.parse_arguments(args, default_config)
+    parsed = primalscheme.cli.parse_arguments(args)
     assert isinstance(parsed, Namespace)
 
 
-def test_cli_fails_with_invalid_option(chikv_input, default_config):
+def test_cli_fails_with_invalid_option(chikv_input):
     """
     Does CLI stop execution with an invalid option?
     """
     with pytest.raises(SystemExit):
         args = ["multiplex", f"{str(chikv_input)}", "--force", "--badOption"]
-        primalscheme.cli.parse_arguments(args, default_config)
+        primalscheme.cli.parse_arguments(args)
 
 
 @pytest.mark.parametrize(
     "option", ["-V", "--version"],
 )
-def test_cli_version_output(option, capsys, default_config):
+def test_cli_version_output(option, capsys):
     """
     Does CLI output a sensible version number for -V and --version?
     """
     try:
-        primalscheme.cli.parse_arguments([option], default_config)
+        primalscheme.cli.parse_arguments([option])
     except SystemExit:
         pass
     out, err = capsys.readouterr()
@@ -127,11 +125,9 @@ def test_existing_output_path_not_dir(tmp_path):
         primalscheme.cli.get_output_path(output_path=path, force=True)
 
 
-def test_too_short_fasta_size_vs_amplicon_size(
-    input_fasta_short_500, default_config, tmp_path, caplog
-):
+def test_too_short_fasta_size_vs_amplicon_size(input_fasta_short_500, tmp_path, caplog):
     args = ["multiplex", str(input_fasta_short_500)]
-    parsed = primalscheme.cli.parse_arguments(args, default_config)
+    parsed = primalscheme.cli.parse_arguments(args)
     outpath = tmp_path / "output"
     output_path = primalscheme.cli.get_output_path(outpath)
 

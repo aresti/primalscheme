@@ -8,8 +8,6 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from primalscheme.cli import get_config
-
 
 def seq_record_factory(seq_len=5000, alphabet="acgt", id=""):
     """Generate a random SeqRecord for testing purposes"""
@@ -21,11 +19,6 @@ def seq_record_factory(seq_len=5000, alphabet="acgt", id=""):
 def multi_seq_generator(n, **kwargs):
     """Generate multiple random SeqRecords for testing purposes"""
     return [seq_record_factory(**kwargs) for i in range(n)]
-
-
-@pytest.fixture(scope="session")
-def default_config():
-    return get_config()
 
 
 @pytest.fixture(scope="session")
