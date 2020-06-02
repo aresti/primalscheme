@@ -119,18 +119,10 @@ class Primer:
         return penalty
 
     def align(self, references):
+        """Align primer against secondary references for debug purposes"""
         for ref in references[1:]:
-            # align against non-primary references
             alignment = align_primer(self, ref)
             self.alignments.append(alignment)
-
-        # Calculate average
-        if self.alignments:
-            scores = [
-                (len(self.seq) - a.mismatches) / len(self.seq) for a in self.alignments
-            ]
-            self.identity = sum(scores) / len(scores)
-            return
 
     @property
     def mismatch_counts(self):
