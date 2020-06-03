@@ -276,7 +276,7 @@ class Region(Window):
             try:
                 self._find_primers_for_slice()
                 return
-            except (FailedAlignmentError, InsufficientPrimersError):
+            except (FailedAlignmentError, NoSuitablePrimersError):
                 if exhausted_left:
                     try:
                         # step right, retry
@@ -290,12 +290,9 @@ class Region(Window):
                     except SliceOutOfBoundsError:
                         self.reset_slice()
                         exhausted_left = True
-            except NoSuitablePrimersError as e:
-                # out of options
-                raise e
 
     def _find_primers_for_slice(self):
-        """Try to find sufficient primers for the current slice"""
+        """Try to find suitable primers for the current slice"""
 
         logger.debug(f"Finding primers for slice [{self.slice_start}:{self.slice_end}]")
 
@@ -325,8 +322,8 @@ class Region(Window):
             primer for primer in candidates if primer.direction == Direction.right
         ]
 
-        if not (passing_left and passing_right):
-            raise InsufficientPrimersError
+        if not (self.left_candidates and self.right_candidates):
+            raise NoSuitablePrimersError
 
         self.left_candidates = passing_left
         self.right_candidates = passing_right
@@ -394,14 +391,8 @@ class Region(Window):
             )
 
 
-class InsufficientPrimersError(Exception):
-    """Unable to find sufficient unique primers at the current cursor position."""
-
-    pass
-
-
 class NoSuitablePrimersError(Exception):
-    """No suitable primers found."""
+    """Unable to find suitable primers at the current cursor position."""
 
     pass
 
