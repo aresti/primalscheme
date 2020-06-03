@@ -30,4 +30,7 @@ PRIMER_MISMATCH_PENALTIES = [3, 2, 1]  # distance from 3', last is default
 
 MV_CONC = 50
 DV_CONC = 1.5
-DNTP_CONC = 0.6
+DNA_CONC = 15
+DNTP_CONC = 0.2
+TEMP_C = 0
+HETERODIMER_DG_THRESHOLD = -24

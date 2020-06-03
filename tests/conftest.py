@@ -91,10 +91,7 @@ def input_fasta_short_500(temp_inputs_path):
     return fh
 
 
-STORED_INPUTS = [
-    "CHIKV_demo.fa",
-    "Ebov-10-Pan.fasta",
-]
+STORED_INPUTS = ["CHIKV_demo.fa", "Ebov-10-Pan.fasta", "nCov-2019.fasta"]
 
 
 @pytest.fixture(params=STORED_INPUTS)

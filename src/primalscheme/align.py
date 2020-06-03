@@ -23,6 +23,9 @@ import parasail
 
 from collections import namedtuple
 
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 
 Alignment = namedtuple("Alignment", "mismatches formatted_alignment")
 
@@ -84,7 +87,7 @@ def align_primer(primer, reference):
     return Alignment(mismatches, formatted_alignment)
 
 
-def align_secondary_reference(slice, ref):
+def align_secondary_reference(primary_flank, secondary_ref):
     """
     An seqan alignment of a primary reference slice against a complete
     secondary reference.
@@ -96,17 +99,17 @@ def align_secondary_reference(slice, ref):
 
     # Semi-Global, do not penalize gaps at beginning and end of s2/database
     trace = parasail.sg_dx_trace_striped_sat(
-        str(slice), str(ref.seq), OPEN, EXTEND, MATRIX
+        str(primary_flank.seq), str(secondary_ref.seq), OPEN, EXTEND, MATRIX
     )
     traceback = trace.get_traceback()
     query_end = trace.end_query
     ref_end = trace.end_ref
-    cigar = traceback.comp[ref_end - query_end : ref_end + 1]
-
-    # Alignment failed (indels)  # TODO check this
-    if len(slice) != len(cigar):
-        raise FailedAlignmentError
+    aligned_ref = traceback.ref[ref_end - query_end : ref_end + 1]
 
     del trace
 
-    return cigar
+    # Alignment failed (indels)
+    if len(primary_flank) != len(aligned_ref):
+        raise FailedAlignmentError
+
+    return SeqRecord(Seq(aligned_ref), id=secondary_ref.id)

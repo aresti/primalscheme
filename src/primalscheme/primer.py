@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 from collections import namedtuple
 from enum import Enum
 from itertools import groupby
+
 from primer3 import calcTm as p3_calcTm, calcHairpin as p3_calcHairpin
 from primalscheme import config
 from primalscheme.align import align_primer
@@ -44,7 +45,7 @@ class Primer:
         self.seq = seq
         self.start = start
         self.alignments = []
-        self.alignment_cigars = []
+        self.reference_msa = None
 
     def __str__(self):
         return f"{self.direction.value}:{self.seq}:{self.start}"
@@ -55,7 +56,7 @@ class Primer:
 
     @property
     def end(self):
-        """Return the (inclusive) end position of the primer"""
+        """The (inclusive) end position of the primer"""
         if self.direction == Direction.left:
             return self.start + self.size - 1
         elif self.direction == Direction.right:
@@ -118,33 +119,41 @@ class Primer:
         self.__base_penalty = penalty
         return penalty
 
-    def align(self, references):
+    def _align(self, references):  # TODO, derive from msa
         """Align primer against secondary references for debug purposes"""
         for ref in references[1:]:
             alignment = align_primer(self, ref)
             self.alignments.append(alignment)
 
+    def _mismatch_count_for_ref(self, ref):
+        count = 0
+        for i, base in enumerate(self.seq):
+            if base != str(ref.seq)[i]:
+                count += 1
+        return count
+
+    def _mismatch_penalties_for_ref(self, ref):
+        positions = []
+        penalties = config.PRIMER_MISMATCH_PENALTIES
+        ref_seq = str(ref.seq)
+        for i, base in enumerate(self.seq):
+            if base == ref_seq[i]:
+                positions.append(0)
+                continue
+            dist_3p = self.size - i
+            if dist_3p > len(penalties) - 1:
+                positions.append(penalties[-1])
+            else:
+                positions.append(penalties[dist_3p])
+        return positions
+
     @property
     def mismatch_counts(self):
-        return [cigar.count(".") for cigar in self.alignment_cigars]
+        return [self._mismatch_count_for_ref(ref) for ref in self.reference_msa]
 
     @property
     def mismatch_penalty_matrix(self):
-        penalties = config.PRIMER_MISMATCH_PENALTIES
-        matrix = []
-        for cigar in self.alignment_cigars:
-            row = []
-            for i, base in enumerate(cigar):
-                if base == "|":
-                    row.append(0)
-                    continue
-                dist_3p = self.size - i
-                if dist_3p > len(penalties) - 1:
-                    row.append(penalties[-1])
-                else:
-                    row.append(penalties[dist_3p])
-            matrix.append(row)
-        return matrix
+        return [self._mismatch_penalties_for_ref(ref) for ref in self.reference_msa]
 
     @property
     def mismatch_penalties(self):
@@ -179,21 +188,26 @@ def calc_hairpin(seq):
     ).tm
 
 
-def design_primers(seq, offset, reverse=False):
+def design_primers(msa, offset=0, reverse=False):
     min_size = config.PRIMER_SIZE_MIN
     max_size = config.PRIMER_SIZE_MAX
     variation = max_size - min_size
 
-    # Digest seq into k-mers
+    sequences = [record.seq for record in msa]
+
+    # Digest all sequences into k-mers
     all_kmers = set()
-    for kmer_size in range(min_size, max_size + 1):
-        all_kmers.update(digest_seq(str(seq[:-variation]), kmer_size))
+    for seq in sequences:
+        for kmer_size in range(min_size, max_size + 1):
+            all_kmers.update(digest_seq(str(seq[:-variation]), kmer_size))
 
     # Generate primers
     primers = [
         Primer(
             kmer.seq,
-            offset + len(seq) - 1 - kmer.start if reverse else offset + kmer.start,
+            offset + len(msa[0].seq) - 1 - kmer.start
+            if reverse
+            else offset + kmer.start,
             Direction.right if reverse else Direction.left,
         )
         for kmer in all_kmers

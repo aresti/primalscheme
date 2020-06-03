@@ -20,6 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
 import logging
+import primer3
+
+from Bio.SeqRecord import SeqRecord
+from Bio.Align import MultipleSeqAlignment
 
 from primalscheme import config
 from primalscheme.align import align_secondary_reference, FailedAlignmentError
@@ -133,6 +137,13 @@ class MultiplexScheme:
 
         return slice_start
 
+    def primers_in_pool(self, pool):
+        primers = []
+        for region in [region for region in self.regions if region.pool == pool]:
+            primers.append(region.left)
+            primers.append(region.right)
+        return primers
+
     def design_scheme(self):
         """Design a multiplex primer scheme"""
         is_last = False
@@ -221,26 +232,16 @@ class Window:
     @property
     def left_flank(self):
         """The reference sequence for the left flank"""
-        return self.ref_slice[: self.flank_size]
+        return SeqRecord(
+            self.ref_slice[: self.flank_size], id=self.scheme.primary_ref.id
+        )
 
     @property
     def right_flank(self):
         """The reference sequence for the right flank"""
-        return self.ref_slice[-self.flank_size :]
-
-    def get_flank_cigars(self):
-        """
-        Return cigars for alignments between the left and right flanks
-        of the primary reference, against each secondary reference
-        """
-        cigars = [
-            (
-                align_secondary_reference(self.left_flank, ref),
-                align_secondary_reference(self.right_flank, ref),
-            )
-            for ref in self.scheme.references[1:]
-        ]
-        return cigars
+        return SeqRecord(
+            self.ref_slice[-self.flank_size :], id=self.scheme.primary_ref.id
+        )
 
 
 class Region(Window):
@@ -294,27 +295,24 @@ class Region(Window):
 
         logger.debug(f"Finding primers for slice [{self.slice_start}:{self.slice_end}]")
 
-        # Align flanks against secondary references, store the cigars
-        flank_cigars = self.get_flank_cigars()
+        # Align secondary flanks against primary
+        flank_msa = self.get_flank_msa()
 
         # Design primers for the left and right flanks
-        candidates = design_primers(self.left_flank, self.slice_start)
+        candidates = design_primers(flank_msa[0], offset=self.slice_start)
         candidates.extend(
             design_primers(
-                self.right_flank.reverse_complement(),
-                self.slice_end - self.flank_size,
-                reverse=True,
+                flank_msa[1], self.slice_end - self.flank_size, reverse=True,
             )
         )
 
-        # Slice the secondary alignment for each primer, check mismatche threshold
-        if len(self.scheme.references) > 1:
-            passing_candidates = []
-            for primer in candidates:
-                self._align_against_secondary(primer, flank_cigars)
-                if max(primer.mismatch_counts) <= config.PRIMER_MAX_MISMATCHES:
-                    passing_candidates.append(primer)
-            candidates = passing_candidates
+        # Slice the flank alignments for each primer, check mismatch threshold
+        passing_candidates = []
+        for primer in candidates:
+            self._append_aligned_ref_slices(primer, flank_msa)
+            if max(primer.mismatch_counts) <= config.PRIMER_MAX_MISMATCHES:
+                passing_candidates.append(primer)
+        candidates = passing_candidates
 
         # Pull out left and right from passing candidates
         self.left_candidates = [
@@ -330,20 +328,39 @@ class Region(Window):
         # Pick best-scoring left and right candidates
         self._pick_pair()
 
-    def _align_against_secondary(self, primer, flank_cigars):
+    def get_flank_msa(self):
         """
-        Append to the primer the slice of each flank cigar that
-        would represent its alignment to that secondary reference.
+        Return a multiple seq alignment of all refs for the left & right flanks.
         """
-        for left, right in flank_cigars:
-            if primer.direction == Direction.left:
-                start = primer.start - self.slice_start
-                cigar = left
-            else:
-                start = primer.end - self.slice_end + self.flank_size
-                cigar = right
+        left_alignments = [self.left_flank]
+        right_alignments = [self.right_flank.reverse_complement()]
+        if len(self.scheme.references) > 1:
+            for ref in self.scheme.references[1:]:
+                left_alignments.append(align_secondary_reference(self.left_flank, ref))
+                right_alignments.append(
+                    align_secondary_reference(
+                        self.right_flank, ref
+                    ).reverse_complement()
+                )
+        return (
+            MultipleSeqAlignment([*left_alignments]),
+            MultipleSeqAlignment([*right_alignments]),
+        )
+
+    def _append_aligned_ref_slices(self, primer, flank_msa):
+        """
+        Append aligned references, sliced by primer coords.
+        """
+
+        if primer.direction == Direction.left:
+            start = primer.start - self.slice_start
             end = start + primer.size
-            primer.alignment_cigars.append(cigar[start : end + 1])
+            msa = flank_msa[0]
+        else:
+            end = self.slice_end - primer.end
+            start = end - primer.size
+            msa = flank_msa[1]
+        primer.reference_msa = msa[:, start:end]
 
     def _sort_candidate_pairs(self):
         """Sort the list of candidate pairs in place"""
@@ -353,17 +370,45 @@ class Region(Window):
     def _pick_pair(self):
         """Pick the best scoring left and right primer for the region"""
         self._sort_candidate_pairs()
-        self.left = self.left_candidates[0]
-        self.right = self.right_candidates[0]
+        self.left = self._pick_candidate(self.left_candidates)
+        self.right = self._pick_candidate(self.right_candidates)
 
         if logger.level >= logging.DEBUG:
             self._log_debug()
 
+    def _pick_candidate(self, candidates):
+        for candidate in candidates:
+            if not self._check_for_heterodimers(candidate):
+                return candidate
+        raise NoSuitablePrimersError(
+            "All candidates form stable heterodimers with existing primers "
+            "in this pool."
+        )
+
+    def _check_for_heterodimers(self, candidate):
+        """
+        Return True if candidate primer forms stable heterodimer with
+        an existing primer in the same pool.
+        """
+        for existing in self.scheme.primers_in_pool(self.pool):
+            thermo_end = primer3.bindings.calcEndStability(
+                candidate.seq,
+                existing.seq,
+                mv_conc=config.MV_CONC,
+                dv_conc=config.DV_CONC,
+                dna_conc=config.DNA_CONC,
+                dntp_conc=config.DNTP_CONC,
+                temp_c=config.TEMP_C,
+            )
+            if thermo_end.dg / 1000 < config.HETERODIMER_DG_THRESHOLD:
+                return True
+        return False
+
     def _log_debug(self):
         """Log detailed debug info for the region"""
 
-        self.left.align(self.scheme.references)
-        self.right.align(self.scheme.references)
+        self.left._align(self.scheme.references)
+        self.right._align(self.scheme.references)
 
         logger.debug(f"Picked: {self.left}, {self.right}")
 

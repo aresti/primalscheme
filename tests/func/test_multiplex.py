@@ -1,7 +1,5 @@
 import pytest
 
-from Bio.Seq import Seq
-
 from primalscheme.cli import process_fasta
 from primalscheme.multiplex import MultiplexScheme
 
@@ -86,19 +84,23 @@ def test_right_candidates_are_correctly_sorted(default_chikv_scheme):
         penalty = candidate.combined_penalty
 
 
-def test_left_primer_seq_matches_ref_slice(default_chikv_scheme):
-    primary_ref = str(default_chikv_scheme.primary_ref.seq)
+def test_left_primer_seq_matches_some_ref_slice(default_chikv_scheme):
     left = default_chikv_scheme.regions[0].left
-    ref_slice = primary_ref[left.start : left.end + 1]
+    ref_slices = left.reference_msa
 
-    assert len(left.seq) == left.size
-    assert ref_slice == left.seq
+    assert any(ref_slice.seq == left.seq for ref_slice in ref_slices)
 
 
-def test_right_primer_seq_matches_ref_slice(default_chikv_scheme):
-    primary_ref = str(default_chikv_scheme.primary_ref.seq)
+def test_right_primer_seq_matches_some_ref_slice(default_chikv_scheme):
     right = default_chikv_scheme.regions[0].right
-    ref_slice = str(Seq(primary_ref[right.end : right.start + 1]).reverse_complement())
+    ref_slices = right.reference_msa
 
-    assert len(right.seq) == right.size
-    assert ref_slice == right.seq
+    assert any(ref_slice.seq == right.seq for ref_slice in ref_slices)
+
+
+def test_scheme_with_single_reference(chikv_input):
+    references = process_fasta(chikv_input)[:1]
+    scheme = MultiplexScheme(references)
+    scheme.design_scheme()
+
+    assert len(scheme.regions) > 0
