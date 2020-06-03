@@ -279,13 +279,11 @@ class Region(Window):
             except (FailedAlignmentError, NoSuitablePrimersError):
                 if exhausted_left:
                     try:
-                        # step right, retry
                         self.step_right()
                     except SliceOutOfBoundsError:
                         raise NoSuitablePrimersError("Right limit reached.")
                 else:
                     try:
-                        # step left, retry
                         self.step_left()
                     except SliceOutOfBoundsError:
                         self.reset_slice()
@@ -296,8 +294,10 @@ class Region(Window):
 
         logger.debug(f"Finding primers for slice [{self.slice_start}:{self.slice_end}]")
 
+        # Align flanks against secondary references, store the cigars
         flank_cigars = self.get_flank_cigars()
 
+        # Design primers for the left and right flanks
         candidates = design_primers(self.left_flank, self.slice_start)
         candidates.extend(
             design_primers(
@@ -307,6 +307,7 @@ class Region(Window):
             )
         )
 
+        # Slice the secondary alignment for each primer, check mismatche threshold
         if len(self.scheme.references) > 1:
             passing_candidates = []
             for primer in candidates:
@@ -315,22 +316,19 @@ class Region(Window):
                     passing_candidates.append(primer)
             candidates = passing_candidates
 
-        passing_left = [
+        # Pull out left and right from passing candidates
+        self.left_candidates = [
             primer for primer in candidates if primer.direction == Direction.left
         ]
-        passing_right = [
+        self.right_candidates = [
             primer for primer in candidates if primer.direction == Direction.right
         ]
 
         if not (self.left_candidates and self.right_candidates):
             raise NoSuitablePrimersError
 
-        self.left_candidates = passing_left
-        self.right_candidates = passing_right
+        # Pick best-scoring left and right candidates
         self._pick_pair()
-
-        if logger.level >= logging.DEBUG:
-            self.log_debug()
 
     def _align_against_secondary(self, primer, flank_cigars):
         """
@@ -358,7 +356,10 @@ class Region(Window):
         self.left = self.left_candidates[0]
         self.right = self.right_candidates[0]
 
-    def log_debug(self):
+        if logger.level >= logging.DEBUG:
+            self._log_debug()
+
+    def _log_debug(self):
         """Log detailed debug info for the region"""
 
         self.left.align(self.scheme.references)
