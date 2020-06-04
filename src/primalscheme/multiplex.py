@@ -400,7 +400,7 @@ class Region(Window):
                 dntp_conc=config.DNTP_CONC,
                 temp_c=config.TEMP_C,
             )
-            if thermo_end.dg / 1000 < config.HETERODIMER_DG_THRESHOLD:
+            if thermo_end.dg / 1000 < 0:
                 return True
         return False
 
