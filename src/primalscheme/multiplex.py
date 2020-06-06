@@ -400,7 +400,11 @@ class Region(Window):
                 dntp_conc=config.DNTP_CONC,
                 temp_c=config.TEMP_C,
             )
-            if thermo_end.dg / 1000 < 0:
+            if thermo_end.dg / 1000 < config.HETERODIMER_DG_THRESHOLD:
+                logger.debug(
+                    f"Primer interaction between {candidate.seq} and {existing.seq} "
+                    f"predicted with a ∆G of {thermo_end.dg / 1000:.2f} kcal/mol"
+                )
                 return True
         return False
 
