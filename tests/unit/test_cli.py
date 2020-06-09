@@ -4,10 +4,15 @@ Tests for command line interface (CLI)
 import os
 import pytest
 import re
-
+import warnings
 import primalscheme.cli
 
 from argparse import Namespace
+from Bio.SeqRecord import SeqRecord
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", PendingDeprecationWarning)
+    from primalscheme.cli import process_fasta
 
 
 def test_runas_module():
@@ -62,6 +67,7 @@ def test_cli_fails_without_fasta():
         ("--output-path", "./scheme"),
         ("--step-distance", "11"),
         ("--debug", None),
+        ("--no-sort", None),
         ("--force", None),
     ],
 )
@@ -135,3 +141,58 @@ def test_too_short_fasta_size_vs_amplicon_size(input_fasta_short_500, tmp_path, 
         primalscheme.cli.multiplex(parsed, output_path)
     messages = [log.message for log in caplog.records]
     assert any("too short" in msg for msg in messages)
+
+
+def test_process_fasta_empty_input(input_fasta_empty):
+    with pytest.raises(ValueError, match="does not contain any valid references"):
+        process_fasta(input_fasta_empty)
+
+
+def test_process_fasta_invalid_alphabet(input_fasta_invalid_alphabet):
+    with pytest.raises(ValueError, match="invalid nucleotide codes"):
+        process_fasta(input_fasta_invalid_alphabet)
+
+
+def test_process_fasta_too_many_records(input_fasta_101_random_valid):
+    with pytest.raises(ValueError, match="A maximum of 100"):
+        process_fasta(input_fasta_101_random_valid)
+
+
+def test_process_fasta_size_difference_over_500(input_fasta_size_difference_over_500,):
+    with pytest.raises(ValueError, match="too different in size"):
+        process_fasta(input_fasta_size_difference_over_500)
+
+
+def test_process_fasta_returns_list_of_seq_records(input_fasta_5_random_valid):
+    references = process_fasta(input_fasta_5_random_valid)
+    assert len(references) == 5
+    assert all(isinstance(r, SeqRecord) for r in references)
+
+
+def test_process_fasta_chikv_demo(chikv_input):
+    references = process_fasta(chikv_input)
+    assert len(references) == 2
+
+
+def test_process_fasta_gaps_removed(input_fasta_valid_with_gaps):
+    references = process_fasta(input_fasta_valid_with_gaps)
+    assert "-" not in references[0]
+
+
+def test_process_fasta_too_short_input(input_fasta_short_500):
+    with pytest.raises(ValueError, match="too short"):
+        process_fasta(input_fasta_short_500, min_ref_size=900)
+
+
+def test_process_fasta_returns_longest_reference_first(input_fasta_shortest_first):
+    references = process_fasta(input_fasta_shortest_first, sort=True)
+    first_ref_len = len(references[0])
+    for ref in references[1:]:
+        assert len(ref) <= first_ref_len
+
+
+def test_process_fasta_no_sort(input_fasta_shortest_first):
+    references = process_fasta(input_fasta_shortest_first, sort=False)
+    first_ref_len = len(references[0])
+    for ref in references[1:]:
+        assert len(ref) >= first_ref_len

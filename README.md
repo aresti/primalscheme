@@ -98,6 +98,8 @@ Test input files can be found in `tests/inputs/`
 
 `--debug`: Verbose logging and pickle output file
 
+`--no-sort`: Don't sort input FASTA by length (will use first reference in BED file)
+
 `--force`: Force output to an existing directory and overwrite output files
 
 #### modifying config
