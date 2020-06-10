@@ -22,6 +22,9 @@ def test_base_penalty_matches_primer3_penalty(random_reference_slice):
         "PRIMER_MAX_GC": config.PRIMER_MAX_GC,
         "PRIMER_MAX_POLY_X": config.PRIMER_MAX_HOMO,
         "PRIMER_SALT_MONOVALENT": config.MV_CONC,
+        "PRIMER_DNTP_CONC": config.DNTP_CONC,
+        "PRIMER_SALT_DIVALENT": config.DV_CONC,
+        "PRIMER_DNA_CONC": config.DNA_CONC,
     }
 
     p3_seq = {

@@ -174,7 +174,11 @@ def calc_gc(seq):
 def calc_tm(seq):
     """Calculate Tm for a sequence"""
     return p3_calcTm(
-        seq, mv_conc=config.MV_CONC, dv_conc=config.DV_CONC, dntp_conc=config.DNTP_CONC
+        seq,
+        mv_conc=config.MV_CONC,
+        dv_conc=config.DV_CONC,
+        dntp_conc=config.DNTP_CONC,
+        dna_conc=config.DNA_CONC,
     )
 
 
@@ -186,7 +190,11 @@ def calc_max_homo(seq):
 def calc_hairpin(seq):
     """Calculate hairpin Tm for a sequence"""
     return p3_calcHairpin(
-        seq, mv_conc=config.MV_CONC, dv_conc=config.DV_CONC, dntp_conc=config.DNTP_CONC
+        seq,
+        mv_conc=config.MV_CONC,
+        dv_conc=config.DV_CONC,
+        dntp_conc=config.DNTP_CONC,
+        dna_conc=config.DNA_CONC,
     ).tm
 
 
