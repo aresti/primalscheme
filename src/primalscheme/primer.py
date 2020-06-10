@@ -123,7 +123,7 @@ class Primer:
 
     def _align(self, references):  # TODO, derive from msa
         """Align primer against secondary references for debug purposes"""
-        for ref in references[1:]:
+        for ref in references:
             alignment = align_primer(self, ref)
             self.alignments.append(alignment)
 

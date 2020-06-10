@@ -107,6 +107,12 @@ def chikv_input(stored_inputs_path):
 
 
 @pytest.fixture(scope="session")
+def ebola_input(stored_inputs_path):
+    """Return ebola input path"""
+    return stored_inputs_path / STORED_INPUTS[1]
+
+
+@pytest.fixture(scope="session")
 def random_reference_slice():
     record = seq_record_factory(seq_len=500)
     return str(record.seq)

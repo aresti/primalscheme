@@ -62,7 +62,7 @@ def align_primer(primer, reference):
     cigar = traceback.comp[ref_end - query_end : ref_end]
     aln_ref = traceback.ref[ref_end - query_end : ref_end]
 
-    mismatches = cigar.count(".")
+    mismatches = cigar.count(".") + cigar.count(" ")
 
     # Format alignment
     refid = reference.id[:30]
@@ -104,12 +104,13 @@ def align_secondary_reference(primary_flank, secondary_ref):
     traceback = trace.get_traceback()
     query_end = trace.end_query
     ref_end = trace.end_ref
+    aligned_query = traceback.query[ref_end - query_end : ref_end + 1]
     aligned_ref = traceback.ref[ref_end - query_end : ref_end + 1]
 
     del trace
 
     # Alignment failed (indels)
-    if len(primary_flank) != len(aligned_ref):
+    if "-" in aligned_query + aligned_ref or len(primary_flank) != len(aligned_ref):
         raise FailedAlignmentError
 
     return SeqRecord(Seq(aligned_ref), id=secondary_ref.id)

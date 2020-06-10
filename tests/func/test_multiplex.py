@@ -1,5 +1,6 @@
 import pytest
 
+from primalscheme.align import align_primer
 from primalscheme.cli import process_fasta
 from primalscheme.multiplex import MultiplexScheme
 
@@ -7,6 +8,11 @@ from primalscheme.multiplex import MultiplexScheme
 @pytest.fixture(scope="session")
 def default_chikv_scheme(chikv_input):
     return get_scheme(chikv_input)
+
+
+@pytest.fixture(scope="session")
+def ebola_scheme(ebola_input):
+    return get_scheme(ebola_input)
 
 
 def get_scheme(fasta, **kwargs):
@@ -104,3 +110,12 @@ def test_scheme_with_single_reference(chikv_input):
     scheme.design_scheme()
 
     assert len(scheme.regions) > 0
+
+
+def test_inferred_mismatch_alignments(ebola_scheme):
+    scheme = ebola_scheme
+    primers = scheme.primers
+    for primer in primers:
+        mismatch_counts = [align_primer(primer, ref)[0] for ref in scheme.references]
+        print(primer.reference_msa)
+        assert primer.mismatch_counts == mismatch_counts
