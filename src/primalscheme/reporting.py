@@ -66,7 +66,9 @@ class MultiplexReporter(MultiplexScheme):
     @property
     def percent_coverage(self):
         """Coverage %, with respect to the primary reference"""
-        covered_coords = set([x for insert in self.inserts for x in range(*insert)])
+        covered_coords = set(
+            [x for insert in self.inserts for x in range(insert.start, insert.end + 1)]
+        )
         return round(len(covered_coords) / self.ref_len * 100, 2)
 
     def calc_gc(self, sequence):
