@@ -118,6 +118,8 @@ Many parameters are not directly exposed in the CLI as we believe they are neces
 
 `{output_dir}/{prefix}.plot.svg` - diagrammatic overview of scheme (SVG)
 
+`{output_dir}/{prefix}.report.json` - run report (reference ids, regions, gaps, coverage)
+
 `{output_dir}/{prefix}.pickle` - pickled Python objects (if --debug)
 
 `{output_dir}/{prefix}.log` - run logs (more detail if --debug)

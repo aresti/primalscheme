@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
 import csv
+import json
 import logging
 import pickle
 
@@ -81,6 +82,7 @@ class MultiplexReporter(MultiplexScheme):
         self.write_primer_tsv()
         self.write_refs()
         self.write_schemadelica_plot()
+        self.write_run_report_json()
 
     def write_primer_bed(self):
         """Write primer BED file"""
@@ -300,3 +302,15 @@ class MultiplexReporter(MultiplexScheme):
         logger.info(f"Writing {svg_filepath}")
         gd_diagram.write(str(pdf_filepath), "PDF", dpi=300)
         gd_diagram.write(str(svg_filepath), "SVG", dpi=300)
+
+    def write_run_report_json(self):
+        """Write run report json"""
+        filepath = self.outpath / f"{self.prefix}.report.json"
+        logger.info(f"Writing {filepath}")
+        data = {
+            "references": [ref.id for ref in self.references],
+            "regions": len(self.regions),
+            "percent_coverage": self.percent_coverage,
+            "gaps": self.gap_count,
+        }
+        filepath.write_text(json.dumps(data))
