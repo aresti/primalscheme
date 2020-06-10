@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use all reference sequences for primer generation
 - 3' distance weighted mismatch scoring
 - Avoid stable heteodimers in same pool
+- Sort inputs by length, to make longest the primary by default (--no-sort reverts)
 
 ### Changed
 - Infer mismatches from aligned references and primer coordinates
