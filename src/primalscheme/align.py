@@ -43,9 +43,9 @@ def align_primer(primer, reference):
     OPEN = 2
     EXTEND = 1
 
-    if primer.direction.value == "left":
+    if primer.direction.name == "LEFT":
         ref = reference.seq
-    elif primer.direction.value == "right":
+    elif primer.direction.name == "RIGHT":
         ref = reference.reverse_complement().seq
 
     # Semi-Global, do not penalize gaps at beginning and end of s2/database
@@ -66,13 +66,13 @@ def align_primer(primer, reference):
 
     # Format alignment
     refid = reference.id[:30]
-    name = primer.direction.value
+    name = primer.direction.name
     formatted_query = f"{name: <30} {1: >6} {aln_query} {query_end}"
-    if primer.direction.value == "left":
+    if primer.direction.name == "LEFT":
         formatted_ref = (
             f"{refid: <30} {ref_end - query_end + 1: >6} {aln_ref} {ref_end}"
         )
-    elif primer.direction.value == "right":
+    elif primer.direction.name == "RIGHT":
         rev_start = len(reference) - ref_end
         formatted_ref = (
             f"{refid: <30} {rev_start + query_end: >6} {aln_ref} {rev_start + 1}"

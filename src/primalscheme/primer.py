@@ -33,22 +33,24 @@ Kmer = namedtuple("Kmer", "seq start")
 class Direction(Enum):
     """Primer direction."""
 
-    left = "left"
-    right = "right"
+    LEFT = "+"
+    RIGHT = "-"
 
 
 class Primer:
     """A primer."""
 
-    def __init__(self, seq, start, direction):
-        self.direction = direction
+    def __init__(self, seq, start, direction, pool):
         self.seq = seq
         self.start = start
-        self.alignments = []
+        self.direction = direction
+        self.pool = pool
         self.reference_msa = None
 
+        self.alignments = []  # to be depreciated
+
     def __str__(self):
-        return f"{self.direction.value}:{self.seq}:{self.start}"
+        return f"{self.direction.name}:{self.seq}:{self.start}"
 
     @property
     def size(self):
@@ -57,9 +59,9 @@ class Primer:
     @property
     def end(self):
         """The (inclusive) end position of the primer"""
-        if self.direction == Direction.left:
+        if self.direction == Direction.LEFT:
             return self.start + self.size - 1
-        elif self.direction == Direction.right:
+        elif self.direction == Direction.RIGHT:
             return self.start - self.size + 1
 
     @property
@@ -188,7 +190,7 @@ def calc_hairpin(seq):
     ).tm
 
 
-def design_primers(msa, offset=0, reverse=False):
+def design_primers(msa, direction, pool, offset=0):
     min_size = config.PRIMER_SIZE_MIN
     max_size = config.PRIMER_SIZE_MAX
     variation = max_size - min_size
@@ -205,10 +207,11 @@ def design_primers(msa, offset=0, reverse=False):
     primers = [
         Primer(
             kmer.seq,
-            offset + len(msa[0].seq) - 1 - kmer.start
-            if reverse
-            else offset + kmer.start,
-            Direction.right if reverse else Direction.left,
+            offset + kmer.start
+            if direction == Direction.LEFT
+            else offset + len(msa[0].seq) - 1 - kmer.start,
+            direction,
+            pool,
         )
         for kmer in all_kmers
     ]

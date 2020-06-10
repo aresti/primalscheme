@@ -39,7 +39,7 @@ def test_base_penalty_matches_primer3_penalty(random_reference_slice):
             seq = str(p3_output[f"PRIMER_{text_dir[d]}_{i}_SEQUENCE"])
             p3_penalty = float(p3_output[f"PRIMER_{text_dir[d]}_{i}_PENALTY"])
             primer = Primer(
-                seq, 0, Direction.left if text_dir[d] == "LEFT" else Direction.right
+                seq, 0, Direction.LEFT if text_dir[d] == "LEFT" else Direction.RIGHT, 1
             )
 
             assert primer.base_penalty == p3_penalty

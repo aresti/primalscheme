@@ -137,13 +137,18 @@ class MultiplexScheme:
 
         return slice_start
 
-    def primers_in_pool(self, pool):
-        """Return a list of all left & right primers in a pool"""
+    @property
+    def primers(self):
+        """Return a list of all primers in the scheme"""
         primers = []
-        for region in [region for region in self.regions if region.pool == pool]:
+        for region in [region for region in self.regions]:
             primers.append(region.left)
             primers.append(region.right)
         return primers
+
+    def primers_in_pool(self, pool):
+        """Return a list of all primers in a pool"""
+        return [primer for primer in self.primers if primer.pool == pool]
 
     def design_scheme(self):
         """Design a multiplex primer scheme"""
@@ -300,10 +305,15 @@ class Region(Window):
         flank_msa = self.get_flank_msa()
 
         # Design primers for the left and right flanks
-        candidates = design_primers(flank_msa[0], offset=self.slice_start)
+        candidates = design_primers(
+            flank_msa[0], Direction.LEFT, self.pool, offset=self.slice_start,
+        )
         candidates.extend(
             design_primers(
-                flank_msa[1], self.slice_end - self.flank_size, reverse=True,
+                flank_msa[1],
+                Direction.RIGHT,
+                self.pool,
+                offset=self.slice_end - self.flank_size,
             )
         )
 
@@ -317,10 +327,10 @@ class Region(Window):
 
         # Pull out left and right from passing candidates
         self.left_candidates = [
-            primer for primer in candidates if primer.direction == Direction.left
+            primer for primer in candidates if primer.direction == Direction.LEFT
         ]
         self.right_candidates = [
-            primer for primer in candidates if primer.direction == Direction.right
+            primer for primer in candidates if primer.direction == Direction.RIGHT
         ]
 
         if not (self.left_candidates and self.right_candidates):
@@ -353,7 +363,7 @@ class Region(Window):
         Append aligned references, sliced by primer coords.
         """
 
-        if primer.direction == Direction.left:
+        if primer.direction == Direction.LEFT:
             start = primer.start - self.slice_start
             end = start + primer.size
             msa = flank_msa[0]
