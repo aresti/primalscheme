@@ -1,5 +1,4 @@
 # primalscheme
-Multiplex PCR primers for amplicon sequencing.
 
 ![Build](https://github.com/aresti/primalscheme/workflows/Build/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -7,7 +6,7 @@ Multiplex PCR primers for amplicon sequencing.
 
 ### about
 
-primalscheme is a tool for designing primer panels for multiplex PCR. It generates optimum primers for tiling amplicon generation for multiple reference genomes. It was developed for sequencing large numbers of viral isolates of known lineages e.g. outbreak strains. It requires only two PCR reactions to generate the products which should cover at least 90% of the target region without optimisation.
+primalscheme is a tool for designing primer panels for multiplex PCR. It uses a greedy algorithm to find primers for tiling amplicon generation for multiple reference genomes. It works best on viral isolates of known lineages e.g. outbreak strains.
 
 ### requirements
 
