@@ -1,10 +1,13 @@
 # primalscheme
+Multiplex PCR primers for amplicon sequencing.
 
 ![Build](https://github.com/aresti/primalscheme/workflows/Build/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 ---
 
-Multiplex PCR primers for amplicon sequencing.
+### about
+
+primalscheme is a tool for designing primer panels for multiplex PCR. It generates optimum primers for tiling amplicon generation for multiple reference genomes. It was developed for sequencing large numbers of viral isolates of known lineages e.g. outbreak strains. It requires only two PCR reactions to generate the products which should cover at least 90% of the target region without optimisation.
 
 ### requirements
 
@@ -102,9 +105,21 @@ Test input files can be found in `tests/inputs/`
 
 Many parameters are not directly exposed in the CLI as we believe they are necessary for successful multiplex PCR. However, most values can be modified in `config.py` if you install the package from source in editable mode with `flit install --pth-file` (see above).
 
-### about
+#### output
 
-primalscheme is a tool for designing primer panels for multiplex PCR. It generates optimum primers for tiling amplicon generation for multiple reference genomes. It was developed for sequencing large numbers of viral isolates of known lineages e.g. outbreak strains. It requires only two PCR reactions to generate the products which should cover at least 90% of the target region without optimisation.
+`{output_dir}/{prefix}.reference.fasta` - all input references
+
+`{output_dir}/{prefix}.primer.bed` - coordinates of primer positions
+
+`{output_dir}/{prefix}.insert.bed` - coordinates of trimmed amplicons
+
+`{output_dir}/{prefix}.tsv` - primer sequences and information
+
+`{output_dir}/{prefix}.pdf` - diagrammatic overview of scheme
+
+`{output_dir}/{prefix}.pickle` - pickled Python objects (if --debug)
+
+`{output_dir}/{prefix}.log` - run logs (more detail if --debug)
 
 ### how to design a scheme
 
@@ -130,23 +145,7 @@ primalscheme is a tool for designing primer panels for multiplex PCR. It generat
 
 6. Run primalscheme on your FASTA file.
 
-	- Alter the amplicon length as required by your sequencing technology.
-
-### output
-
-`{output_dir}/{prefix}.reference.fasta` - all input references
-
-`{output_dir}/{prefix}.primer.bed` - coordinates of primer positions
-
-`{output_dir}/{prefix}.insert.bed` - coordinates of trimmed amplicons
-
-`{output_dir}/{prefix}.tsv` - primer sequences and information
-
-`{output_dir}/{prefix}.pdf` - diagrammatic overview of scheme
-
-`{output_dir}/{prefix}.pickle` - pickled Python objects (if --debug)
-
-`{output_dir}/{prefix}.log` - run logs (more detail if --debug)
+	- Optionally, set amplicon min/max length as required by your sequencing technology.
 
 ### protocol
 
@@ -168,7 +167,7 @@ We strongly recommend using the PCR conditions outlined in the <a href="http://w
 
 - Sort left and right primers according to base penalty plus weighted mismatch score.
 
-- Check for heterodimers in same pool before using primer3-py selecting top scoring pair.
+- Check for heterodimers in same pool using primer3-py; select top scoring, non-interacting pair.
 
 - Open new window position set to maintain overlap if region is successful.
 
