@@ -85,9 +85,9 @@ def multiplex(args, outpath):
         sys.exit(2)
 
     # Log references
-    logger.info(f"Designing primers using reference: {references[0].id}")
-    for ref in references[1:]:
-        logger.info(f"Checking alignments against reference: {ref.id}")
+    logger.info(f"Primary reference for coordinate system: {references[0].id}")
+    ref_ids = [f" - {ref.id}" for ref in references]
+    logger.info("\n".join(["Designing primers against references:"] + ref_ids))
 
     # Create scheme
     try:
