@@ -138,6 +138,7 @@ class MultiplexScheme:
         return slice_start
 
     def primers_in_pool(self, pool):
+        """Return a list of all left & right primers in a pool"""
         primers = []
         for region in [region for region in self.regions if region.pool == pool]:
             primers.append(region.left)
@@ -377,6 +378,7 @@ class Region(Window):
             self._log_debug()
 
     def _pick_candidate(self, candidates):
+        """Pick the best scoring candidate that passes a same-pool heterodimer check"""
         for candidate in candidates:
             if not self._check_for_heterodimers(candidate):
                 return candidate
