@@ -46,7 +46,8 @@ class MultiplexReporter(MultiplexScheme):
 
     @property
     def inserts(self):
-        return [(r.left.end + 1, r.right.end) for r in self.regions]
+        """Return inclusive insert start, end coords as a list of tuples"""
+        return [(r.left.end + 1, r.right.end - 1) for r in self.regions]
 
     @property
     def gap_count(self):
