@@ -54,22 +54,22 @@ def main():
 
     # Validate output path
     try:
-        output_path = get_output_path(args.output_path, force=args.force)
+        outpath = get_output_path(args.output_path, force=args.force)
     except IOError as e:
         print(f"Error: {e}")
         sys.exit(1)
 
     # Setup logging
-    setup_logging(output_path, debug=args.debug, prefix=args.prefix)
+    setup_logging(outpath, debug=args.debug, prefix=args.prefix)
 
     for arg in vars(args):
         logger.debug("{}: {}".format(arg, str(vars(args)[arg])))
 
     # Run subcommand
-    args.func(args, output_path)
+    args.func(args, outpath)
 
 
-def multiplex(args, output_path):
+def multiplex(args, outpath):
     """
     Multipex scheme command.
     """
@@ -92,6 +92,7 @@ def multiplex(args, output_path):
     # Create scheme
     try:
         scheme = MultiplexReporter(
+            outpath,
             references,
             prefix=args.prefix,
             amplicon_size_min=args.amplicon_size_min,
@@ -115,7 +116,9 @@ def multiplex(args, output_path):
         f"{scheme.gap_count } gap{'' if scheme.gap_count == 1 else 's'}, "
         f"{scheme.percent_coverage}% coverage"
     )
-    scheme.write_all(output_path)
+    scheme.write_default_outputs()
+    if args.debug:
+        scheme.write_pickle()
     sys.exit(0)
 
 

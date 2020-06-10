@@ -112,9 +112,11 @@ Many parameters are not directly exposed in the CLI as we believe they are neces
 
 `{output_dir}/{prefix}.insert.bed` - coordinates of trimmed amplicons
 
-`{output_dir}/{prefix}.tsv` - primer sequences and information
+`{output_dir}/{prefix}.primer.tsv` - primer sequences and information
 
-`{output_dir}/{prefix}.pdf` - diagrammatic overview of scheme
+`{output_dir}/{prefix}.plot.pdf` - diagrammatic overview of scheme (PDF)
+
+`{output_dir}/{prefix}.plot.svg` - diagrammatic overview of scheme (SVG)
 
 `{output_dir}/{prefix}.pickle` - pickled Python objects (if --debug)
 

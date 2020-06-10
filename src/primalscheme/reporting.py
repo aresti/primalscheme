@@ -20,141 +20,154 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
+import csv
 import logging
-import os
 import pickle
 
+from collections import namedtuple
 from Bio import SeqIO
 from Bio.Graphics import GenomeDiagram
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
 
 from primalscheme.multiplex import MultiplexScheme
+from primalscheme.primer import Direction
 
 logger = logging.getLogger("primalscheme")
+
+
+Insert = namedtuple("Insert", "start end pool")
 
 
 class MultiplexReporter(MultiplexScheme):
     """Reporting methods to extend MultiplexScheme"""
 
-    def write_all(self, path):
-        self.write_bed(path)
-        self.write_pickle(path)
-        self.write_tsv(path)
-        self.write_refs(path)
-        self.write_schemadelica_plot(path)
+    def __init__(self, outpath, *args, **kwargs):
+        self.outpath = outpath
+        super().__init__(*args, **kwargs)
 
     @property
     def inserts(self):
-        """Return inclusive insert start, end coords as a list of tuples"""
-        return [(r.left.end + 1, r.right.end - 1) for r in self.regions]
+        """A list of insert (start, end) tuples"""
+        return [Insert(r.left.end + 1, r.right.end - 1, r.pool) for r in self.regions]
 
     @property
     def gap_count(self):
+        """The total number of gaps in the scheme"""
         gaps = 0
-        last_covered = self.inserts[0][1]
-        for insert in self.inserts:
-            if insert[0] > last_covered:
+        last_covered = self.inserts[0].end
+        for insert in self.inserts[1:]:
+            if insert.start > last_covered:
                 gaps += 1
-            last_covered = insert[1]
+            last_covered = insert.end
         return gaps
 
     @property
     def percent_coverage(self):
+        """Coverage %, with respect to the primary reference"""
         covered_coords = set([x for insert in self.inserts for x in range(*insert)])
         return round(len(covered_coords) / self.ref_len * 100, 2)
 
-    def write_bed(self, path):
-        """
-        Write BED format to file.
-        """
-        filepath = path / f"{self.prefix}.scheme.bed"
+    def calc_gc(self, sequence):
+        """Return gc content for a sequence as fraction"""
+        g = sequence.count("G") + sequence.count("g")
+        c = sequence.count("C") + sequence.count("c")
+        return (g + c) / len(sequence)
+
+    def write_default_outputs(self):
+        """Write all default output files"""
+        self.write_primer_bed()
+        self.write_insert_bed()
+        self.write_primer_tsv()
+        self.write_refs()
+        self.write_schemadelica_plot()
+
+    def write_primer_bed(self):
+        """Write primer BED file"""
+        filepath = self.outpath / f"{self.prefix}.primer.bed"
         logger.info(f"Writing {filepath}")
 
-        with open(filepath, "w") as bedhandle:
-            for r in self.regions:
-                print(
-                    *map(
-                        str,
-                        [
-                            self.primary_ref.id,
-                            r.left.start,
-                            r.left.end + 1,  # BED end is 1-based
-                            f"{self.prefix}_{r.region_num}_LEFT",
-                            r.pool,
-                            "+",
-                        ],
-                    ),
-                    sep="\t",
-                    file=bedhandle,
-                )
-                print(
-                    *map(
-                        str,
-                        [
-                            self.primary_ref.id,
-                            r.right.end,
-                            r.right.start + 1,
-                            f"{self.prefix}_{r.region_num}_RIGHT",
-                            r.pool,
-                            "-",
-                        ],
-                    ),
-                    sep="\t",
-                    file=bedhandle,
-                )
+        rows = []
+        ref_id = self.primary_ref.id
 
-    def write_tsv(self, path):
-        filepath = path / f"{self.prefix}.tsv"
-        logger.info(f"Writing {filepath}")
-        with open(filepath, "w") as tsvhandle:
-            print(
-                *["name", "pool", "seq", "size", "%gc", "tm (use 65)"],
-                sep="\t",
-                file=tsvhandle,
+        for i, p in enumerate(self.primers):
+            region_num = int(i / 2) + 1
+            start = p.start if p.direction == Direction.LEFT else p.end
+            end = p.end if p.direction == Direction.LEFT else p.start
+            name = f"{self.prefix}_{region_num}_{p.direction.name}"
+            rows.append(
+                [
+                    ref_id,
+                    start,
+                    end + 1,  # BED end is 1-based
+                    name,
+                    p.pool,
+                    p.direction.value,
+                ]
             )
-            for r in self.regions:
-                left = r.left
-                right = r.right
-                print(
-                    *map(
-                        str,
-                        [
-                            f"{self.prefix}_{r.region_num}_LEFT",
-                            r.pool,
-                            left.seq,
-                            left.size,
-                            "%.2f" % left.gc,
-                            "%.2f" % left.tm,
-                        ],
-                    ),
-                    sep="\t",
-                    file=tsvhandle,
-                )
-                print(
-                    *map(
-                        str,
-                        [
-                            f"{self.prefix}_{r.region_num}_RIGHT",
-                            r.pool,
-                            right.seq,
-                            right.size,
-                            "%.2f" % right.gc,
-                            "%.2f" % right.tm,
-                        ],
-                    ),
-                    sep="\t",
-                    file=tsvhandle,
-                )
 
-    def write_pickle(self, path):
-        filepath = path / f"{self.prefix}.pickle"
+        with open(filepath, "w") as fh:
+            cw = csv.writer(fh, delimiter="\t")
+            cw.writerows(rows)
+
+    def write_insert_bed(self):
+        """Write insert BED file"""
+        filepath = self.outpath / f"{self.prefix}.insert.bed"
+        logger.info(f"Writing {filepath}")
+
+        rows = []
+        ref_id = self.primary_ref.id
+
+        for insert_num, insert in enumerate(self.inserts):
+            rows.append(
+                [
+                    ref_id,
+                    insert.start,
+                    insert.end + 1,  # BED end is 1-based
+                    f"{self.prefix}_INSERT_{insert_num + 1}",
+                    insert.pool,
+                    "+",
+                ]
+            )
+
+        with open(filepath, "w") as fh:
+            cw = csv.writer(fh, delimiter="\t")
+            cw.writerows(rows)
+
+    def write_primer_tsv(self):
+        """Write primer TSV file"""
+        filepath = self.outpath / f"{self.prefix}.primer.tsv"
+        logger.info(f"Writing {filepath}")
+
+        rows = [["name", "pool", "seq", "size", "%gc", "tm (use 65)"]]
+
+        for i, p in enumerate(self.primers):
+            region_num = int(i / 2) + 1
+            rows.append(
+                [
+                    f"{self.prefix}_{region_num}_{p.direction.name}",
+                    p.pool,
+                    p.seq,
+                    p.size,
+                    f"{p.gc:.2f}",
+                    f"{p.tm:.2f}",
+                ]
+            )
+
+        with open(filepath, "w") as fh:
+            cw = csv.writer(fh, delimiter="\t")
+            cw.writerows(rows)
+
+    def write_pickle(self):
+        """Write pickle file"""
+        filepath = self.outpath / f"{self.prefix}.pickle"
         logger.info(f"Writing {filepath}")
         with open(filepath, "wb") as pickleobj:
             pickle.dump(self, pickleobj)
 
-    def write_refs(self, path):
-        filepath = path / f"{self.prefix}.reference.fasta"
+    def write_refs(self):
+        """Write reference FASTA"""
+        filepath = self.outpath / f"{self.prefix}.reference.fasta"
         logger.info(f"Writing {filepath}")
         with open(filepath, "w"):
             SeqIO.write(self.references, filepath, "fasta")
@@ -216,15 +229,8 @@ class MultiplexReporter(MultiplexScheme):
 
         return results  # Return the list of (position, value) results
 
-    def calc_gc(self, sequence):
-        """
-        Return gc content as fraction
-        """
-        g = sequence.count("G") + sequence.count("g")
-        c = sequence.count("C") + sequence.count("c")
-        return (g + c) / len(sequence)
-
-    def write_schemadelica_plot(self, path):
+    def write_schemadelica_plot(self):
+        """Write schemadelica plot as SVG and PDF"""
         gd_diagram = GenomeDiagram.Diagram("Primer Scheme", track_size=0.15)
         primer_feature_set = GenomeDiagram.FeatureSet()
 
@@ -288,9 +294,9 @@ class MultiplexReporter(MultiplexScheme):
             end=len(self.primary_ref),
         )
 
-        pdf_filepath = os.path.join(path, "{}.pdf".format(self.prefix))
-        svg_filepath = os.path.join(path, "{}.svg".format(self.prefix))
+        pdf_filepath = self.outpath / f"{self.prefix}.plot.pdf"
+        svg_filepath = self.outpath / f"{self.prefix}.plot.svg"
         logger.info(f"Writing {pdf_filepath}")
         logger.info(f"Writing {svg_filepath}")
-        gd_diagram.write(pdf_filepath, "PDF", dpi=300)
-        gd_diagram.write(svg_filepath, "SVG", dpi=300)
+        gd_diagram.write(str(pdf_filepath), "PDF", dpi=300)
+        gd_diagram.write(str(svg_filepath), "SVG", dpi=300)
