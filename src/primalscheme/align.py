@@ -36,57 +36,6 @@ class FailedAlignmentError(Exception):
     pass
 
 
-def align_primer(primer, reference):
-    """An seqan alignment of a primer against a reference."""
-
-    MATRIX = parasail.matrix_create("ACGT", 2, -1)
-    OPEN = 2
-    EXTEND = 1
-
-    if primer.direction.name == "LEFT":
-        ref = reference.seq
-    elif primer.direction.name == "RIGHT":
-        ref = reference.reverse_complement().seq
-
-    # Semi-Global, do not penalize gaps at beginning and end of s2/database
-    trace = parasail.sg_dx_trace_striped_sat(
-        str(primer.seq), str(ref), OPEN, EXTEND, MATRIX
-    )
-    traceback = trace.get_traceback()
-
-    query_end = trace.end_query + 1
-    ref_end = trace.end_ref + 1
-
-    # Get alignment strings
-    aln_query = traceback.query[ref_end - query_end : ref_end]
-    cigar = traceback.comp[ref_end - query_end : ref_end]
-    aln_ref = traceback.ref[ref_end - query_end : ref_end]
-
-    mismatches = cigar.count(".") + cigar.count(" ")
-
-    # Format alignment
-    refid = reference.id[:30]
-    name = primer.direction.name
-    formatted_query = f"{name: <30} {1: >6} {aln_query} {query_end}"
-    if primer.direction.name == "LEFT":
-        formatted_ref = (
-            f"{refid: <30} {ref_end - query_end + 1: >6} {aln_ref} {ref_end}"
-        )
-    elif primer.direction.name == "RIGHT":
-        rev_start = len(reference) - ref_end
-        formatted_ref = (
-            f"{refid: <30} {rev_start + query_end: >6} {aln_ref} {rev_start + 1}"
-        )
-    formatted_cigar = f"{'': <30} {'': >6} {cigar}"
-    formatted_alignment = "\n".join(
-        ["", formatted_query, formatted_cigar, formatted_ref]
-    )
-
-    del trace
-
-    return Alignment(mismatches, formatted_alignment)
-
-
 def align_secondary_reference(primary_flank, secondary_ref):
     """
     An seqan alignment of a primary reference slice against a complete

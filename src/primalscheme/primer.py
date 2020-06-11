@@ -23,9 +23,10 @@ from collections import namedtuple
 from enum import Enum
 from itertools import groupby
 
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 from primer3 import calcTm as p3_calcTm, calcHairpin as p3_calcHairpin
 from primalscheme import config
-from primalscheme.align import align_primer
 
 Kmer = namedtuple("Kmer", "seq start")
 
@@ -47,7 +48,7 @@ class Primer:
         self.pool = pool
         self.reference_msa = None
 
-        self.alignments = []  # to be depreciated
+        self.interacts_with = None
 
     def __str__(self):
         return f"{self.direction.name}:{self.seq}:{self.start}"
@@ -121,12 +122,6 @@ class Primer:
         self.__base_penalty = penalty
         return penalty
 
-    def _align(self, references):  # TODO, derive from msa
-        """Align primer against secondary references for debug purposes"""
-        for ref in references:
-            alignment = align_primer(self, ref)
-            self.alignments.append(alignment)
-
     def _mismatch_count_for_ref(self, ref):
         count = 0
         for i, base in enumerate(self.seq):
@@ -164,6 +159,34 @@ class Primer:
     @property
     def combined_penalty(self):
         return self.base_penalty + sum(self.mismatch_penalties)
+
+    @property
+    def reference_msa(self):
+        return self.__reference_msa
+
+    @reference_msa.setter
+    def reference_msa(self, msa):
+        self.__reference_msa = msa
+        if msa is None:
+            self.__annotated_msa = None
+            return
+
+        # Annotated msa
+        cigar = ""
+        for i in range(msa.get_alignment_length()):
+            num = len(set(msa[::-1, i]))
+            if num == 1:
+                cigar += "*"
+            else:
+                cigar += " "
+        cigar = SeqRecord(Seq(cigar), id="Cigar")
+        annotated_msa = msa[:]
+        annotated_msa.append(cigar)
+        self.__annotated_msa = annotated_msa
+
+    @property
+    def annotated_msa(self):
+        return self.__annotated_msa
 
 
 def calc_gc(seq):

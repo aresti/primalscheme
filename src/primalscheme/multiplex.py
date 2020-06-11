@@ -417,39 +417,33 @@ class Region(Window):
                     f"Primer interaction between {candidate.seq} and {existing.seq} "
                     f"predicted with a ∆G of {thermo_end.dg / 1000:.2f} kcal/mol"
                 )
+                candidate.interacts_with = existing
                 return True
         return False
 
-    def _log_debug(self):
+    def _log_debug(self, direction):
         """Log detailed debug info for the region"""
+        if direction == Direction.LEFT:
+            logger.debug(f"Left region flank MSA: {self.left_flank_msa}")
+            candidates = self.left_candidates
+            picked = self.left
+        else:
+            logger.debug(f"Right region flank MSA: {self.right_flank_msa}")
+            candidates = self.right_candidates
+            picked = self.right
 
-        self.left._align(self.scheme.references)
-        self.right._align(self.scheme.references)
-
-        logger.debug(f"Picked: {self.left}, {self.right}")
-
-        for alignment in self.left.alignments:
-            logger.debug(alignment.formatted_alignment)
-
-        for i, primer in enumerate(self.left_candidates[:10]):
-            mismatches = sum(primer.mismatch_counts)
+        logger.debug(f"Picked primer {picked}")
+        logger.debug(f"Picked MSA slice: {picked.annotated_msa}")
+        for i, primer in enumerate(candidates[:10]):
+            max_mis = max(primer.mismatch_counts)
+            total_mis = sum(primer.mismatch_counts)
             logger.debug(
-                f"Left candidate {i}: "
-                f"base penalty {primer.base_penalty:.2f}, "
-                f"combined penalty {primer.combined_penalty:.2f}, "
-                f"{mismatches} mismatch{'' if mismatches == 1 else 'es'}.",
-            )
-
-        for alignment in self.right.alignments:
-            logger.debug(alignment.formatted_alignment)
-
-        for i, primer in enumerate(self.right_candidates[:10]):
-            mismatches = sum(primer.mismatch_counts)
-            logger.debug(
-                f"Right candidate {i}: "
-                f"base penalty {primer.base_penalty:.2f}, "
-                f"combined penalty {primer.combined_penalty:.2f}, "
-                f"{mismatches} mismatch{'' if mismatches == 1 else 'es'}.",
+                f"{direction.name} candidate {i}: "
+                f"{'*interaction, ' if primer.interacts_with else ''}"
+                f"base pen {primer.base_penalty:.3f}, "
+                f"combined pen {primer.combined_penalty:.3f}, "
+                f"{max_mis} max mismatch{'' if max_mis == 1 else 'es'}, "
+                f"{total_mis} total mismatch{'' if total_mis == 1 else 'es'}."
             )
 
 
