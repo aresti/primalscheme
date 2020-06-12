@@ -1,7 +1,8 @@
 # primalscheme
 
-![Build](https://github.com/aresti/primalscheme/workflows/Build/badge.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![Build](https://github.com/aresti/primalscheme/workflows/Build/badge.svg)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=aresti_primalscheme&metric=alert_status)](https://sonarcloud.io/dashboard?id=aresti_primalscheme)
 ---
 
 ### about
