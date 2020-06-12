@@ -1,5 +1,6 @@
 import primer3
 
+from Bio.Align import MultipleSeqAlignment
 from primalscheme import config
 from primalscheme.primer import Primer, Direction
 
@@ -28,7 +29,7 @@ def test_base_penalty_matches_primer3_penalty(random_reference_slice):
     }
 
     p3_seq = {
-        "SEQUENCE_TEMPLATE": random_reference_slice,
+        "SEQUENCE_TEMPLATE": str(random_reference_slice.seq),
         "SEQUENCE_PRIMER_PAIR_OK_REGION_LIST": [-1, -1, -1, -1],
         "SEQUENCE_INCLUDED_REGION": [-1, -1],
     }
@@ -41,8 +42,8 @@ def test_base_penalty_matches_primer3_penalty(random_reference_slice):
         for i in range(num_returned):
             seq = str(p3_output[f"PRIMER_{text_dir[d]}_{i}_SEQUENCE"])
             p3_penalty = float(p3_output[f"PRIMER_{text_dir[d]}_{i}_PENALTY"])
-            primer = Primer(
-                seq, 0, Direction.LEFT if text_dir[d] == "LEFT" else Direction.RIGHT, 1
-            )
+            mock_msa = MultipleSeqAlignment([random_reference_slice])
+            direction = Direction.LEFT if text_dir[d] == "LEFT" else Direction.RIGHT
+            primer = Primer(seq, 0, direction, 1, mock_msa)
 
             assert primer.base_penalty == p3_penalty

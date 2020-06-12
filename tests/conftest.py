@@ -115,7 +115,7 @@ def ebola_input(stored_inputs_path):
 @pytest.fixture(scope="session")
 def random_reference_slice():
     record = seq_record_factory(seq_len=500)
-    return str(record.seq)
+    return record
 
 
 @pytest.fixture(scope="session")
