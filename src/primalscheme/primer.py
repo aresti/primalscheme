@@ -41,13 +41,12 @@ class Direction(Enum):
 class Primer:
     """A primer."""
 
-    def __init__(self, seq, start, direction, pool):
+    def __init__(self, seq, start, direction, pool, reference_msa):
         self.seq = seq
         self.start = start
         self.direction = direction
         self.pool = pool
-        self.reference_msa = None
-
+        self.reference_msa = reference_msa
         self.interacts_with = None
 
     def __str__(self):
@@ -235,17 +234,14 @@ def design_primers(msa, direction, pool, offset=0):
             all_kmers.update(digest_seq(str(seq[:-variation]), kmer_size))
 
     # Generate primers
-    primers = [
-        Primer(
-            kmer.seq,
-            offset + kmer.start
-            if direction == Direction.LEFT
-            else offset + len(msa[0].seq) - 1 - kmer.start,
-            direction,
-            pool,
-        )
-        for kmer in all_kmers
-    ]
+    primers = []
+    for kmer in all_kmers:
+        sliced_msa = msa[:, kmer.start : kmer.start + len(kmer.seq)]
+        if direction == Direction.LEFT:
+            primer_start = offset + kmer.start
+        else:
+            primer_start = offset + len(msa[0].seq) - 1 - kmer.start
+        primers.append(Primer(kmer.seq, primer_start, direction, pool, sliced_msa))
 
     # Hard filter
     filtered_candidates = [primer for primer in primers if hard_filter(primer)]

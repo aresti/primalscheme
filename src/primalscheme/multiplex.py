@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 import logging
 import primer3
 
+from operator import attrgetter
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
 
@@ -184,6 +185,8 @@ class Window:
         self.right_limit = right_limit or len(scheme.primary_ref.seq)
 
         self._initial_slice_start = self.slice_start
+        self.left_flank_msa = None
+        self.right_flank_msa = None
 
         logger.debug(
             f"Window: left_limit {left_limit}, slice_start {slice_start}, "
@@ -201,6 +204,7 @@ class Window:
             logger.debug("Left limit reached")
             raise SliceOutOfBoundsError("Left window limit reached.")
         self.slice_start -= distance
+        self.left_flank_msa, self.right_flank_msa = None, None
         logger.debug(f"Stepping left to {self.slice_start}")
 
     def step_right(self):
@@ -210,6 +214,7 @@ class Window:
             logger.debug("Right limit reached")
             raise SliceOutOfBoundsError("Right window limit reached.")
         self.slice_start += distance
+        self.left_flank_msa, self.right_flank_msa = None, None
         logger.debug(f"Stepping right to {self.slice_start}")
 
     def reset_slice(self):
@@ -224,8 +229,7 @@ class Window:
     @property
     def ref_slice(self):
         """The reference sequence for the slice"""
-        primary_ref = self.scheme.primary_ref.seq
-        return primary_ref[self.slice_start : self.slice_end]
+        return self.scheme.primary_ref[self.slice_start : self.slice_end]
 
     @property
     def flank_size(self):
@@ -238,16 +242,26 @@ class Window:
     @property
     def left_flank(self):
         """The reference sequence for the left flank"""
-        return SeqRecord(
-            self.ref_slice[: self.flank_size], id=self.scheme.primary_ref.id
-        )
+        return self.ref_slice[: self.flank_size]
 
     @property
     def right_flank(self):
         """The reference sequence for the right flank"""
-        return SeqRecord(
-            self.ref_slice[-self.flank_size :], id=self.scheme.primary_ref.id
+        return self.ref_slice[-self.flank_size :]
+
+    def align_flanks(self):
+        """Perform multiple seq alignment of all refs for flanks."""
+        self.left_flank_msa = MultipleSeqAlignment([self.left_flank])
+        right_rev = SeqRecord(
+            self.right_flank.reverse_complement().seq, id=self.scheme.primary_ref.id
         )
+        self.right_flank_msa = MultipleSeqAlignment([right_rev])
+        for ref in self.scheme.references[1:]:
+            self.left_flank_msa.append(align_secondary_reference(self.left_flank, ref))
+            ra = align_secondary_reference(self.right_flank, ref)
+            self.right_flank_msa.append(
+                SeqRecord(ra.reverse_complement().seq, id=ra.id)
+            )
 
 
 class Region(Window):
@@ -298,29 +312,27 @@ class Region(Window):
 
     def _find_primers_for_slice(self):
         """Try to find suitable primers for the current slice"""
-
         logger.debug(f"Finding primers for slice [{self.slice_start}:{self.slice_end}]")
 
-        # Align secondary flanks against primary
-        flank_msa = self.get_flank_msa()
+        # Align flanks at this position
+        self.align_flanks()
 
         # Design primers for the left and right flanks
         candidates = design_primers(
-            flank_msa[0], Direction.LEFT, self.pool, offset=self.slice_start,
+            self.left_flank_msa, Direction.LEFT, self.pool, offset=self.slice_start,
         )
         candidates.extend(
             design_primers(
-                flank_msa[1],
+                self.right_flank_msa,
                 Direction.RIGHT,
                 self.pool,
                 offset=self.slice_end - self.flank_size,
             )
         )
 
-        # Slice the flank alignments for each primer, check mismatch threshold
+        # Check mismatch threshold
         passing_candidates = []
         for primer in candidates:
-            self._append_aligned_ref_slices(primer, flank_msa)
             if max(primer.mismatch_counts) <= config.PRIMER_MAX_MISMATCHES:
                 passing_candidates.append(primer)
         candidates = passing_candidates
@@ -339,53 +351,25 @@ class Region(Window):
         # Pick best-scoring left and right candidates
         self._pick_pair()
 
-    def get_flank_msa(self):
+    def _sort_candidates(self, candidates):
         """
-        Return a multiple seq alignment of all refs for the left & right flanks.
+        Sort candidates by penalty, start (higher), seq.
+        seq is necessary to maintain deterministic output.
         """
-        left_alignments = [self.left_flank]
-        right_alignments = [self.right_flank.reverse_complement()]
-        if len(self.scheme.references) > 1:
-            for ref in self.scheme.references[1:]:
-                left_alignments.append(align_secondary_reference(self.left_flank, ref))
-                right_alignments.append(
-                    align_secondary_reference(
-                        self.right_flank, ref
-                    ).reverse_complement()
-                )
-        return (
-            MultipleSeqAlignment([*left_alignments]),
-            MultipleSeqAlignment([*right_alignments]),
-        )
-
-    def _append_aligned_ref_slices(self, primer, flank_msa):
-        """
-        Append aligned references, sliced by primer coords.
-        """
-
-        if primer.direction == Direction.LEFT:
-            start = primer.start - self.slice_start
-            end = start + primer.size
-            msa = flank_msa[0]
-        else:
-            end = self.slice_end - primer.end
-            start = end - primer.size
-            msa = flank_msa[1]
-        primer.reference_msa = msa[:, start:end]
-
-    def _sort_candidate_pairs(self):
-        """Sort the list of candidate pairs in place"""
-        self.left_candidates.sort(key=lambda x: x.combined_penalty)
-        self.right_candidates.sort(key=lambda x: x.combined_penalty)
+        candidates.sort(key=attrgetter("seq"))
+        candidates.sort(key=attrgetter("start"), reverse=True)
+        candidates.sort(key=attrgetter("combined_penalty"))
 
     def _pick_pair(self):
         """Pick the best scoring left and right primer for the region"""
-        self._sort_candidate_pairs()
+        self._sort_candidates(self.left_candidates)
+        self._sort_candidates(self.right_candidates)
         self.left = self._pick_candidate(self.left_candidates)
         self.right = self._pick_candidate(self.right_candidates)
 
         if logger.level >= logging.DEBUG:
-            self._log_debug()
+            self._log_debug(Direction.LEFT)
+            self._log_debug(Direction.RIGHT)
 
     def _pick_candidate(self, candidates):
         """Pick the best scoring candidate that passes a same-pool heterodimer check"""
