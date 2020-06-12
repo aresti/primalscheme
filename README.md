@@ -76,7 +76,7 @@ flit install --pth-file
 
 To design a multiplex scheme run `primalscheme multiplex <FASTA>`.
 
-Test input files can be found in `tests/inputs/`
+If you're looking for test inputs you can try [CHIKV_demo.fa](tests/inputs/CHIKV_demo.fa), [Ebov-10-Pan.fasta](tests/inputs/Ebov-10-Pan.fasta) or [nCov-2019.fasta](tests/inputs/nCov-2019.fasta)
 
 #### optional arguments
 
@@ -130,7 +130,7 @@ Many parameters are not directly exposed in the CLI as we believe they are neces
 	- e.g. `cat "sequence (1).fasta" "sequence (2).fasta" > input.fasta`
 	- primalscheme does not currently support inputs with ambiguity codes.
 
-3. Align all sequences using Clustal Omega.
+3. Align all sequences using [Clustal Omega](https://www.ebi.ac.uk/Tools/msa/clustalo/).
 
 4. The genomes should be complete and roughly the same length.
 
@@ -152,7 +152,7 @@ Many parameters are not directly exposed in the CLI as we believe they are neces
 
 ### protocol
 
-We strongly recommend using the PCR conditions outlined in the <a href="http://www.nature.com/nprot/journal/v12/n6/full/nprot.2017.066.html">Nature Protocols paper</a>.
+We strongly recommend using the PCR conditions outlined in the [Nature Protocols paper](http://www.nature.com/nprot/journal/v12/n6/full/nprot.2017.066.html).
 
 ### description of the algorithm
 

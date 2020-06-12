@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - Nighthawk - 2020-06-12
 ### Added
 - Use all reference sequences for primer generation
-- 3' distance weighted mismatch scoring
-- Avoid stable heteodimers in same pool
+- 3' distance-weighted mismatch scoring
+- Avoid stable heterodimers in same pool
 - Sort inputs by length, to make longest the primary by default (--no-sort reverts)
 - Inserts bed file output
 - Run report json output
@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - primer3 FindPrimers function
 - Redundant classes
+- Redundant exceptions
 
 ## [0.3.0] - Blackbird - 2020-05-21
 ### Added
