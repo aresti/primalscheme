@@ -56,8 +56,6 @@ def align_secondary_reference(primary_flank, secondary_ref):
     aligned_query = traceback.query[ref_end - query_end : ref_end + 1]
     aligned_ref = traceback.ref[ref_end - query_end : ref_end + 1]
 
-    del trace
-
     # Alignment failed (indels)
     if "-" in aligned_query + aligned_ref or len(primary_flank) != len(aligned_ref):
         raise FailedAlignmentError
