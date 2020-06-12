@@ -13,7 +13,7 @@ primalscheme is a tool for designing primer panels for multiplex PCR. It uses a 
 
 * Linux, macOS or Windows
 
-* Python 3.5+
+* Python 3.6+
 
 ### installation from PyPI using pip
 
