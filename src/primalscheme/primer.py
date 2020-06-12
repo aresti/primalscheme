@@ -166,25 +166,25 @@ class Primer:
     @reference_msa.setter
     def reference_msa(self, msa):
         self.__reference_msa = msa
-        if msa is None:
-            self.__annotated_msa = None
-            return
+        self.__annotated_msa = None
 
-        # Annotated msa
+    @property
+    def annotated_msa(self):
+        """Reference MSA with annotated cigar for logging (lazy eval)"""
+        if self.__annotated_msa:
+            return self.__annotated_msa
+
+        # Calculate cigar
         cigar = ""
-        for i in range(msa.get_alignment_length()):
-            num = len(set(msa[::-1, i]))
+        for i in range(self.__reference_msa.get_alignment_length()):
+            num = len(set(self.__reference_msa[::-1, i]))
             if num == 1:
                 cigar += "*"
             else:
                 cigar += " "
         cigar = SeqRecord(Seq(cigar), id="Cigar")
-        annotated_msa = msa[:]
-        annotated_msa.append(cigar)
-        self.__annotated_msa = annotated_msa
-
-    @property
-    def annotated_msa(self):
+        self.__annotated_msa = self.__reference_msa[:]
+        self.__annotated_msa.append(cigar)
         return self.__annotated_msa
 
 
