@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2020-06-14
+### Added
+- Drop secondary references on repeated flank alignment failure.
+
+### Changed
+- Reduce complexity of Region find_primers() method.
+
 ## [1.0.0] - Nighthawk - 2020-06-12
 ### Added
 - Use all reference sequences for primer generation

@@ -33,7 +33,12 @@ Alignment = namedtuple("Alignment", "mismatches formatted_alignment")
 class FailedAlignmentError(Exception):
     """No aligment between the primer and the refernce"""
 
-    pass
+    def __init__(self, message, reference=None):
+        self.message = message
+        self.reference = reference
+
+    def __str__(self):
+        return self.message
 
 
 def align_secondary_reference(primary_flank, secondary_ref):
@@ -58,6 +63,9 @@ def align_secondary_reference(primary_flank, secondary_ref):
 
     # Alignment failed (indels)
     if "-" in aligned_query + aligned_ref or len(primary_flank) != len(aligned_ref):
-        raise FailedAlignmentError
+        raise FailedAlignmentError(
+            "Alignment failed between primary and secondary reference.",
+            reference=secondary_ref,
+        )
 
     return SeqRecord(Seq(aligned_ref), id=secondary_ref.id)

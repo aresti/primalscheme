@@ -49,23 +49,21 @@ class MultiplexScheme:
         if amplicon_size_min > amplicon_size_max:
             raise ValueError("amplicon_size_min cannot exceed amplicon_size_max")
 
-        self.references = references
         self.prefix = prefix
         self.amplicon_size_min = amplicon_size_min
         self.amplicon_size_max = amplicon_size_max
         self.target_overlap = target_overlap
         self.progress_func = progress_func
+
         self.regions = []
 
-    @property
-    def primary_ref(self):
-        """The first, primary reference"""
-        return self.references[0]
-
-    @property
-    def ref_len(self):
-        """The primary reference length"""
-        return len(self.primary_ref)
+        self.references = references
+        self.primary_ref = references[0]
+        self.secondary_refs = references[1:]
+        self.ref_len = len(self.primary_ref)
+        self._max_failed_aln = int(
+            config.MAX_ALN_GAP_PERCENT * self.ref_len / config.STEP_DISTANCE
+        )
 
     @property
     def region_count(self):
@@ -159,10 +157,13 @@ class MultiplexScheme:
             region = Region(self._region_num, self, self._left_limit, self._slice_start)
             try:
                 region.find_primers()
-            except NoSuitablePrimersError as e:
+            except NoSuitablePrimersError as exc:
                 if self._region_num == 1:
-                    raise e
+                    raise exc
                 break
+            except FailedAlignmentError as exc:
+                self._exclude_reference(exc.reference)
+                continue
 
             self.regions.append(region)
             if self.progress_func:
@@ -170,6 +171,15 @@ class MultiplexScheme:
 
         if self.progress_func:
             self.progress_func(self.ref_len, self.ref_len)
+
+    def _exclude_reference(self, reference):
+        """Exclude a secondary reference"""
+        for i, ref in enumerate(self.secondary_refs):
+            if ref.id == reference.id:
+                self.secondary_refs.pop(i)
+        if self._region_num > 1:
+            self.progress_func(0, 0, interrupt=True)
+        logger.info(f"Excluding reference {reference.id}: unable to align.")
 
 
 class Window:
@@ -256,7 +266,7 @@ class Window:
             self.right_flank.reverse_complement().seq, id=self.scheme.primary_ref.id
         )
         self.right_flank_msa = MultipleSeqAlignment([right_rev])
-        for ref in self.scheme.references[1:]:
+        for ref in self.scheme.secondary_refs:
             self.left_flank_msa.append(align_secondary_reference(self.left_flank, ref))
             ra = align_secondary_reference(self.right_flank, ref)
             self.right_flank_msa.append(
@@ -278,6 +288,8 @@ class Region(Window):
         self.right = None
         self.left_candidates = []
         self.right_candidates = []
+        self.exhausted_left_stepping = False
+        self.failed_alignment_count = 0
 
         logger.debug(f"Region {region_num}, pool {self.pool}")
 
@@ -292,23 +304,30 @@ class Region(Window):
         """
         Try <-> step window logic:
         """
-        exhausted_left = False
         while True:
             try:
                 self._find_primers_for_slice()
                 return
-            except (FailedAlignmentError, NoSuitablePrimersError):
-                if exhausted_left:
-                    try:
-                        self.step_right()
-                    except SliceOutOfBoundsError:
-                        raise NoSuitablePrimersError("Right limit reached.")
-                else:
-                    try:
-                        self.step_left()
-                    except SliceOutOfBoundsError:
-                        self.reset_slice()
-                        exhausted_left = True
+            except FailedAlignmentError as exc:
+                self.failed_alignment_count += 1
+                if self.failed_alignment_count > self.scheme._max_failed_aln:
+                    raise exc
+                self._try_stepping()
+            except NoSuitablePrimersError:
+                self._try_stepping()
+
+    def _try_stepping(self):
+        if self.exhausted_left_stepping:
+            try:
+                self.step_right()
+            except SliceOutOfBoundsError:
+                raise NoSuitablePrimersError("Right limit reached.")
+        else:
+            try:
+                self.step_left()
+            except SliceOutOfBoundsError:
+                self.reset_slice()
+                self.exhausted_left_stepping = True
 
     def _find_primers_for_slice(self):
         """Try to find suitable primers for the current slice"""

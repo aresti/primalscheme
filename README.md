@@ -187,6 +187,8 @@ We strongly recommend using the PCR conditions outlined in the [Nature Protocols
 	
 	- Move window position right (to open a gap or reduce overlap) before retrying.
 
+	- Exclude secondary reference on repeated flank alignment failure.
+
 ### citing
 
 If you use primalscheme please cite:

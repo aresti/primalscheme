@@ -310,8 +310,13 @@ def positive_int(string):
     return value
 
 
-def stdout_progress(count, total):
+def stdout_progress(count, total, interrupt=False):
     """Update a simple stdout progress bar"""
+    if interrupt:
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+        return
+
     bar_len = 60
     filled_len = int(round(bar_len * count / float(total)))
 
