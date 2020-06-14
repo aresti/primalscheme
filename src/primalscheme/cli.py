@@ -30,7 +30,7 @@ from pathlib import Path
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from progress.bar import ChargingBar
+from progress.bar import ShadyBar
 
 from primalscheme import __version__ as version
 from primalscheme import config
@@ -91,10 +91,8 @@ def multiplex(args, outpath):
     logger.info("\n".join(["Designing primers against references:"] + ref_ids))
 
     # Progress bar
-    progress_bar = ChargingBar(
-        "Designing scheme",
-        max=len(references[0]),
-        suffix="%(percent)d%% [%(index)d / %(max)d]",
+    progress_bar = ShadyBar(
+        max=len(references[0]), suffix="%(percent)d%% [%(index)d / %(max)d]",
     )
 
     # Create scheme

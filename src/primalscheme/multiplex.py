@@ -64,6 +64,7 @@ class MultiplexScheme:
         self._max_failed_aln = int(
             config.MAX_ALN_GAP_PERCENT * self.ref_len / config.STEP_DISTANCE
         )
+        self.considered = 0
 
     @property
     def region_count(self):
@@ -183,6 +184,14 @@ class MultiplexScheme:
             self.progress_bar.finish()
             self.progress_bar.message = "Continuing with remaining references"
         logger.info(f"Excluding reference {reference.id}: unable to align.")
+
+    def add_considered(self, num):
+        """Increase the number of considered primers; update progress message"""
+        self.considered += num
+        if self.progress_bar:
+            self.progress_bar.message = (
+                f"Region {self._region_num}, considered {self.considered} primers"
+            )
 
 
 class Window:
@@ -351,6 +360,9 @@ class Region(Window):
                 offset=self.slice_end - self.flank_size,
             )
         )
+
+        # Update progress message
+        self.scheme.add_considered(len(candidates))
 
         # Check mismatch threshold
         passing_candidates = []
