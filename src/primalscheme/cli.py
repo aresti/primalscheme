@@ -30,6 +30,7 @@ from pathlib import Path
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from progress.bar import ChargingBar
 
 from primalscheme import __version__ as version
 from primalscheme import config
@@ -89,6 +90,13 @@ def multiplex(args, outpath):
     ref_ids = [f" - {ref.id}" for ref in references]
     logger.info("\n".join(["Designing primers against references:"] + ref_ids))
 
+    # Progress bar
+    progress_bar = ChargingBar(
+        "Designing scheme",
+        max=len(references[0]),
+        suffix="%(percent)d%% [%(index)d / %(max)d]",
+    )
+
     # Create scheme
     try:
         scheme = MultiplexReporter(
@@ -98,7 +106,7 @@ def multiplex(args, outpath):
             amplicon_size_min=args.amplicon_size_min,
             amplicon_size_max=args.amplicon_size_max,
             target_overlap=args.target_overlap,
-            progress_func=stdout_progress,
+            progress_bar=progress_bar,
         )
         scheme.design_scheme()
     except NoSuitablePrimersError:
@@ -308,25 +316,6 @@ def positive_int(string):
     if value < 0:
         raise argparse.ArgumentTypeError("positive integer required.")
     return value
-
-
-def stdout_progress(count, total, interrupt=False):
-    """Update a simple stdout progress bar"""
-    if interrupt:
-        sys.stdout.write("\n")
-        sys.stdout.flush()
-        return
-
-    bar_len = 60
-    filled_len = int(round(bar_len * count / float(total)))
-
-    percents = round(100.0 * count / float(total), 1)
-    bar = "=" * filled_len + "-" * (bar_len - filled_len)
-
-    sys.stdout.write(f"\r[{bar}] {percents}%")
-    if count == total:
-        sys.stdout.write("\n")
-    sys.stdout.flush()
 
 
 if __name__ == "__main__":

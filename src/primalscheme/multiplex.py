@@ -43,7 +43,7 @@ class MultiplexScheme:
         amplicon_size_min=config.AMPLICON_SIZE_MIN,
         amplicon_size_max=config.AMPLICON_SIZE_MAX,
         target_overlap=config.TARGET_OVERLAP,
-        progress_func=None,
+        progress_bar=None,
     ):
 
         if amplicon_size_min > amplicon_size_max:
@@ -53,7 +53,7 @@ class MultiplexScheme:
         self.amplicon_size_min = amplicon_size_min
         self.amplicon_size_max = amplicon_size_max
         self.target_overlap = target_overlap
-        self.progress_func = progress_func
+        self.progress_bar = progress_bar
 
         self.regions = []
 
@@ -166,11 +166,13 @@ class MultiplexScheme:
                 continue
 
             self.regions.append(region)
-            if self.progress_func:
-                self.progress_func(region.right.start, self.ref_len)
 
-        if self.progress_func:
-            self.progress_func(self.ref_len, self.ref_len)
+            if self.progress_bar:
+                self.progress_bar.goto(region.right.start)
+
+        if self.progress_bar:
+            self.progress_bar.goto(self.progress_bar.max)
+            self.progress_bar.finish()
 
     def _exclude_reference(self, reference):
         """Exclude a secondary reference"""
@@ -178,7 +180,8 @@ class MultiplexScheme:
             if ref.id == reference.id:
                 self.secondary_refs.pop(i)
         if self._region_num > 1:
-            self.progress_func(0, 0, interrupt=True)
+            self.progress_bar.finish()
+            self.progress_bar.message = "Continuing with remaining references"
         logger.info(f"Excluding reference {reference.id}: unable to align.")
 
 
