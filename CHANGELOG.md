@@ -8,10 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] - 2020-06-14
 ### Added
-- Drop secondary references on repeated flank alignment failure.
+- Drop secondary references on repeated flank alignment failure
+- Add primary_ref, secondary_refs and excluded_refs to json run report
 
 ### Changed
-- Reduce complexity of Region find_primers() method.
+- Reduce complexity of Region find_primers() method
+- Use progress library
+- Add region and considered primers to progress message
+
+### Removed
+- DIY progress bar
 
 ## [1.0.0] - Nighthawk - 2020-06-12
 ### Added
