@@ -311,6 +311,9 @@ class MultiplexReporter(MultiplexScheme):
         logger.info(f"Writing {filepath}")
         data = {
             "references": [ref.id for ref in self.references],
+            "primary_ref": self.references[0].id,
+            "secondary_refs": [ref.id for ref in self.secondary_refs],
+            "excluded_refs": [ref.id for ref in self.excluded_refs],
             "regions": len(self.regions),
             "percent_coverage": self.percent_coverage,
             "gaps": self.gap_count,

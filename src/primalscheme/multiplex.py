@@ -56,10 +56,10 @@ class MultiplexScheme:
         self.progress_bar = progress_bar
 
         self.regions = []
-
         self.references = references
         self.primary_ref = references[0]
         self.secondary_refs = references[1:]
+        self.excluded_refs = []
         self.ref_len = len(self.primary_ref)
         self._max_failed_aln = int(
             config.MAX_ALN_GAP_PERCENT * self.ref_len / config.STEP_DISTANCE
@@ -178,7 +178,7 @@ class MultiplexScheme:
         """Exclude a secondary reference"""
         for i, ref in enumerate(self.secondary_refs):
             if ref.id == reference.id:
-                self.secondary_refs.pop(i)
+                self.excluded_refs.append(self.secondary_refs.pop(i))
         if self._region_num > 1:
             self.progress_bar.finish()
             self.progress_bar.message = "Continuing with remaining references"
