@@ -25,7 +25,9 @@ import json
 import logging
 import pickle
 
+from abc import ABC, abstractmethod
 from collections import namedtuple
+
 from Bio import SeqIO
 from Bio.Graphics import GenomeDiagram
 from Bio.SeqFeature import FeatureLocation, SeqFeature
@@ -319,3 +321,55 @@ class MultiplexReporter(MultiplexScheme):
             "gaps": self.gap_count,
         }
         filepath.write_text(json.dumps(data))
+
+
+class ProgressTracker(ABC):
+    """Abstract base class for ProgressTracker"""
+
+    @abstractmethod
+    def goto(self, val):
+        """Update progress to val"""
+        ...
+
+    @property
+    def end(self):
+        """Progress end value"""
+        ...
+
+    @end.setter
+    @abstractmethod
+    def end(self, val):
+        """Set progress end value"""
+        ...
+
+    @property
+    def considered(self):
+        """Count of considered primers"""
+        ...
+
+    @considered.setter
+    @abstractmethod
+    def considered(self, considered):
+        """Set count of considered primers"""
+        ...
+
+    @property
+    def region_num(self):
+        """The current region num"""
+        ...
+
+    @region_num.setter
+    @abstractmethod
+    def region_num(self, region_num):
+        """Set current region num"""
+        ...
+
+    @abstractmethod
+    def interrupt(self):
+        """Prepare to be interrupted by a log message"""
+        ...
+
+    @abstractmethod
+    def finish(self):
+        """Finish tracking progress"""
+        ...

@@ -21,9 +21,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
-import sys
 import argparse
 import logging
+import sys
 
 from pathlib import Path
 
@@ -32,10 +32,9 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from progress.bar import ShadyBar
 
-from primalscheme import __version__ as version
-from primalscheme import config
-from primalscheme.multiplex import NoSuitablePrimersError, ProgressTracker
-from primalscheme.reporting import MultiplexReporter
+from primalscheme import __version__ as version, config
+from primalscheme.region import NoSuitablePrimersError
+from primalscheme.reporting import MultiplexReporter, ProgressTracker
 
 logger = logging.getLogger("primalscheme")
 
