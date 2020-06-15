@@ -85,11 +85,6 @@ def multiplex(args, outpath):
         logger.error(f"Error: {e}")
         sys.exit(2)
 
-    # Log references
-    logger.info(f"Primary reference for coordinate system: {references[0].id}")
-    ref_ids = [f" - {ref.id}" for ref in references]
-    logger.info("\n".join(["Designing primers against references:"] + ref_ids))
-
     # Progress bar
     progress_bar = ProgressBar()
 

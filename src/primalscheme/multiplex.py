@@ -70,6 +70,11 @@ class MultiplexScheme:
         if self.progress_tracker:
             self.progress_tracker.end = self.ref_len
 
+        # Log references
+        logger.info(f"Primary reference for coordinate system: {references[0].id}")
+        ref_ids = [f" - {ref.id}" for ref in references]
+        logger.info("\n".join(["Designing primers against references:"] + ref_ids))
+
     @property
     def region_count(self):
         """The number of regions in the scheme"""
