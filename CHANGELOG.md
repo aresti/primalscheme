@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2020-06-15
+### Added
+- Define ProgressTracker interface as abstract base class (to facilitate web interface progress)
+
+### Changed
+- Reorganise Region and Window into region.py
+
 ## [1.1.0] - 2020-06-14
 ### Added
 - Drop secondary references on repeated flank alignment failure
