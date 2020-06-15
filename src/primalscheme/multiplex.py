@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 import logging
 import primer3
 
+from abc import ABC, abstractmethod
 from operator import attrgetter
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
@@ -43,7 +44,7 @@ class MultiplexScheme:
         amplicon_size_min=config.AMPLICON_SIZE_MIN,
         amplicon_size_max=config.AMPLICON_SIZE_MAX,
         target_overlap=config.TARGET_OVERLAP,
-        progress_bar=None,
+        progress_tracker=None,
     ):
 
         if amplicon_size_min > amplicon_size_max:
@@ -53,7 +54,7 @@ class MultiplexScheme:
         self.amplicon_size_min = amplicon_size_min
         self.amplicon_size_max = amplicon_size_max
         self.target_overlap = target_overlap
-        self.progress_bar = progress_bar
+        self.progress_tracker = progress_tracker
 
         self.regions = []
         self.references = references
@@ -65,6 +66,9 @@ class MultiplexScheme:
             config.MAX_ALN_GAP_PERCENT * self.ref_len / config.STEP_DISTANCE
         )
         self.considered = 0
+
+        if self.progress_tracker:
+            self.progress_tracker.end = self.ref_len
 
     @property
     def region_count(self):
@@ -168,30 +172,27 @@ class MultiplexScheme:
 
             self.regions.append(region)
 
-            if self.progress_bar:
-                self.progress_bar.goto(region.right.start)
+            if self.progress_tracker:
+                self.progress_tracker.region_num = self._region_num
+                self.progress_tracker.goto(region.right.start)
 
-        if self.progress_bar:
-            self.progress_bar.goto(self.progress_bar.max)
-            self.progress_bar.finish()
+        if self.progress_tracker:
+            self.progress_tracker.goto(self.progress_tracker.end)
+            self.progress_tracker.finish()
 
     def _exclude_reference(self, reference):
         """Exclude a secondary reference"""
         for i, ref in enumerate(self.secondary_refs):
             if ref.id == reference.id:
                 self.excluded_refs.append(self.secondary_refs.pop(i))
-        if self._region_num > 1:
-            self.progress_bar.finish()
-            self.progress_bar.message = "Continuing with remaining references"
+        self.progress_tracker.interrupt()
         logger.info(f"Excluding reference {reference.id}: unable to align.")
 
     def add_considered(self, num):
-        """Increase the number of considered primers; update progress message"""
+        """Increment number of considered primers; update progress tracker"""
         self.considered += num
-        if self.progress_bar:
-            self.progress_bar.message = (
-                f"Region {self._region_num}, considered {self.considered} primers"
-            )
+        if self.progress_tracker:
+            self.progress_tracker.considered = self.considered
 
 
 class Window:
@@ -313,9 +314,7 @@ class Region(Window):
         return None
 
     def find_primers(self):
-        """
-        Try <-> step window logic:
-        """
+        """Find primers for this region"""
         while True:
             try:
                 self._find_primers_for_slice()
@@ -329,6 +328,7 @@ class Region(Window):
                 self._try_stepping()
 
     def _try_stepping(self):
+        """Step region left, or right (from initial start) once left limit reached"""
         if self.exhausted_left_stepping:
             try:
                 self.step_right()
@@ -475,3 +475,55 @@ class SliceOutOfBoundsError(Exception):
     """The requested start position would put the slice out of bounds."""
 
     pass
+
+
+class ProgressTracker(ABC):
+    """Abstract base class for ProgressTracker"""
+
+    @abstractmethod
+    def goto(self, val):
+        """Update progress to val"""
+        ...
+
+    @property
+    def end(self):
+        """Progress end value"""
+        ...
+
+    @end.setter
+    @abstractmethod
+    def end(self, val):
+        """Set progress end value"""
+        ...
+
+    @property
+    def considered(self):
+        """Count of considered primers"""
+        ...
+
+    @considered.setter
+    @abstractmethod
+    def considered(self, considered):
+        """Set count of considered primers"""
+        ...
+
+    @property
+    def region_num(self):
+        """The current region num"""
+        ...
+
+    @region_num.setter
+    @abstractmethod
+    def region_num(self, region_num):
+        """Set current region num"""
+        ...
+
+    @abstractmethod
+    def interrupt(self):
+        """Prepare to be interrupted by a log message"""
+        ...
+
+    @abstractmethod
+    def finish(self):
+        """Finish tracking progress"""
+        ...

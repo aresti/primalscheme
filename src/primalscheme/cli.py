@@ -34,7 +34,7 @@ from progress.bar import ShadyBar
 
 from primalscheme import __version__ as version
 from primalscheme import config
-from primalscheme.multiplex import NoSuitablePrimersError
+from primalscheme.multiplex import NoSuitablePrimersError, ProgressTracker
 from primalscheme.reporting import MultiplexReporter
 
 logger = logging.getLogger("primalscheme")
@@ -91,9 +91,7 @@ def multiplex(args, outpath):
     logger.info("\n".join(["Designing primers against references:"] + ref_ids))
 
     # Progress bar
-    progress_bar = ShadyBar(
-        max=len(references[0]), suffix="%(percent)d%% [%(index)d / %(max)d]",
-    )
+    progress_bar = ProgressBar()
 
     # Create scheme
     try:
@@ -104,7 +102,7 @@ def multiplex(args, outpath):
             amplicon_size_min=args.amplicon_size_min,
             amplicon_size_max=args.amplicon_size_max,
             target_overlap=args.target_overlap,
-            progress_bar=progress_bar,
+            progress_tracker=progress_bar,
         )
         scheme.design_scheme()
     except NoSuitablePrimersError:
@@ -314,6 +312,56 @@ def positive_int(string):
     if value < 0:
         raise argparse.ArgumentTypeError("positive integer required.")
     return value
+
+
+class ProgressBar(ShadyBar, ProgressTracker):
+    """Progress bar for terminal stdout"""
+
+    suffix = "%(percent)d%% [%(index)d / %(max)d]"
+
+    def __init__(self, *args, **kwargs):
+        self.__considered = 0
+        self.__region_num = 1
+        super().__init__(*args, **kwargs)
+
+    @property
+    def end(self):
+        return self.max
+
+    @end.setter
+    def end(self, val):
+        self.max = val
+
+    @property
+    def considered(self):
+        """Count of considered primers"""
+        return self.__considered
+
+    @considered.setter
+    def considered(self, considered):
+        """Set count of considered primers"""
+        self.__considered = considered
+        self.update_message()
+
+    @property
+    def region_num(self):
+        """Current region num"""
+        return self.__region_num
+
+    @region_num.setter
+    def region_num(self, region_num):
+        """Set current region num"""
+        self.__region_num = region_num
+        self.update_message()
+
+    def update_message(self):
+        """Update progress bar prefix message"""
+        self.message = f"Considered {self.considered} primers, region {self.region_num}"
+
+    def interrupt(self):
+        """Prepare to be interrupted by a log message."""
+        if self.index:
+            self.finish()
 
 
 if __name__ == "__main__":
