@@ -318,6 +318,10 @@ class ProgressBar(ShadyBar, ProgressTracker):
         self.__region_num = 1
         super().__init__(*args, **kwargs)
 
+    def goto(self, val):
+        """Update progress to val."""
+        super().goto(val)
+
     @property
     def end(self):
         return self.max
