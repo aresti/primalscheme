@@ -64,16 +64,16 @@ If you're looking for test inputs you can try [CHIKV_demo.fa](tests/inputs/CHIKV
 
 ### optional arguments
 
-`--help`: Show help on the command line interface
-`--prefix`: Prefix used for primer names and output files (default: scheme)
-`--amplicon-size-min`: Minimum amplicon size (default: 380)
-`--amplicon-size-max`: Maximum amplicon size (default: 420)
-`--output-path`: Output directory (default: ./output)
-`--target-overlap`: Target overlap size (default: 0)
-`--step-distance`: Distance to step between find attempts (default: 11)
-`--debug`: Verbose logging and pickle output file
-`--no-sort`: Don't sort input FASTA by length (will use first reference in BED file)
-`--force`: Force output to an existing directory and overwrite output files
+* `--help`: Show help on the command line interface
+* `--prefix`: Prefix used for primer names and output files (default: scheme)
+* `--amplicon-size-min`: Minimum amplicon size (default: 380)
+* `--amplicon-size-max`: Maximum amplicon size (default: 420)
+* `--output-path`: Output directory (default: ./output)
+* `--target-overlap`: Target overlap size (default: 0)
+* `--step-distance`: Distance to step between find attempts (default: 11)
+* `--debug`: Verbose logging and pickle output file
+* `--no-sort`: Don't sort input FASTA by length (will use first reference in BED file)
+* `--force`: Force output to an existing directory and overwrite output files
 
 ### modifying config
 
@@ -81,15 +81,15 @@ Many parameters are not directly exposed in the CLI as we believe they are neces
 
 ### output
 
-`{output_dir}/{prefix}.reference.fasta` - all input references
-`{output_dir}/{prefix}.primer.bed` - coordinates of primer positions
-`{output_dir}/{prefix}.insert.bed` - coordinates of trimmed amplicons
-`{output_dir}/{prefix}.primer.tsv` - primer sequences and information
-`{output_dir}/{prefix}.plot.pdf` - diagrammatic overview of scheme (PDF)
-`{output_dir}/{prefix}.plot.svg` - diagrammatic overview of scheme (SVG)
-`{output_dir}/{prefix}.report.json` - run report (reference ids, regions, gaps, coverage)
-`{output_dir}/{prefix}.pickle` - pickled Python objects (if --debug)
-`{output_dir}/{prefix}.log` - run logs (more detail if --debug)
+* `{output_dir}/{prefix}.reference.fasta` - all input references
+* `{output_dir}/{prefix}.primer.bed` - coordinates of primer positions
+* `{output_dir}/{prefix}.insert.bed` - coordinates of trimmed amplicons
+* `{output_dir}/{prefix}.primer.tsv` - primer sequences and information
+* `{output_dir}/{prefix}.plot.pdf` - diagrammatic overview of scheme (PDF)
+* `{output_dir}/{prefix}.plot.svg` - diagrammatic overview of scheme (SVG)
+* `{output_dir}/{prefix}.report.json` - run report (reference ids, regions, gaps, coverage)
+* `{output_dir}/{prefix}.pickle` - pickled Python objects (if --debug)
+* `{output_dir}/{prefix}.log` - run logs (more detail if --debug)
 
 ## how to design a scheme
 
