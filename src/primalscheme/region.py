@@ -1,5 +1,6 @@
 """
 PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
+
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
@@ -40,6 +41,7 @@ class Window:
     """
 
     def __init__(self, scheme, left_limit, slice_start, right_limit=None):
+        """Init Window."""
         self.scheme = scheme
         self.left_limit = left_limit
         self.slice_start = slice_start
@@ -127,10 +129,11 @@ class Window:
 
 class Region(Window):
     """
-    Region forming part of a tiling amplicon scheme.
+    A region forming part of a tiling amplicon scheme.
     """
 
     def __init__(self, region_num, *args, **kwargs):
+        """Init Region."""
         self.region_num = region_num
         self.pool = 1 if self.region_num % 2 == 1 else 2
         super().__init__(*args, **kwargs)

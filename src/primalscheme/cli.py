@@ -1,5 +1,6 @@
 """
 PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
+
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
@@ -70,9 +71,7 @@ def main():
 
 
 def multiplex(args, outpath):
-    """
-    Multipex scheme command.
-    """
+    """Multipex scheme command."""
 
     # Process FASTA input
     try:
@@ -121,9 +120,7 @@ def multiplex(args, outpath):
 
 
 def process_fasta(file_path, min_ref_size=None, sort=True):
-    """
-    Parse and validate the fasta file.
-    """
+    """Parse and validate the fasta file."""
 
     references = []
     records = SeqIO.parse(file_path, "fasta")  # may raise
@@ -180,9 +177,7 @@ def process_fasta(file_path, min_ref_size=None, sort=True):
 
 
 def setup_logging(output_path, debug=False, prefix="primalscheme"):
-    """
-    Setup logging output and verbosity.
-    """
+    """Setup logging output and verbosity."""
 
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
@@ -223,9 +218,7 @@ def get_output_path(output_path, force=False):
 
 
 def parse_arguments(args):
-    """
-    Parse command line arguments.
-    """
+    """Parse command line arguments."""
     # Setup parsers
     parser = argparse.ArgumentParser(
         prog="primalscheme",
@@ -302,6 +295,7 @@ def parse_arguments(args):
 
 
 def positive_int(string):
+    """Validate command line args as being of type: positive int."""
     value = int(string)
     if value < 0:
         raise argparse.ArgumentTypeError("positive integer required.")
@@ -309,11 +303,12 @@ def positive_int(string):
 
 
 class ProgressBar(ShadyBar, ProgressTracker):
-    """Progress bar for terminal stdout"""
+    """Progress bar for terminal stdout."""
 
     suffix = "%(percent)d%% [%(index)d / %(max)d]"
 
     def __init__(self, *args, **kwargs):
+        """Init ProgressBar."""
         self.__considered = 0
         self.__region_num = 1
         super().__init__(*args, **kwargs)
@@ -324,36 +319,38 @@ class ProgressBar(ShadyBar, ProgressTracker):
 
     @property
     def end(self):
+        """End (max) progress value."""
         return self.max
 
     @end.setter
     def end(self, val):
+        """Set end progress value."""
         self.max = val
 
     @property
     def considered(self):
-        """Count of considered primers"""
+        """Count of considered primers."""
         return self.__considered
 
     @considered.setter
     def considered(self, considered):
-        """Set count of considered primers"""
+        """Set count of considered primers."""
         self.__considered = considered
         self.update_message()
 
     @property
     def region_num(self):
-        """Current region num"""
+        """Current region num."""
         return self.__region_num
 
     @region_num.setter
     def region_num(self, region_num):
-        """Set current region num"""
+        """Set current region num."""
         self.__region_num = region_num
         self.update_message()
 
     def update_message(self):
-        """Update progress bar prefix message"""
+        """Update progress bar prefix message."""
         self.message = f"Considered {self.considered} primers, region {self.region_num}"
 
     def interrupt(self):

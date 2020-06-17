@@ -1,5 +1,6 @@
 """
 PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
+
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
@@ -43,20 +44,21 @@ Insert = namedtuple("Insert", "start end pool")
 
 
 class MultiplexReporter(MultiplexScheme):
-    """Reporting methods to extend MultiplexScheme"""
+    """Reporting methods to extend MultiplexScheme."""
 
     def __init__(self, outpath, *args, **kwargs):
+        """Init MultiplexReporter."""
         self.outpath = outpath
         super().__init__(*args, **kwargs)
 
     @property
     def inserts(self):
-        """A list of insert (start, end) tuples"""
+        """A list of insert (start, end) tuples."""
         return [Insert(r.left.end + 1, r.right.end - 1, r.pool) for r in self.regions]
 
     @property
     def gap_count(self):
-        """The total number of gaps in the scheme"""
+        """The total number of gaps in the scheme."""
         gaps = 0
         last_covered = self.inserts[0].end
         for insert in self.inserts[1:]:
@@ -67,20 +69,20 @@ class MultiplexReporter(MultiplexScheme):
 
     @property
     def percent_coverage(self):
-        """Coverage %, with respect to the primary reference"""
+        """Coverage %, with respect to the primary reference."""
         covered_coords = set(
             [x for insert in self.inserts for x in range(insert.start, insert.end + 1)]
         )
         return round(len(covered_coords) / self.ref_len * 100, 2)
 
     def calc_gc(self, sequence):
-        """Return gc content for a sequence as fraction"""
+        """Return gc content for a sequence as fraction."""
         g = sequence.count("G") + sequence.count("g")
         c = sequence.count("C") + sequence.count("c")
         return (g + c) / len(sequence)
 
     def write_default_outputs(self):
-        """Write all default output files"""
+        """Write all default output files."""
         self.write_primer_bed()
         self.write_insert_bed()
         self.write_primer_tsv()
@@ -89,7 +91,7 @@ class MultiplexReporter(MultiplexScheme):
         self.write_run_report_json()
 
     def write_primer_bed(self):
-        """Write primer BED file"""
+        """Write primer BED file."""
         filepath = self.outpath / f"{self.prefix}.primer.bed"
         logger.info(f"Writing {filepath}")
 
@@ -117,7 +119,7 @@ class MultiplexReporter(MultiplexScheme):
             cw.writerows(rows)
 
     def write_insert_bed(self):
-        """Write insert BED file"""
+        """Write insert BED file."""
         filepath = self.outpath / f"{self.prefix}.insert.bed"
         logger.info(f"Writing {filepath}")
 
@@ -141,7 +143,7 @@ class MultiplexReporter(MultiplexScheme):
             cw.writerows(rows)
 
     def write_primer_tsv(self):
-        """Write primer TSV file"""
+        """Write primer TSV file."""
         filepath = self.outpath / f"{self.prefix}.primer.tsv"
         logger.info(f"Writing {filepath}")
 
@@ -165,14 +167,14 @@ class MultiplexReporter(MultiplexScheme):
             cw.writerows(rows)
 
     def write_pickle(self):
-        """Write pickle file"""
+        """Write pickle file."""
         filepath = self.outpath / f"{self.prefix}.pickle"
         logger.info(f"Writing {filepath}")
         with open(filepath, "wb") as pickleobj:
             pickle.dump(self, pickleobj)
 
     def write_refs(self):
-        """Write reference FASTA"""
+        """Write reference FASTA."""
         filepath = self.outpath / f"{self.prefix}.reference.fasta"
         logger.info(f"Writing {filepath}")
         with open(filepath, "w"):
@@ -236,7 +238,7 @@ class MultiplexReporter(MultiplexScheme):
         return results  # Return the list of (position, value) results
 
     def write_schemadelica_plot(self):
-        """Write schemadelica plot as SVG and PDF"""
+        """Write schemadelica plot as SVG and PDF."""
         gd_diagram = GenomeDiagram.Diagram("Primer Scheme", track_size=0.15)
         primer_feature_set = GenomeDiagram.FeatureSet()
 
@@ -308,7 +310,7 @@ class MultiplexReporter(MultiplexScheme):
         gd_diagram.write(str(svg_filepath), "SVG", dpi=300)
 
     def write_run_report_json(self):
-        """Write run report json"""
+        """Write run report json."""
         filepath = self.outpath / f"{self.prefix}.report.json"
         logger.info(f"Writing {filepath}")
         data = {
@@ -324,52 +326,52 @@ class MultiplexReporter(MultiplexScheme):
 
 
 class ProgressTracker(ABC):
-    """Abstract base class for ProgressTracker"""
+    """Abstract base class for ProgressTracker."""
 
     @abstractmethod
     def goto(self, val):
-        """Update progress to val"""
+        """Update progress to val."""
         ...
 
     @property
     def end(self):
-        """Progress end value"""
+        """Progress end value."""
         ...
 
     @end.setter
     @abstractmethod
     def end(self, val):
-        """Set progress end value"""
+        """Set progress end value."""
         ...
 
     @property
     def considered(self):
-        """Count of considered primers"""
+        """Count of considered primers."""
         ...
 
     @considered.setter
     @abstractmethod
     def considered(self, considered):
-        """Set count of considered primers"""
+        """Set count of considered primers."""
         ...
 
     @property
     def region_num(self):
-        """The current region num"""
+        """The current region num."""
         ...
 
     @region_num.setter
     @abstractmethod
     def region_num(self, region_num):
-        """Set current region num"""
+        """Set current region num."""
         ...
 
     @abstractmethod
     def interrupt(self):
-        """Prepare to be interrupted by a log message"""
+        """Prepare to be interrupted by a log message."""
         ...
 
     @abstractmethod
     def finish(self):
-        """Finish tracking progress"""
+        """Finish tracking progress."""
         ...

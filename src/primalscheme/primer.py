@@ -1,5 +1,6 @@
 """
 PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
+
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
@@ -42,6 +43,7 @@ class Primer:
     """A primer."""
 
     def __init__(self, seq, start, direction, pool, reference_msa):
+        """Init Primer."""
         self.seq = seq
         self.start = start
         self.direction = direction
@@ -50,15 +52,17 @@ class Primer:
         self.interacts_with = None
 
     def __str__(self):
+        """Primer string representation."""
         return f"{self.direction.name}:{self.seq}:{self.start}"
 
     @property
     def size(self):
+        """Primer size (length)."""
         return len(self.seq)
 
     @property
     def end(self):
-        """The (inclusive) end position of the primer"""
+        """Primer (inclusive) end position."""
         if self.direction == Direction.LEFT:
             return self.start + self.size - 1
         elif self.direction == Direction.RIGHT:
@@ -66,11 +70,12 @@ class Primer:
 
     @property
     def seq(self):
+        """Primer sequence."""
         return self.__seq
 
     @seq.setter
     def seq(self, seq):
-        """Set seq and calculate derived characteristics"""
+        """Set seq and calculate derived characteristics."""
         self.__seq = seq
         self.gc = calc_gc(self.seq)
         self.tm = calc_tm(self.seq)
@@ -122,6 +127,7 @@ class Primer:
         return penalty
 
     def _mismatch_count_for_ref(self, ref):
+        """Mismatch count for the primer against a given reference."""
         count = 0
         for i, base in enumerate(self.seq):
             if base != str(ref.seq)[i]:
@@ -129,6 +135,7 @@ class Primer:
         return count
 
     def _mismatch_penalties_for_ref(self, ref):
+        """Mismatch penalties for each position against a given reference."""
         positions = []
         penalties = config.PRIMER_MISMATCH_PENALTIES
         ref_seq = str(ref.seq)
@@ -145,32 +152,38 @@ class Primer:
 
     @property
     def mismatch_counts(self):
+        """List of mismatch counts between the primer and all references."""
         return [self._mismatch_count_for_ref(ref) for ref in self.reference_msa]
 
     @property
     def mismatch_penalty_matrix(self):
+        """Matrix of mistmatch penalties for each position, against all references."""
         return [self._mismatch_penalties_for_ref(ref) for ref in self.reference_msa]
 
     @property
     def mismatch_penalties(self):
+        """List of total mismatch penalties for the primer against all references."""
         return [sum(row) for row in self.mismatch_penalty_matrix]
 
     @property
     def combined_penalty(self):
+        """Combined penalty (base + mistmatch)."""
         return self.base_penalty + sum(self.mismatch_penalties)
 
     @property
     def reference_msa(self):
+        """Reference MSA, sliced to match primer position."""
         return self.__reference_msa
 
     @reference_msa.setter
     def reference_msa(self, msa):
+        """Set reference MSA."""
         self.__reference_msa = msa
         self.__annotated_msa = None
 
     @property
     def annotated_msa(self):
-        """Reference MSA with annotated cigar for logging (lazy eval)"""
+        """Reference MSA with annotated cigar for logging (lazy eval)."""
         if self.__annotated_msa:
             return self.__annotated_msa
 
@@ -189,12 +202,12 @@ class Primer:
 
 
 def calc_gc(seq):
-    """Calculate percent GC for a sequence"""
+    """Calculate percent GC for a sequence."""
     return 100.0 * (seq.count("G") + seq.count("C")) / len(seq)
 
 
 def calc_tm(seq):
-    """Calculate Tm for a sequence"""
+    """Calculate Tm for a sequence."""
     return p3_calcTm(
         seq,
         mv_conc=config.MV_CONC,
@@ -205,12 +218,12 @@ def calc_tm(seq):
 
 
 def calc_max_homo(seq):
-    """Calculate max homopolymer length for a sequence"""
+    """Calculate max homopolymer length for a sequence."""
     return sorted([(len(list(g))) for k, g in groupby(seq)], reverse=True)[0]
 
 
 def calc_hairpin(seq):
-    """Calculate hairpin Tm for a sequence"""
+    """Calculate hairpin Tm for a sequence."""
     return p3_calcHairpin(
         seq,
         mv_conc=config.MV_CONC,
@@ -221,6 +234,7 @@ def calc_hairpin(seq):
 
 
 def design_primers(msa, direction, pool, offset=0):
+    """Design primers against a reference MSA."""
     min_size = config.PRIMER_SIZE_MIN
     max_size = config.PRIMER_SIZE_MAX
     variation = max_size - min_size
@@ -249,6 +263,7 @@ def design_primers(msa, direction, pool, offset=0):
 
 
 def hard_filter(primer):
+    """Hard filter for candidate primers."""
     return (
         (config.PRIMER_MIN_GC <= primer.gc <= config.PRIMER_MAX_GC)
         and (config.PRIMER_MIN_TM <= primer.tm <= config.PRIMER_MAX_TM)
@@ -258,4 +273,5 @@ def hard_filter(primer):
 
 
 def digest_seq(seq, kmer_size):
+    """Digest a sequence into kmers."""
     return [Kmer(seq[i : i + kmer_size], i) for i in range((len(seq) - kmer_size) + 1)]

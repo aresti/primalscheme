@@ -1,5 +1,6 @@
 """
 PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
+
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
@@ -40,6 +41,7 @@ class MultiplexScheme:
         target_overlap=config.TARGET_OVERLAP,
         progress_tracker=None,
     ):
+        """Init MultiplexScheme."""
 
         if amplicon_size_min > amplicon_size_max:
             raise ValueError("amplicon_size_min cannot exceed amplicon_size_max")
@@ -71,27 +73,27 @@ class MultiplexScheme:
 
     @property
     def region_count(self):
-        """The number of regions in the scheme"""
+        """The number of regions in the scheme."""
         return len(self.regions)
 
     @property
     def _region_num(self):
-        """The next region number"""
+        """The next/pending region number."""
         return len(self.regions) + 1
 
     @property
     def _prev(self):
-        """The previous region"""
+        """The previous region."""
         return self.regions[-1] if self.regions else None
 
     @property
     def _prev_in_pool(self):
-        """The previous region in the same pool as the next"""
+        """The previous region in the same pool as the next."""
         return self.regions[-2] if self.region_count > 1 else None
 
     @property
     def _remaining_distance(self):
-        """The distance between the last region and the primary reference end"""
+        """The distance between the last region and the primary reference end."""
         if self.regions:
             return self.ref_len - self._prev.right.start
         return self.ref_len
@@ -103,7 +105,7 @@ class MultiplexScheme:
 
     @property
     def _left_limit(self):
-        """The left limit for the next region"""
+        """The left limit for the next region."""
         if self._region_num == 1:
             return 0
         elif (
@@ -118,7 +120,7 @@ class MultiplexScheme:
 
     @property
     def _slice_start(self):
-        """The ideal slice start position for the next region"""
+        """The ideal slice start position for the next region."""
 
         if self._region_num == 1:
             return 0
@@ -142,7 +144,7 @@ class MultiplexScheme:
 
     @property
     def primers(self):
-        """Return a list of all primers in the scheme"""
+        """Return a list of all primers in the scheme."""
         primers = []
         for region in [region for region in self.regions]:
             primers.append(region.left)
@@ -150,11 +152,11 @@ class MultiplexScheme:
         return primers
 
     def primers_in_pool(self, pool):
-        """Return a list of all primers in a pool"""
+        """Return a list of all primers in a pool."""
         return [primer for primer in self.primers if primer.pool == pool]
 
     def design_scheme(self):
-        """Design a multiplex primer scheme"""
+        """Design a multiplex primer scheme."""
         is_last = False
         while not is_last:
             is_last = self._is_last_region
@@ -180,7 +182,7 @@ class MultiplexScheme:
             self.progress_tracker.finish()
 
     def _exclude_reference(self, reference):
-        """Exclude a secondary reference"""
+        """Exclude a secondary reference."""
         for i, ref in enumerate(self.secondary_refs):
             if ref.id == reference.id:
                 self.excluded_refs.append(self.secondary_refs.pop(i))
@@ -188,7 +190,7 @@ class MultiplexScheme:
         logger.info(f"Excluding reference {reference.id}: unable to align.")
 
     def add_considered(self, num):
-        """Increment number of considered primers; update progress tracker"""
+        """Increment number of considered primers; update progress tracker."""
         self.considered += num
         if self.progress_tracker:
             self.progress_tracker.considered = self.considered

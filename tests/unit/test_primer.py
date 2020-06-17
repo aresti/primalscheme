@@ -7,7 +7,6 @@ from primalscheme.primer import Primer, Direction
 
 def test_base_penalty_matches_primer3_penalty(random_reference_slice):
     """Check internal penalty calculation matches primer3 output"""
-
     p3_global = {
         "PRIMER_NUM_RETURN": 10,
         "PRIMER_PRODUCT_SIZE_RANGE": [

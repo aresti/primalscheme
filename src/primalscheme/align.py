@@ -1,5 +1,6 @@
 """
 PrimalScheme: a primer3 wrapper for designing multiplex primer schemes
+
 Copyright (C) 2020 Joshua Quick and Andrew Smith
 www.github.com/aresti/primalscheme
 
@@ -34,10 +35,12 @@ class FailedAlignmentError(Exception):
     """No aligment between the primer and the refernce"""
 
     def __init__(self, message, reference=None):
+        """Init FailedAlignmentError."""
         self.message = message
         self.reference = reference
 
     def __str__(self):
+        """Exception string representation."""
         return self.message
 
 
