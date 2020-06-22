@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2020-06-22
+
+### Fixed
+
+- Fix number of reported candidates considered
+- Fix missing exception message where no suitable pair found
+- Fix incorrect logging of --no-sort
+
 ## [1.1.1] - 2020-06-15
 
 ### Added
