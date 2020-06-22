@@ -74,11 +74,10 @@ def multiplex(args, outpath):
     """Multipex scheme command."""
 
     # Process FASTA input
+    min_ref_size = args.amplicon_size_max * 2
+    sort = not args.no_sort
     try:
-        min_ref_size = args.amplicon_size_max * 2
-        references = process_fasta(
-            args.fasta, min_ref_size=min_ref_size, sort=args.no_sort
-        )
+        references = process_fasta(args.fasta, min_ref_size=min_ref_size, sort=sort)
     except ValueError as e:
         logger.error(f"Error: {e}")
         sys.exit(2)
@@ -272,7 +271,7 @@ def parse_arguments(args):
     parser_scheme.add_argument("--debug", action="store_true", help="Verbose logging")
     parser_scheme.add_argument(
         "--no-sort",
-        action="store_false",
+        action="store_true",
         help="Don't sort input FASTA by length (will use first reference in BED file",
     )
     parser_scheme.add_argument(
