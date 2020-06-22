@@ -221,7 +221,9 @@ class Region(Window):
         ]
 
         if not (self.left_candidates and self.right_candidates):
-            raise NoSuitablePrimersError
+            raise NoSuitablePrimersError(
+                "Unable to find at least one suitable pair of candidate primers."
+            )
 
         # Pick best-scoring left and right candidates
         self._pick_pair()
