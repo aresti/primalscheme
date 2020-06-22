@@ -257,12 +257,10 @@ def design_primers(msa, direction, pool, offset=0):
             primer_start = offset + len(msa[0].seq) - 1 - kmer.start
         primers.append(Primer(kmer.seq, primer_start, direction, pool, sliced_msa))
 
-    # Hard filter
-    filtered_candidates = [primer for primer in primers if hard_filter(primer)]
-    return filtered_candidates
+    return primers
 
 
-def hard_filter(primer):
+def primer_thermo_filter(primer):
     """Hard filter for candidate primers."""
     return (
         (config.PRIMER_MIN_GC <= primer.gc <= config.PRIMER_MAX_GC)

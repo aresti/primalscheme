@@ -29,7 +29,7 @@ from Bio.Align import MultipleSeqAlignment
 
 from primalscheme import config
 from primalscheme.align import align_secondary_reference, FailedAlignmentError
-from primalscheme.primer import design_primers, Direction
+from primalscheme.primer import design_primers, primer_thermo_filter, Direction
 
 logger = logging.getLogger("primalscheme")
 
@@ -202,12 +202,17 @@ class Region(Window):
             )
         )
 
-        # Update progress message
+        # Update considered (trigger progress update)
         self.scheme.add_considered(len(candidates))
+
+        # Hard thermo filter
+        filtered_candidates = [
+            primer for primer in candidates if primer_thermo_filter(primer)
+        ]
 
         # Check mismatch threshold
         passing_candidates = []
-        for primer in candidates:
+        for primer in filtered_candidates:
             if max(primer.mismatch_counts) <= config.PRIMER_MAX_MISMATCHES:
                 passing_candidates.append(primer)
         candidates = passing_candidates
