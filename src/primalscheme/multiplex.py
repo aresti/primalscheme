@@ -108,9 +108,9 @@ class MultiplexScheme:
         """The left limit for the next region."""
         if self._region_num == 1:
             return 0
-        elif (
-            self._region_num == 2
-            or self._prev.left.start > self._prev_in_pool.right.start
+        elif self._region_num == 2 or (
+            self._prev.left.start > self._prev_in_pool.right.start
+            and not self._is_last_region
         ):
             # first region in second pool, or we have a gap. Force progress.
             return self._prev.left.end + 1
