@@ -116,12 +116,3 @@ def ebola_input(stored_inputs_path):
 def random_reference_slice():
     record = seq_record_factory(seq_len=500)
     return record
-
-
-@pytest.fixture(scope="session")
-def input_fasta_shortest_first(temp_inputs_path):
-    """Generate a FASTA with a short reference followed by a long reference"""
-    fh = temp_inputs_path / "shortest_first.fa"
-    records = [seq_record_factory(seq_len=5000), seq_record_factory(seq_len=5001)]
-    SeqIO.write(records, fh, "fasta")
-    return fh

@@ -74,11 +74,8 @@ def multiplex(args, outpath):
     """Multipex scheme command."""
 
     # Process FASTA input
-    sort = not args.no_sort
     try:
-        references = process_fasta(
-            args.fasta, min_ref_size=args.amplicon_size_max, sort=sort
-        )
+        references = process_fasta(args.fasta, min_ref_size=args.amplicon_size_max)
     except ValueError as e:
         logger.error(f"Error: {e}")
         sys.exit(2)
@@ -119,7 +116,7 @@ def multiplex(args, outpath):
     sys.exit(0)
 
 
-def process_fasta(file_path, min_ref_size=None, sort=True):
+def process_fasta(file_path, min_ref_size=None):
     """Parse and validate the fasta file."""
 
     references = []
@@ -170,9 +167,6 @@ def process_fasta(file_path, min_ref_size=None, sort=True):
                 "Ambiguity codes and gaps are not currently supported."
             )
 
-    # Sort references by length to maximum scheme coverage
-    if sort:
-        references.sort(key=len, reverse=True)
     return references
 
 
@@ -238,7 +232,7 @@ def parse_arguments(args):
     parser_scheme.add_argument(
         "--prefix",
         default=config.PREFIX,
-        help="Prefix used for primer names and output files " "(default: %(default)s)",
+        help="Prefix used for primer names and output files (default: %(default)s)",
     )
     parser_scheme.add_argument(
         "--amplicon-size-min",
@@ -271,14 +265,9 @@ def parse_arguments(args):
     )
     parser_scheme.add_argument("--debug", action="store_true", help="Verbose logging")
     parser_scheme.add_argument(
-        "--no-sort",
-        action="store_true",
-        help="Don't sort input FASTA by length (will use first reference in BED file",
-    )
-    parser_scheme.add_argument(
         "--force",
         action="store_true",
-        help="Force output to an existing directory and overwrite output " "files",
+        help="Force output to an existing directory and overwrite output files",
     )
     parser.add_argument(
         "-V", "--version", action="version", version=f"%(prog)s {version}"

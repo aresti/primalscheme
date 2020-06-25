@@ -1,5 +1,7 @@
 import pytest
 
+from Bio import SeqIO
+
 from primalscheme.cli import process_fasta
 from primalscheme.multiplex import MultiplexScheme
 
@@ -141,3 +143,8 @@ def test_scheme_runs_with_single_reference(chikv_input):
     scheme.design_scheme()
 
     assert len(scheme.regions) > 30
+
+
+def test_first_reference_is_primary(ebola_input, ebola_scheme):
+    records = list(SeqIO.parse(ebola_input, "fasta"))
+    assert records[0].id == ebola_scheme.primary_ref.id

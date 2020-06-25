@@ -72,7 +72,6 @@ If you're looking for test inputs you can try [CHIKV_demo.fa](tests/inputs/CHIKV
 * `--target-overlap`: Target overlap size (default: 0)
 * `--step-distance`: Distance to step between find attempts (default: 11)
 * `--debug`: Verbose logging and pickle output file
-* `--no-sort`: Don't sort input FASTA by length (will use first reference in BED file)
 * `--force`: Force output to an existing directory and overwrite output files
 
 ### modifying config
@@ -99,8 +98,8 @@ Many parameters are not directly exposed in the CLI as we believe they are neces
 2. Align all sequences using [Clustal Omega](https://www.ebi.ac.uk/Tools/msa/clustalo/).
 3. The genomes should be complete and roughly the same length.
     * Primers are only designed within the limits of the alignment.
-    * The longest sequence will be used for the coordinate system in the output scheme.
-4. Check the 'Result Summary' tab then 'Percent Identity Matrix' link to check the identity matrix of all sequences.
+    * The **first reference** will be used for the coordinate system in the output scheme.
+4. Check the 'Result Summary' tab then the 'Percent Identity Matrix' link to check the identity matrix of all sequences.
     * Check that the maximum sequence divergence is not more than 5%.
     * If your sequences are more divergent than this it may be necessary separate them into multiple scheme run independently; the 'Phylogenetic Tree' tab may be useful for this.
 5. Remove sequences with 99-100% identity to other genomes in the file as these will bias the primer selection
@@ -113,7 +112,7 @@ We strongly recommend using the PCR conditions outlined in the [Nature Protocols
 
 ## description of the algorithm
 
-* Pick the longest reference to be used for the coordinate system (primary reference).
+* Set the first reference as primary, to be used for the coordinate system.
 * Open a region window of width AMPLICON_SIZE_MAX onto the primary reference.
 * Align the flanks of this reference slice to all other references using parasail.
 * Take all aligned flanks and digest them into K-mers (primers) of length PRIMER_SIZE_MIN to PRIMER_SIZE_MAX.

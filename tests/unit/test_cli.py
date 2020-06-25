@@ -67,7 +67,6 @@ def test_cli_fails_without_fasta():
         ("--output-path", "./scheme"),
         ("--step-distance", "11"),
         ("--debug", None),
-        ("--no-sort", None),
         ("--force", None),
     ],
 )
@@ -189,17 +188,3 @@ def test_process_fasta_gaps_removed(input_fasta_valid_with_gaps):
 def test_process_fasta_too_short_input(input_fasta_short_500):
     with pytest.raises(ValueError, match="too short"):
         process_fasta(input_fasta_short_500, min_ref_size=900)
-
-
-def test_process_fasta_returns_longest_reference_first(input_fasta_shortest_first):
-    references = process_fasta(input_fasta_shortest_first, sort=True)
-    first_ref_len = len(references[0])
-    for ref in references[1:]:
-        assert len(ref) <= first_ref_len
-
-
-def test_process_fasta_no_sort(input_fasta_shortest_first):
-    references = process_fasta(input_fasta_shortest_first, sort=False)
-    first_ref_len = len(references[0])
-    for ref in references[1:]:
-        assert len(ref) >= first_ref_len
