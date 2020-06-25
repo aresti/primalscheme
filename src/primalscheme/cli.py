@@ -74,10 +74,11 @@ def multiplex(args, outpath):
     """Multipex scheme command."""
 
     # Process FASTA input
-    min_ref_size = args.amplicon_size_max * 2
     sort = not args.no_sort
     try:
-        references = process_fasta(args.fasta, min_ref_size=min_ref_size, sort=sort)
+        references = process_fasta(
+            args.fasta, min_ref_size=args.amplicon_size_max, sort=sort
+        )
     except ValueError as e:
         logger.error(f"Error: {e}")
         sys.exit(2)

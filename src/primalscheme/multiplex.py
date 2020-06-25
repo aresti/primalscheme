@@ -177,6 +177,11 @@ class MultiplexScheme:
                 self.progress_tracker.region_num = self._region_num
                 self.progress_tracker.goto(region.right.start)
 
+            if self._is_last_region and self._slice_start < self._left_limit:
+                # additional region no longer possible due to small ref, relative to
+                # amplicon size, or significant right stepping of prev region.
+                break
+
         if self.progress_tracker:
             self.progress_tracker.goto(self.progress_tracker.end)
             self.progress_tracker.finish()

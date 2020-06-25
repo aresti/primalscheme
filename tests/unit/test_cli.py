@@ -132,7 +132,14 @@ def test_existing_output_path_not_dir(tmp_path):
 
 
 def test_too_short_fasta_size_vs_amplicon_size(input_fasta_short_500, tmp_path, caplog):
-    args = ["multiplex", str(input_fasta_short_500)]
+    args = [
+        "multiplex",
+        str(input_fasta_short_500),
+        "--amplicon-size-min",
+        "500",
+        "--amplicon-size-max",
+        "550",
+    ]
     parsed = primalscheme.cli.parse_arguments(args)
     outpath = tmp_path / "output"
     output_path = primalscheme.cli.get_output_path(outpath)
