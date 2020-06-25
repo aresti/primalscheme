@@ -87,12 +87,12 @@ class Window:
     @property
     def slice_end(self):
         """The slice end position"""
-        return self.slice_start + self.scheme.amplicon_size_max
+        return self.slice_start + self.scheme.amplicon_size_max - 1
 
     @property
     def ref_slice(self):
         """The reference sequence for the slice"""
-        return self.scheme.primary_ref[self.slice_start : self.slice_end]
+        return self.scheme.primary_ref[self.slice_start : self.slice_end + 1]
 
     @property
     def flank_size(self):
@@ -184,7 +184,9 @@ class Region(Window):
 
     def _find_primers_for_slice(self):
         """Try to find suitable primers for the current slice"""
-        logger.debug(f"Finding primers for slice [{self.slice_start}:{self.slice_end}]")
+        logger.debug(
+            f"Finding primers for slice {self.slice_start} to {self.slice_end}"
+        )
 
         # Align flanks at this position
         self.align_flanks()
@@ -198,7 +200,7 @@ class Region(Window):
                 self.right_flank_msa,
                 Direction.RIGHT,
                 self.pool,
-                offset=self.slice_end - self.flank_size,
+                offset=self.slice_end - self.flank_size + 1,
             )
         )
 
