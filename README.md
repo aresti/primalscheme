@@ -10,6 +10,10 @@
 
 primalscheme is a tool for designing primer panels for multiplex PCR. It uses a greedy algorithm to find primers for tiling amplicon generation for multiple reference genomes. It works best on viral isolates of known lineages e.g. outbreak strains.
 
+## web interface
+
+a web interface is available at [primalscheme.com](https://primalscheme.com/), although it does not currently support all available options.
+
 ## requirements
 
 * Linux, macOS or Windows
@@ -101,7 +105,7 @@ Many parameters are not directly exposed in the CLI as we believe they are neces
     * The **first reference** will be used for the coordinate system in the output scheme.
 4. Check the 'Result Summary' tab then the 'Percent Identity Matrix' link to check the identity matrix of all sequences.
     * Check that the maximum sequence divergence is not more than 5%.
-    * If your sequences are more divergent than this it may be necessary separate them into multiple scheme run independently; the 'Phylogenetic Tree' tab may be useful for this.
+    * If your sequences are more divergent, it may be necessary to separate them into multiple independent schemes; the 'Phylogenetic Tree' tab may be useful for this.
 5. Remove sequences with 99-100% identity to other genomes in the file as these will bias the primer selection
 6. Run primalscheme on your FASTA file.
     * Optionally, set amplicon min/max length as required by your sequencing technology.
