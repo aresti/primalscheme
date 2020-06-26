@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2020-06-26
+
+### Added
+
+- Add `--pinned, -p` option: reverts to designing primers exclusively from first reference
+- Add short option names
+- Add option to pass single target amplicon size and auto-determine a suitable range
+- Add web interface link to README
+
+### Changed
+
+- Switch from Argparse to Click
+- Rename options
+- Allow `--amplicon-size, -a` to be passed once to set a target size, or twice to set an exact size range
+- Refactor test_cli.py to use CliRunner throughout
+
+### Removed
+
+- Remove argparse
+- Remove non-functional --step-distance option
+- Remove automatic reference sort on length (no longer serves a purpose)
+
+### Fixed
+
+- Fix edge case where last-but-one region steps right, putting last region out of bounds
+- Fix (usually) inconsequential out-by-one error to make Window.slice_end coord inclusive
+
 ## [1.1.2] - 2020-06-22
 
 ### Fixed
