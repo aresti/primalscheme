@@ -1,4 +1,4 @@
-from primalscheme.cli import main
+from primalscheme.cli import cli
 
 if __name__ == "__main__":
-    main()
+    cli()

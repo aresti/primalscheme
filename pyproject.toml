@@ -12,10 +12,11 @@ home-page = "https://github.com/aresti/primalscheme"
 
 requires = [
     "biopython>=1,<2",
-    "primer3-py>=0,<1",
-    "reportlab>=3,<4",
+    "click==7.1.2",
     "parasail==1.2",
+    "primer3-py>=0,<1",
     "progress==1.5",
+    "reportlab>=3,<4",
 ]
 requires-python = ">=3.6,<4"
 
@@ -27,7 +28,7 @@ classifiers = [
 ]
 
 [tool.flit.scripts]
-primalscheme = "primalscheme.cli:main"
+primalscheme = "primalscheme.cli:cli"
 
 [tool.flit.metadata.requires-extra]
 test = [

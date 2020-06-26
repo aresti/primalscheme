@@ -22,7 +22,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
-import argparse
+import click
 import logging
 import sys
 
@@ -40,42 +40,98 @@ from primalscheme.reporting import MultiplexReporter, ProgressTracker
 logger = logging.getLogger("primalscheme")
 
 
-def main():
-    """
-    Entry point for primalscheme.
-    Process args, set up logging and call the command function.
-    """
+CLI_CONTEXT = dict(auto_envvar_prefix="PRIMAL", help_option_names=["-h", "--help"],)
 
-    # Parse args, update config
-    try:
-        args = parse_arguments(sys.argv[1:])
-    except ValueError as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+
+@click.group(context_settings=CLI_CONTEXT)
+@click.version_option(version, "--version", "-V")
+def cli():
+    """a tool for designing primer panels for multiplex PCR."""
+    pass
+
+
+@cli.command()
+@click.argument("fasta", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--amplicon-size",
+    "-a",
+    multiple=True,
+    type=click.IntRange(90),
+    help=(
+        "Amplicon size target. Pass twice to set an exact range, otherwise expect "
+        f"+/- {config.SIZE_RANGE_AUTO * 100}%."
+    ),
+    metavar="<int>",
+    default=[config.AMPLICON_SIZE_MIN, config.AMPLICON_SIZE_MAX],
+    show_default=True,
+)
+@click.option(
+    "--outpath",
+    "-o",
+    type=click.Path(file_okay=False, writable=True),
+    help="Path to output directory.",
+    metavar="<dir>",
+    default=config.OUTPUT_PATH,
+    show_default=True,
+)
+@click.option(
+    "--name",
+    "-n",
+    type=click.STRING,
+    help="Prefix name for your outputs.",
+    metavar="<str>",
+    default=config.PREFIX,
+    show_default=True,
+)
+@click.option(
+    "--target-overlap",
+    "-t",
+    type=click.IntRange(0),
+    help="Target insert overlap size.",
+    metavar="<int>",
+    default=config.TARGET_OVERLAP,
+    show_default=True,
+)
+@click.option("--debug/--no-debug", "-d", help="Set log level DEBUG.", default=False)
+@click.option(
+    "--force/--no-force",
+    "-f",
+    help="Force output to an existing directory, overwrite files.",
+    default=False,
+)
+@click.option(
+    "--pinned/--no-pinned",
+    "-p",
+    help="Only consider primers from the first reference.",
+    default=False,
+)
+def multiplex(
+    fasta, amplicon_size, outpath, name, target_overlap, debug, force, pinned
+):
+    """Design a multiplex PCR scheme."""
+    # Handle args
+    if len(amplicon_size) == 1:
+        target_amplicon_size = amplicon_size[0]
+        half_range = int(target_amplicon_size * config.SIZE_RANGE_AUTO / 2)
+        amplicon_size_min = target_amplicon_size - half_range
+        amplicon_size_max = target_amplicon_size + half_range
+    else:
+        amplicon_size_min = min(amplicon_size[:2])
+        amplicon_size_max = max(amplicon_size[:2])
 
     # Validate output path
     try:
-        outpath = get_output_path(args.output_path, force=args.force)
+        outpath = get_output_path(outpath, force=force)
     except IOError as e:
         print(f"Error: {e}")
         sys.exit(1)
 
     # Setup logging
-    setup_logging(outpath, debug=args.debug, prefix=args.prefix)
-
-    for arg in vars(args):
-        logger.debug("{}: {}".format(arg, str(vars(args)[arg])))
-
-    # Run subcommand
-    args.func(args, outpath)
-
-
-def multiplex(args, outpath):
-    """Multipex scheme command."""
+    setup_logging(outpath, debug=debug, prefix=name)
 
     # Process FASTA input
     try:
-        references = process_fasta(args.fasta, min_ref_size=args.amplicon_size_max)
+        references = process_fasta(fasta, min_ref_size=amplicon_size_max)
     except ValueError as e:
         logger.error(f"Error: {e}")
         sys.exit(2)
@@ -88,11 +144,11 @@ def multiplex(args, outpath):
         scheme = MultiplexReporter(
             outpath,
             references,
-            prefix=args.prefix,
-            amplicon_size_min=args.amplicon_size_min,
-            amplicon_size_max=args.amplicon_size_max,
-            target_overlap=args.target_overlap,
-            primary_only=args.first_only,
+            prefix=name,
+            amplicon_size_min=amplicon_size_min,
+            amplicon_size_max=amplicon_size_max,
+            target_overlap=target_overlap,
+            primary_only=pinned,
             progress_tracker=progress_bar,
         )
         scheme.design_scheme()
@@ -112,7 +168,7 @@ def multiplex(args, outpath):
         f"{scheme.percent_coverage}% coverage"
     )
     scheme.write_default_outputs()
-    if args.debug:
+    if debug:
         scheme.write_pickle()
     sys.exit(0)
 
@@ -205,111 +261,9 @@ def get_output_path(output_path, force=False):
 
     if path.exists() and not force:
         raise IOError("Directory exists add --force to overwrite")
-    elif path.exists() and not path.is_dir():
-        raise IOError("The output path is not a directory.")
 
     path.mkdir(exist_ok=True)
     return path
-
-
-def parse_arguments(args):
-    """Parse command line arguments."""
-    # Setup parsers
-    parser = argparse.ArgumentParser(
-        prog="primalscheme",
-        description=("a primer3 wrapper for designing multiplex primer schemes."),
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        allow_abbrev=False,
-    )
-    subparsers = parser.add_subparsers(title="[subcommands]", dest="command")
-    subparsers.required = True
-
-    parser_scheme = subparsers.add_parser(
-        "multiplex", help="design a multiplex PCR scheme"
-    )
-
-    # Set func
-    parser_scheme.set_defaults(func=multiplex)
-
-    # Add arguments to parser
-    parser_scheme.add_argument(
-        "fasta", help="FASTA file containing one or more references"
-    )
-    parser_scheme.add_argument(
-        "-a",
-        "--amplicon-size-min",
-        type=positive_int,
-        default=config.AMPLICON_SIZE_MIN,
-        help="minimum amplicon size (default: %(default)i)",
-    )
-    parser_scheme.add_argument(
-        "-b",
-        "--amplicon-size-max",
-        type=positive_int,
-        default=config.AMPLICON_SIZE_MAX,
-        help="maximum amplicon size (default: %(default)i).",
-    )
-    parser_scheme.add_argument(
-        "-d", "--debug", action="store_true", help="verbose logging"
-    )
-    parser_scheme.add_argument(
-        "-x",
-        "--first-only",
-        action="store_true",
-        help="only consider primers from the first (primary) reference",
-    )
-    parser_scheme.add_argument(
-        "-f",
-        "--force",
-        action="store_true",
-        help="force output to an existing directory and overwrite output files",
-    )
-    parser_scheme.add_argument(
-        "-o",
-        "--output-path",
-        default=config.OUTPUT_PATH,
-        help="output directory (default: %(default)s)",
-    )
-    parser_scheme.add_argument(
-        "-p",
-        "--prefix",
-        default=config.PREFIX,
-        help="prefix used for primer names and output files (default: %(default)s)",
-    )
-    parser_scheme.add_argument(
-        "-s",
-        "--step-distance",
-        default=config.STEP_DISTANCE,
-        type=positive_int,
-        help="distance to step between find attempts (default: %(default)i)",
-    )
-    parser_scheme.add_argument(
-        "-t",
-        "--target-overlap",
-        default=config.TARGET_OVERLAP,
-        type=positive_int,
-        help="target overlap size (default: %(default)i)",
-    )
-    parser.add_argument(
-        "-V", "--version", action="version", version=f"%(prog)s {version}",
-    )
-
-    # Generate args
-    parsed = parser.parse_args(args)
-
-    # Post parsing checks
-    if parsed.amplicon_size_max < parsed.amplicon_size_min:
-        raise ValueError("--amplicon-size-min cannot exceed --amplicon-size-max")
-
-    return parsed
-
-
-def positive_int(string):
-    """Validate command line args as being of type: positive int."""
-    value = int(string)
-    if value < 0:
-        raise argparse.ArgumentTypeError("positive integer required.")
-    return value
 
 
 class ProgressBar(ShadyBar, ProgressTracker):
@@ -370,4 +324,4 @@ class ProgressBar(ShadyBar, ProgressTracker):
 
 
 if __name__ == "__main__":
-    main()
+    cli()

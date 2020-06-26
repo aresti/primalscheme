@@ -68,17 +68,14 @@ If you're looking for test inputs you can try [CHIKV_demo.fa](tests/inputs/CHIKV
 
 ### optional arguments
 
-* `-a, --amplicon-size-min`: minimum amplicon size (default: 380)
-* `-b, --amplicon-size-max`: maximum amplicon size (default: 420)
-* `-d, --debug`: verbose logging and pickle output file.
-* `-x, --first-only`: only consider primers from the first (primary) reference
-* `-f, --force`: force output to an existing directory and overwrite output files
-* `-h, --help`: show help on the command line interface
-* `-o, --output-path`: output directory (default: ./output)
-* `-p, --prefix`: prefix used for primer names and output files (default: scheme)
-* `-s, --step-distance`: distance to step between find attempts (default: 11)
-* `-t, --target-overlap`: target overlap size (default: 0)
-* `-V, --version`: show version and exit
+* `--amplicon-size, -a`: Amplicon size target. Pass twice to set an exact range, otherwise expect +/- 5% (default 380, 420).
+* `--output-path, -o`: Path to output directory (default: ./output).
+* `--name, -n`: Prefix name for your outputs (default: scheme).
+* `--target-overlap, -t`: Target insert overlap size (default: 0).
+* `--debug, -d`: Set log level DEBUG.
+* `--force, -f`: Force output to an existing directory, overwrite files.
+* `--pinned, -p`: Only consider primers from the first reference.
+* `--help, -h`: Show help message and exit.
 
 ### modifying config
 

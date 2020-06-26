@@ -7,6 +7,7 @@ from pathlib import Path
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from click.testing import CliRunner
 
 
 def seq_record_factory(seq_len=5000, alphabet="acgt", id=""):
@@ -116,3 +117,8 @@ def ebola_input(stored_inputs_path):
 def random_reference_slice():
     record = seq_record_factory(seq_len=500)
     return record
+
+
+@pytest.fixture(scope="session")
+def cli_runner():
+    return CliRunner()
