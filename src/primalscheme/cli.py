@@ -217,66 +217,81 @@ def parse_arguments(args):
     # Setup parsers
     parser = argparse.ArgumentParser(
         prog="primalscheme",
-        description=("A primer3 wrapper for designing multiplex primer schemes."),
+        description=("a primer3 wrapper for designing multiplex primer schemes."),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        allow_abbrev=False,
     )
     subparsers = parser.add_subparsers(title="[subcommands]", dest="command")
     subparsers.required = True
 
-    parser_scheme = subparsers.add_parser("multiplex", help="Multiplex PCR scheme")
+    parser_scheme = subparsers.add_parser(
+        "multiplex", help="design a multiplex PCR scheme"
+    )
 
     # Set func
     parser_scheme.set_defaults(func=multiplex)
 
     # Add arguments to parser
-    parser_scheme.add_argument("fasta", help="FASTA file")
     parser_scheme.add_argument(
-        "--prefix",
-        default=config.PREFIX,
-        help="Prefix used for primer names and output files (default: %(default)s)",
+        "fasta", help="FASTA file containing one or more references"
     )
     parser_scheme.add_argument(
+        "-a",
         "--amplicon-size-min",
         type=positive_int,
         default=config.AMPLICON_SIZE_MIN,
-        help="Minimum amplicon size (default: %(default)i)",
+        help="minimum amplicon size (default: %(default)i)",
     )
     parser_scheme.add_argument(
+        "-b",
         "--amplicon-size-max",
         type=positive_int,
         default=config.AMPLICON_SIZE_MAX,
-        help="Maximum amplicon size (default: %(default)i)",
+        help="maximum amplicon size (default: %(default)i).",
     )
     parser_scheme.add_argument(
+        "-d", "--debug", action="store_true", help="verbose logging"
+    )
+    parser_scheme.add_argument(
+        "-x",
         "--first-only",
         action="store_true",
-        help="Only consider primers from the first (primary) reference.",
+        help="only consider primers from the first (primary) reference",
     )
     parser_scheme.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="force output to an existing directory and overwrite output files",
+    )
+    parser_scheme.add_argument(
+        "-o",
         "--output-path",
         default=config.OUTPUT_PATH,
-        help="Output directory (default: %(default)s)",
+        help="output directory (default: %(default)s)",
     )
     parser_scheme.add_argument(
-        "--target-overlap",
-        default=config.TARGET_OVERLAP,
-        type=positive_int,
-        help="Target overlap size (default: %(default)i)",
+        "-p",
+        "--prefix",
+        default=config.PREFIX,
+        help="prefix used for primer names and output files (default: %(default)s)",
     )
     parser_scheme.add_argument(
+        "-s",
         "--step-distance",
         default=config.STEP_DISTANCE,
         type=positive_int,
-        help="Distance to step between find attempts (default: %(default)i)",
+        help="distance to step between find attempts (default: %(default)i)",
     )
-    parser_scheme.add_argument("--debug", action="store_true", help="Verbose logging")
     parser_scheme.add_argument(
-        "--force",
-        action="store_true",
-        help="Force output to an existing directory and overwrite output files",
+        "-t",
+        "--target-overlap",
+        default=config.TARGET_OVERLAP,
+        type=positive_int,
+        help="target overlap size (default: %(default)i)",
     )
     parser.add_argument(
-        "-V", "--version", action="version", version=f"%(prog)s {version}"
+        "-V", "--version", action="version", version=f"%(prog)s {version}",
     )
 
     # Generate args
