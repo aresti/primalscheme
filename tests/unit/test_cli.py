@@ -68,6 +68,7 @@ def test_cli_fails_without_fasta():
         ("--step-distance", "11"),
         ("--debug", None),
         ("--force", None),
+        ("--first-only", None),
     ],
 )
 def test_availability_of_cli_options(option, value):

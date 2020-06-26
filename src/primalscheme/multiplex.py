@@ -39,6 +39,7 @@ class MultiplexScheme:
         amplicon_size_min=config.AMPLICON_SIZE_MIN,
         amplicon_size_max=config.AMPLICON_SIZE_MAX,
         target_overlap=config.TARGET_OVERLAP,
+        primary_only=False,
         progress_tracker=None,
     ):
         """Init MultiplexScheme."""
@@ -50,6 +51,7 @@ class MultiplexScheme:
         self.amplicon_size_min = amplicon_size_min
         self.amplicon_size_max = amplicon_size_max
         self.target_overlap = target_overlap
+        self.primary_only = primary_only
         self.progress_tracker = progress_tracker
 
         self.regions = []

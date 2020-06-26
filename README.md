@@ -77,6 +77,7 @@ If you're looking for test inputs you can try [CHIKV_demo.fa](tests/inputs/CHIKV
 * `--step-distance`: Distance to step between find attempts (default: 11)
 * `--debug`: Verbose logging and pickle output file
 * `--force`: Force output to an existing directory and overwrite output files
+* `--first-only`: Only consider primers from the first (primary) reference.
 
 ### modifying config
 

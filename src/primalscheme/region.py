@@ -193,7 +193,11 @@ class Region(Window):
 
         # Design primers for the left and right flanks
         candidates = design_primers(
-            self.left_flank_msa, Direction.LEFT, self.pool, offset=self.slice_start,
+            self.left_flank_msa,
+            Direction.LEFT,
+            self.pool,
+            offset=self.slice_start,
+            primary_only=self.scheme.primary_only,
         )
         candidates.extend(
             design_primers(
@@ -201,6 +205,7 @@ class Region(Window):
                 Direction.RIGHT,
                 self.pool,
                 offset=self.slice_end - self.flank_size + 1,
+                primary_only=self.scheme.primary_only,
             )
         )
 

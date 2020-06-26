@@ -233,13 +233,16 @@ def calc_hairpin(seq):
     ).tm
 
 
-def design_primers(msa, direction, pool, offset=0):
+def design_primers(msa, direction, pool, offset=0, primary_only=False):
     """Design primers against a reference MSA."""
     min_size = config.PRIMER_SIZE_MIN
     max_size = config.PRIMER_SIZE_MAX
     variation = max_size - min_size
 
-    sequences = [record.seq for record in msa]
+    if primary_only:
+        sequences = [msa[0].seq]
+    else:
+        sequences = [record.seq for record in msa]
 
     # Digest all sequences into k-mers
     all_kmers = set()

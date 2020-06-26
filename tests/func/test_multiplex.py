@@ -4,6 +4,7 @@ from Bio import SeqIO
 
 from primalscheme.cli import process_fasta
 from primalscheme.multiplex import MultiplexScheme
+from primalscheme.primer import Direction
 
 
 @pytest.fixture(scope="session")
@@ -137,6 +138,16 @@ def test_right_primer_seq_matches_some_ref_slice(chikv_scheme):
     assert any(ref_slice.seq == right.seq for ref_slice in ref_slices)
 
 
+def test_multiple_references_used_for_primer_design(chikv_scheme):
+    for dir in Direction:
+        assert any(
+            map(
+                lambda x: x.seq != x.reference_msa[0].seq,
+                [p for p in chikv_scheme.primers if p.direction == dir],
+            )
+        )
+
+
 def test_scheme_runs_with_single_reference(chikv_input):
     references = process_fasta(chikv_input)[:1]
     scheme = MultiplexScheme(references)
@@ -148,3 +159,14 @@ def test_scheme_runs_with_single_reference(chikv_input):
 def test_first_reference_is_primary(ebola_input, ebola_scheme):
     records = list(SeqIO.parse(ebola_input, "fasta"))
     assert records[0].id == ebola_scheme.primary_ref.id
+
+
+def test_first_only_option_has_no_mistmatches_against_primary(chikv_input):
+    scheme = get_scheme(chikv_input, primary_only=True)
+    for dir in Direction:
+        assert all(
+            map(
+                lambda x: x.seq == x.reference_msa[0].seq,
+                [p for p in scheme.primers if p.direction == dir],
+            )
+        )

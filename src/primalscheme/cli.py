@@ -92,6 +92,7 @@ def multiplex(args, outpath):
             amplicon_size_min=args.amplicon_size_min,
             amplicon_size_max=args.amplicon_size_max,
             target_overlap=args.target_overlap,
+            primary_only=args.first_only,
             progress_tracker=progress_bar,
         )
         scheme.design_scheme()
@@ -245,6 +246,11 @@ def parse_arguments(args):
         type=positive_int,
         default=config.AMPLICON_SIZE_MAX,
         help="Maximum amplicon size (default: %(default)i)",
+    )
+    parser_scheme.add_argument(
+        "--first-only",
+        action="store_true",
+        help="Only consider primers from the first (primary) reference.",
     )
     parser_scheme.add_argument(
         "--output-path",
