@@ -68,7 +68,7 @@ If you're looking for test inputs you can try [CHIKV_demo.fa](tests/inputs/CHIKV
 
 ### optional arguments
 
-* `--amplicon-size, -a`: Amplicon size target. Pass twice to set an exact range, otherwise expect +/- 5% (default 380, 420).
+* `--amplicon-size, -a`: Amplicon size target. Pass twice to set an exact range (e.g, -a 220 -a 250), otherwise expect +/- 5% (default 380, 420).
 * `--outpath, -o`: Path to output directory (default: ./output).
 * `--name, -n`: Prefix name for your outputs (default: scheme).
 * `--target-overlap, -t`: Target insert overlap size (default: 0).

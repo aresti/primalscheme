@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2020-06-27
+
+### Added
+
+- Add MultiplexScheme parameters to debug log output
+- Add version number to debug log and run report
+
+### Changed
+
+- Improve --amplicon-size help text
+- Move reference info logging into cli
+
+### Fixed
+
+- Fix outpath option in README
+- Fix --amplicon-size % variation in help text
+
+### Removed
+
+- Remove logger name from log file output
+
 ## [1.2.0] - 2020-06-26
 
 ### Added
