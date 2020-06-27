@@ -257,6 +257,7 @@ def setup_logging(output_path, debug=False, prefix="primalscheme"):
     logger.addHandler(sh)
 
     logger.info(f"Writing log to {log_filepath}")
+    logger.debug(f"primalscheme version {version}")
 
 
 def get_output_path(output_path, force=False):

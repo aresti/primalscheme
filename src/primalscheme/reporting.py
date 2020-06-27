@@ -34,6 +34,7 @@ from Bio.Graphics import GenomeDiagram
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
 
+from primalscheme import __version__ as version
 from primalscheme.multiplex import MultiplexScheme
 from primalscheme.primer import Direction
 
@@ -321,6 +322,7 @@ class MultiplexReporter(MultiplexScheme):
             "regions": len(self.regions),
             "percent_coverage": self.percent_coverage,
             "gaps": self.gap_count,
+            "primalscheme_version": version,
         }
         filepath.write_text(json.dumps(data))
 
