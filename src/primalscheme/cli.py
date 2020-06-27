@@ -59,7 +59,7 @@ def cli():
     type=click.IntRange(90),
     help=(
         "Amplicon size target. Pass twice to set an exact range, otherwise expect "
-        f"+/- {config.SIZE_RANGE_AUTO * 100}%."
+        f"+/- {config.SIZE_RANGE_AUTO/2 * 100}%."
     ),
     metavar="<int>",
     default=[config.AMPLICON_SIZE_MIN, config.AMPLICON_SIZE_MAX],
@@ -236,9 +236,7 @@ def setup_logging(output_path, debug=False, prefix="primalscheme"):
     log_filepath = output_path / f"{prefix}.log"
     fh = logging.FileHandler(log_filepath)
     fh.setLevel(logging.DEBUG)
-    fh_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    fh_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     fh.setFormatter(fh_formatter)
     logger.addHandler(fh)
 
