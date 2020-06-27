@@ -68,10 +68,19 @@ class MultiplexScheme:
         if self.progress_tracker:
             self.progress_tracker.end = self.ref_len
 
-        # Log references
-        logger.info(f"Primary reference for coordinate system: {references[0].id}")
-        ref_ids = [f" - {ref.id}" for ref in references]
-        logger.info("\n".join(["Designing primers against references:"] + ref_ids))
+        logger.debug(str(self))
+
+    def __str__(self):
+        lines = [
+            "MuliplexScheme",
+            f"Prefix: {self.prefix}",
+            f"Amplicon size range: {self.amplicon_size_min} - {self.amplicon_size_max}",
+            f"Target overlap: {self.target_overlap}",
+            f"Primary only (pinned): {self.primary_only}",
+            "References:",
+        ]
+        lines.extend(f" - {ref.id}" for ref in self.references)
+        return "\n".join(lines)
 
     @property
     def region_count(self):

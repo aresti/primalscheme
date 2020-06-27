@@ -139,6 +139,15 @@ def multiplex(
     # Progress bar
     progress_bar = ProgressBar()
 
+    # Log references
+    ref_ids = [f" - {ref.id}" for ref in references]
+    logger.info("\n".join(["References:"] + ref_ids))
+    logger.info(f"Primary reference for coordinate system: {references[0].id}")
+    logger.info(
+        "Considering primers from "
+        f"{'primary reference only' if pinned else 'all references'}"
+    )
+
     # Create scheme
     try:
         scheme = MultiplexReporter(
