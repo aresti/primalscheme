@@ -40,6 +40,7 @@ class MultiplexScheme:
         amplicon_size_max=config.AMPLICON_SIZE_MAX,
         target_overlap=config.TARGET_OVERLAP,
         primary_only=False,
+        high_gc=False,
         progress_tracker=None,
     ):
         """Init MultiplexScheme."""
@@ -52,7 +53,12 @@ class MultiplexScheme:
         self.amplicon_size_max = amplicon_size_max
         self.target_overlap = target_overlap
         self.primary_only = primary_only
+        self.high_gc = high_gc
         self.progress_tracker = progress_tracker
+
+        if high_gc:
+            config.PRIMER_SIZE_RANGE = config.PRIMER_SIZE_RANGES["HIGH_GC"]
+            config.PRIMER_GC_RANGE = config.PRIMER_GC_RANGES["HIGH_GC"]
 
         self.regions = []
         self.references = references
@@ -139,7 +145,7 @@ class MultiplexScheme:
         insert_start = self._prev.right.end - self.target_overlap - 1
         desired_slice_start = (
             insert_start
-            - config.PRIMER_SIZE_MAX
+            - config.PRIMER_SIZE_RANGE.max
             - (self.amplicon_size_max - self.amplicon_size_min)
         )
 

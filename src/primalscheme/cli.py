@@ -105,8 +105,14 @@ def cli():
     help="Only consider primers from the first reference.",
     default=False,
 )
+@click.option(
+    "--high-gc/--no-high-hc",
+    "-g",
+    help="Use config suitable for high-GC sequences.",
+    default=False,
+)
 def multiplex(
-    fasta, amplicon_size, outpath, name, target_overlap, debug, force, pinned
+    fasta, amplicon_size, outpath, name, target_overlap, debug, force, pinned, high_gc
 ):
     """Design a multiplex PCR scheme."""
     # Handle args
@@ -158,6 +164,7 @@ def multiplex(
             amplicon_size_max=amplicon_size_max,
             target_overlap=target_overlap,
             primary_only=pinned,
+            high_gc=high_gc,
             progress_tracker=progress_bar,
         )
         scheme.design_scheme()

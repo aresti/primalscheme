@@ -104,24 +104,28 @@ class Primer:
             penalty += config.PRIMER_WT_TM_LT * (config.PRIMER_OPT_TM - self.tm)
 
         # High GC
-        if self.gc > config.PRIMER_OPT_GC_PERCENT:
+        if self.gc > config.PRIMER_GC_RANGE.opt:
             penalty += config.PRIMER_WT_GC_PERCENT_GT * (
-                self.gc - config.PRIMER_OPT_GC_PERCENT
+                self.gc - config.PRIMER_GC_RANGE.opt
             )
 
         # Low GC
-        if self.gc < config.PRIMER_OPT_GC_PERCENT:
+        if self.gc < config.PRIMER_GC_RANGE.opt:
             penalty += config.PRIMER_WT_GC_PERCENT_LT * (
-                config.PRIMER_OPT_GC_PERCENT - self.gc
+                config.PRIMER_GC_RANGE.opt - self.gc
             )
 
         # High size
-        if self.size > config.PRIMER_OPT_SIZE:
-            penalty += config.PRIMER_WT_SIZE_GT * (self.size - config.PRIMER_OPT_SIZE)
+        if self.size > config.PRIMER_SIZE_RANGE.opt:
+            penalty += config.PRIMER_WT_SIZE_GT * (
+                self.size - config.PRIMER_SIZE_RANGE.opt
+            )
 
         # Low size
-        if self.size < config.PRIMER_OPT_SIZE:
-            penalty += config.PRIMER_WT_SIZE_LT * (config.PRIMER_OPT_SIZE - self.size)
+        if self.size < config.PRIMER_SIZE_RANGE.opt:
+            penalty += config.PRIMER_WT_SIZE_LT * (
+                config.PRIMER_SIZE_RANGE.opt - self.size
+            )
 
         self.__base_penalty = penalty
         return penalty
@@ -235,8 +239,8 @@ def calc_hairpin(seq):
 
 def design_primers(msa, direction, pool, offset=0, primary_only=False):
     """Design primers against a reference MSA."""
-    min_size = config.PRIMER_SIZE_MIN
-    max_size = config.PRIMER_SIZE_MAX
+    min_size = config.PRIMER_SIZE_RANGE.min
+    max_size = config.PRIMER_SIZE_RANGE.max
     variation = max_size - min_size
 
     if primary_only:
@@ -266,7 +270,7 @@ def design_primers(msa, direction, pool, offset=0, primary_only=False):
 def primer_thermo_filter(primer):
     """Hard filter for candidate primers."""
     return (
-        (config.PRIMER_MIN_GC <= primer.gc <= config.PRIMER_MAX_GC)
+        (config.PRIMER_GC_RANGE.min <= primer.gc <= config.PRIMER_GC_RANGE.max)
         and (config.PRIMER_MIN_TM <= primer.tm <= config.PRIMER_MAX_TM)
         and (primer.hairpin <= config.PRIMER_MAX_HAIRPIN_TH)
         and (primer.max_homo <= config.PRIMER_MAX_HOMO)

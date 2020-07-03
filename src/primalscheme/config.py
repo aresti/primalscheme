@@ -20,6 +20,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
+from collections import namedtuple
+
+PrimerSizeRange = namedtuple("PrimerSizeRange", "min max opt")
+PRIMER_SIZE_RANGES = {
+    "DEFAULT": PrimerSizeRange(22, 30, 22),
+    "HIGH_GC": PrimerSizeRange(17, 30, 20),
+}
+
+PrimerGCRange = namedtuple("GCRange", "min max opt")
+PRIMER_GC_RANGES = {
+    "DEFAULT": PrimerGCRange(30, 55, 50),
+    "HIGH_GC": PrimerGCRange(40, 65, 60),
+}
 
 PREFIX = "scheme"
 OUTPUT_PATH = "./output"
@@ -31,10 +44,7 @@ AMPLICON_SIZE_MIN = 380
 AMPLICON_SIZE_MAX = 420
 SIZE_RANGE_AUTO = 0.1
 
-PRIMER_SIZE_MIN = 22
-PRIMER_SIZE_MAX = 30
-PRIMER_OPT_SIZE = PRIMER_SIZE_MIN
-
+PRIMER_SIZE_RANGE = PRIMER_SIZE_RANGES["DEFAULT"]
 PRIMER_OPT_TM = 61.0
 PRIMER_WT_TM_GT = 1.0
 PRIMER_WT_TM_LT = 1.0
@@ -42,11 +52,9 @@ PRIMER_MIN_TM = 59.5
 PRIMER_MAX_TM = 62.5
 PRIMER_WT_SIZE_GT = 1.0
 PRIMER_WT_SIZE_LT = 1.0
-PRIMER_OPT_GC_PERCENT = 50.0
 PRIMER_WT_GC_PERCENT_GT = 0.0
 PRIMER_WT_GC_PERCENT_LT = 0.0
-PRIMER_MIN_GC = 30
-PRIMER_MAX_GC = 55
+PRIMER_GC_RANGE = PRIMER_GC_RANGES["DEFAULT"]
 PRIMER_MAX_HAIRPIN_TH = 50
 PRIMER_MAX_HOMO = 5
 

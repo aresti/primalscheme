@@ -34,7 +34,7 @@ from Bio.Graphics import GenomeDiagram
 from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
 
-from primalscheme import __version__ as version
+from primalscheme import config, __version__ as version
 from primalscheme.multiplex import MultiplexScheme
 from primalscheme.primer import Direction
 
@@ -324,7 +324,24 @@ class MultiplexReporter(MultiplexScheme):
             "regions": len(self.regions),
             "percent_coverage": self.percent_coverage,
             "gaps": self.gap_count,
-            "primalscheme_version": version,
+            "config": {
+                "amplicon_size_min": self.amplicon_size_min,
+                "amplicon_size_max": self.amplicon_size_max,
+                "target_overlap": self.target_overlap,
+                "high_gc_mode": self.high_gc,
+                "step_distance": config.STEP_DISTANCE,
+                "primer_size_range": {
+                    "min": config.PRIMER_SIZE_RANGE.min,
+                    "max": config.PRIMER_SIZE_RANGE.max,
+                    "opt": config.PRIMER_SIZE_RANGE.opt,
+                },
+                "primer_gc_range": {
+                    "min": config.PRIMER_GC_RANGE.min,
+                    "max": config.PRIMER_GC_RANGE.max,
+                    "opt": config.PRIMER_GC_RANGE.opt,
+                },
+                "primalscheme_version": version,
+            },
         }
         filepath.write_text(json.dumps(data))
 

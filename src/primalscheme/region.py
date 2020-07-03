@@ -99,7 +99,7 @@ class Window:
         """The size of the slice flanks, where possible primers could be located"""
         return (
             int((self.scheme.amplicon_size_max - self.scheme.amplicon_size_min) / 2)
-            + config.PRIMER_SIZE_MAX
+            + config.PRIMER_SIZE_RANGE.max
         )
 
     @property

@@ -75,6 +75,7 @@ If you're looking for test inputs you can try [CHIKV_demo.fa](tests/inputs/CHIKV
 * `--debug, -d`: Set log level DEBUG.
 * `--force, -f`: Force output to an existing directory, overwrite files.
 * `--pinned, -p`: Only consider primers from the first reference.
+* `--high-gc, -g`: Use config suitable for high-GC sequences.
 * `--help, -h`: Show help message and exit.
 
 ### modifying config
