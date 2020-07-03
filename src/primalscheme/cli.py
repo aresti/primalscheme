@@ -34,6 +34,7 @@ from Bio.SeqRecord import SeqRecord
 from progress.bar import ShadyBar
 
 from primalscheme import __version__ as version, config
+from primalscheme.primer import calc_gc
 from primalscheme.region import NoSuitablePrimersError
 from primalscheme.reporting import MultiplexReporter, ProgressTracker
 
@@ -129,7 +130,7 @@ def multiplex(
     try:
         outpath = get_output_path(outpath, force=force)
     except IOError as e:
-        print(f"Error: {e}")
+        click.echo(click.style(f"Error: {e}", fg="red",))
         sys.exit(1)
 
     # Setup logging
@@ -141,6 +142,15 @@ def multiplex(
     except ValueError as e:
         logger.error(f"Error: {e}")
         sys.exit(2)
+
+    # High GC warning
+    if not high_gc and any([calc_gc(str(ref.seq)) > 55 for ref in references]):
+        click.echo(
+            click.style(
+                "WARNING: High-GC reference detected. Consider using --high-gc mode.",
+                fg="red",
+            )
+        )
 
     # Progress bar
     progress_bar = ProgressBar()
