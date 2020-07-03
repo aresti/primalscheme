@@ -144,7 +144,9 @@ def multiplex(
         sys.exit(2)
 
     # High GC warning
-    if not high_gc and any([calc_gc(str(ref.seq)) > 55 for ref in references]):
+    if not high_gc and any(
+        calc_gc(str(ref.seq)) > config.HIGH_GC_WARN_THRESHOLD for ref in references
+    ):
         click.echo(
             click.style(
                 "WARNING: High-GC reference detected. Consider using --high-gc mode.",
