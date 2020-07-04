@@ -148,8 +148,8 @@ def test_multiple_references_used_for_primer_design(chikv_scheme):
         )
 
 
-def test_scheme_runs_with_single_reference(chikv_input):
-    references = process_fasta(chikv_input)[:1]
+def test_scheme_runs_with_single_reference(ncov_single_ref_input):
+    references = process_fasta(ncov_single_ref_input)
     scheme = MultiplexScheme(references)
     scheme.design_scheme()
 

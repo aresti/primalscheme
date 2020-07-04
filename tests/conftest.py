@@ -92,7 +92,12 @@ def input_fasta_short_500(temp_inputs_path):
     return fh
 
 
-STORED_INPUTS = ["CHIKV_demo.fa", "Ebov-10-Pan.fasta", "nCov-2019.fasta"]
+STORED_INPUTS = [
+    "CHIKV_demo.fa",
+    "Ebov-10-Pan.fasta",
+    "nCov-2019.fasta",
+    "embB_high_gc.fasta",
+]
 
 
 @pytest.fixture(params=STORED_INPUTS)
@@ -111,6 +116,18 @@ def chikv_input(stored_inputs_path):
 def ebola_input(stored_inputs_path):
     """Return ebola input path"""
     return stored_inputs_path / STORED_INPUTS[1]
+
+
+@pytest.fixture(scope="session")
+def ncov_single_ref_input(stored_inputs_path):
+    """Return ebola input path"""
+    return stored_inputs_path / STORED_INPUTS[2]
+
+
+@pytest.fixture(scope="session")
+def high_gc_input(stored_inputs_path):
+    """Return ebola input path"""
+    return stored_inputs_path / STORED_INPUTS[3]
 
 
 @pytest.fixture(scope="session")

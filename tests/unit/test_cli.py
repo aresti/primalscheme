@@ -67,6 +67,8 @@ def test_multiplex_command_without_fasta_returns_exit_code_2(cli_runner):
         ("-f", None),
         ("--pinned", None),
         ("-p", None),
+        ("--high-gc", None),
+        ("-g", None),
         ("--help", None),
         ("-h", None),
     ],
@@ -145,6 +147,39 @@ def test_existing_output_path_not_dir(tmp_path, cli_runner, chikv_input):
 
     assert result.exit_code != 0
     assert "file" in result.output
+
+
+def test_warning_on_high_gc_input(tmp_path, cli_runner, high_gc_input):
+    """Does CLI warn user when using a high-GC input without the --high-gc option?"""
+    path = tmp_path / "output"
+    result = cli_runner.invoke(cli, ["multiplex", str(high_gc_input), "-o", str(path)])
+
+    assert "warning:" in result.output.lower()
+    assert "high-gc" in result.output.lower()
+
+
+def test_warning_silenced_when_using_high_gc(tmp_path, cli_runner, high_gc_input):
+    """Does CLI silence the warning when using the --high-gc option?"""
+    path = tmp_path / "output"
+    result = cli_runner.invoke(
+        cli, ["multiplex", str(high_gc_input), "-o", str(path), "-g"]
+    )
+
+    assert "warning:" not in result.output.lower()
+    assert "high-gc" not in result.output.lower()
+
+
+def test_no_high_gc_warning_on_average_input(
+    tmp_path, cli_runner, ncov_single_ref_input
+):
+    """Does CLI stay quiet when using a regular input wihout the --high-gc option?"""
+    path = tmp_path / "output"
+    result = cli_runner.invoke(
+        cli, ["multiplex", str(ncov_single_ref_input), "-o", str(path)]
+    )
+
+    assert "warning:" not in result.output.lower()
+    assert "high-gc" not in result.output.lower()
 
 
 def test_too_short_fasta_size_vs_amplicon_size(
