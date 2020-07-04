@@ -24,6 +24,7 @@ import logging
 import primer3
 
 from operator import attrgetter
+
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
 
@@ -112,20 +113,6 @@ class Window:
         """The reference sequence for the right flank"""
         return self.ref_slice[-self.flank_size :]
 
-    def align_flanks(self):
-        """Perform multiple seq alignment of all refs for flanks."""
-        self.left_flank_msa = MultipleSeqAlignment([self.left_flank])
-        right_rev = SeqRecord(
-            self.right_flank.reverse_complement().seq, id=self.scheme.primary_ref.id
-        )
-        self.right_flank_msa = MultipleSeqAlignment([right_rev])
-        for ref in self.scheme.secondary_refs:
-            self.left_flank_msa.append(align_secondary_reference(self.left_flank, ref))
-            ra = align_secondary_reference(self.right_flank, ref)
-            self.right_flank_msa.append(
-                SeqRecord(ra.reverse_complement().seq, id=ra.id)
-            )
-
 
 class Region(Window):
     """
@@ -143,7 +130,8 @@ class Region(Window):
         self.left_candidates = []
         self.right_candidates = []
         self.exhausted_left_stepping = False
-        self.failed_alignment_count = 0
+        self.failed_aln_count = 0
+        self.failed_aln_ref_ids = []
 
         logger.debug(f"Region {region_num}, pool {self.pool}")
 
@@ -161,12 +149,36 @@ class Region(Window):
                 self._find_primers_for_slice()
                 return
             except FailedAlignmentError as exc:
-                self.failed_alignment_count += 1
-                if self.failed_alignment_count > self.scheme._max_failed_aln:
-                    raise exc
+                if self.exhausted_left_stepping:
+                    self._handle_failed_alignment(exc)
                 self._try_stepping()
             except NoSuitablePrimersError:
                 self._try_stepping()
+
+    def _align_flanks(self):
+        """Perform multiple seq alignment of all refs for flanks."""
+        self.left_flank_msa = MultipleSeqAlignment([self.left_flank])
+        right_rev = SeqRecord(
+            self.right_flank.reverse_complement().seq, id=self.scheme.primary_ref.id
+        )
+        self.right_flank_msa = MultipleSeqAlignment([right_rev])
+        failed_ref_ids = []
+        for ref in self.scheme.secondary_refs:
+            try:
+                self.left_flank_msa.append(
+                    align_secondary_reference(self.left_flank, ref)
+                )
+                ra = align_secondary_reference(self.right_flank, ref)
+                self.right_flank_msa.append(
+                    SeqRecord(ra.reverse_complement().seq, id=ra.id)
+                )
+            except FailedAlignmentError:
+                failed_ref_ids.append(ref.id)
+        if failed_ref_ids:
+            raise FailedAlignmentError(
+                "Failed alignment between primary flank and secondary references.",
+                ref_ids=failed_ref_ids,
+            )
 
     def _try_stepping(self):
         """Step region left, or right (from initial start) once left limit reached"""
@@ -182,6 +194,25 @@ class Region(Window):
                 self.reset_slice()
                 self.exhausted_left_stepping = True
 
+    def _handle_failed_alignment(self, exc):
+        self.failed_aln_count += 1
+        self.failed_aln_ref_ids.extend(exc.ref_ids)
+        if self.failed_aln_count <= self.scheme._max_failed_aln:
+            return
+
+        # Over threshold, re-raise with worst offenders
+        unique_ids = list(set(self.failed_aln_ref_ids))
+        unique_ids.sort(key=lambda x: self.failed_aln_ref_ids.count(x), reverse=True)
+        median_low = self.failed_aln_ref_ids.count(unique_ids[int(len(unique_ids) / 2)])
+        raise_ids = list(
+            filter(lambda x: self.failed_aln_ref_ids.count(x) >= median_low, unique_ids)
+        )
+        raise FailedAlignmentError(
+            "Multiple failed alignments between primary reference "
+            "flanks and secondary references.",
+            ref_ids=raise_ids,
+        )
+
     def _find_primers_for_slice(self):
         """Try to find suitable primers for the current slice"""
         logger.debug(
@@ -189,7 +220,7 @@ class Region(Window):
         )
 
         # Align flanks at this position
-        self.align_flanks()
+        self._align_flanks()
 
         # Design primers for the left and right flanks
         candidates = design_primers(

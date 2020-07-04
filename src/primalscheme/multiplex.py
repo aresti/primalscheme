@@ -184,7 +184,7 @@ class MultiplexScheme:
                     raise exc
                 break
             except FailedAlignmentError as exc:
-                self._exclude_reference(exc.reference)
+                self._exclude_references(exc.ref_ids)
                 continue
 
             self.regions.append(region)
@@ -202,13 +202,13 @@ class MultiplexScheme:
             self.progress_tracker.goto(self.progress_tracker.end)
             self.progress_tracker.finish()
 
-    def _exclude_reference(self, reference):
-        """Exclude a secondary reference."""
-        for i, ref in enumerate(self.secondary_refs):
-            if ref.id == reference.id:
-                self.excluded_refs.append(self.secondary_refs.pop(i))
+    def _exclude_references(self, ref_ids):
+        """Exclude secondary references."""
         self.progress_tracker.interrupt()
-        logger.info(f"Excluding reference {reference.id}: unable to align.")
+        for i, ref in enumerate(self.secondary_refs):
+            if ref.id in ref_ids:
+                self.excluded_refs.append(self.secondary_refs.pop(i))
+                logger.info(f"Excluding reference {ref.id}: unable to align.")
 
     def add_considered(self, num):
         """Increment number of considered primers; update progress tracker."""

@@ -60,10 +60,10 @@ def input_fasta_5_random_valid(temp_inputs_path):
 
 
 @pytest.fixture(scope="session")
-def input_fasta_101_random_valid(temp_inputs_path):
-    """Generate a random multi-FASTA with 101 records"""
-    fh = temp_inputs_path / "valid_random_101_fasta.fa"
-    SeqIO.write(multi_seq_generator(101), fh, "fasta")
+def input_fasta_151_random_valid(temp_inputs_path):
+    """Generate a random multi-FASTA with 151 records"""
+    fh = temp_inputs_path / "valid_random_151_fasta.fa"
+    SeqIO.write(multi_seq_generator(151), fh, "fasta")
     return fh
 
 

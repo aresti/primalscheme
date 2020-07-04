@@ -228,8 +228,8 @@ def process_fasta(file_path, min_ref_size=None):
         )
 
     # Check for too many references
-    if len(references) > 100:
-        raise ValueError("A maximum of 100 reference genomes is currently supported.")
+    if len(references) > 150:
+        raise ValueError("A maximum of 150 reference genomes is currently supported.")
 
     # Check for max difference in size between references
     primary_ref = references[0]
@@ -348,6 +348,7 @@ class ProgressBar(ShadyBar, ProgressTracker):
         """Prepare to be interrupted by a log message."""
         if self.index:
             self.finish()
+            self.index = 0
 
 
 if __name__ == "__main__":

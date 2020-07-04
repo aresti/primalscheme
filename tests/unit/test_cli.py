@@ -215,10 +215,10 @@ def test_process_fasta_invalid_alphabet(input_fasta_invalid_alphabet):
         process_fasta(input_fasta_invalid_alphabet)
 
 
-def test_process_fasta_too_many_records(input_fasta_101_random_valid):
+def test_process_fasta_too_many_records(input_fasta_151_random_valid):
     """Does process_fasta raise for too many references?"""
-    with pytest.raises(ValueError, match="A maximum of 100"):
-        process_fasta(input_fasta_101_random_valid)
+    with pytest.raises(ValueError, match="A maximum of 150"):
+        process_fasta(input_fasta_151_random_valid)
 
 
 def test_process_fasta_size_difference_over_500(input_fasta_size_difference_over_500,):
