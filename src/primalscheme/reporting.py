@@ -327,9 +327,9 @@ class MultiplexReporter(MultiplexScheme):
             "config": {
                 "amplicon_size_min": self.amplicon_size_min,
                 "amplicon_size_max": self.amplicon_size_max,
-                "target_overlap": self.target_overlap,
                 "high_gc": self.high_gc,
-                "step_distance": config.STEP_DISTANCE,
+                "primalscheme_version": version,
+                "primary_only": self.primary_only,
                 "primer_size_range": {
                     "min": config.PRIMER_SIZE_RANGE.min,
                     "max": config.PRIMER_SIZE_RANGE.max,
@@ -340,7 +340,8 @@ class MultiplexReporter(MultiplexScheme):
                     "max": config.PRIMER_GC_RANGE.max,
                     "opt": config.PRIMER_GC_RANGE.opt,
                 },
-                "primalscheme_version": version,
+                "step_distance": config.STEP_DISTANCE,
+                "target_overlap": self.target_overlap,
             },
         }
         filepath.write_text(json.dumps(data))
