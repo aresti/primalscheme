@@ -56,10 +56,6 @@ class MultiplexScheme:
         self.high_gc = high_gc
         self.progress_tracker = progress_tracker
 
-        if high_gc:
-            config.PRIMER_SIZE_RANGE = config.PRIMER_SIZE_RANGES["HIGH_GC"]
-            config.PRIMER_GC_RANGE = config.PRIMER_GC_RANGES["HIGH_GC"]
-
         self.regions = []
         self.references = references
         self.primary_ref = references[0]
@@ -71,6 +67,12 @@ class MultiplexScheme:
         )
         self.considered = 0
 
+        # config switching
+        config_key = "HIGH_GC" if high_gc else "DEFAULT"
+        config.PRIMER_SIZE_RANGE = config.PRIMER_SIZE_RANGES[config_key]
+        config.PRIMER_GC_RANGE = config.PRIMER_GC_RANGES[config_key]
+
+        # progress & logging setup
         if self.progress_tracker:
             self.progress_tracker.end = self.ref_len
 
