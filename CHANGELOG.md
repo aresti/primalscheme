@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2020-07-10
+
+### Added
+
+- Implement high-GC config option
+- Warn user if high-GC detected (without --high-gc option)
+- Include ref counts in run report
+
+### Fixed
+
+- Fix bug where last region could be a duplicate amplicon in opposite pool (no progress)
+
 ## [1.2.1] - 2020-06-27
 
 ### Added

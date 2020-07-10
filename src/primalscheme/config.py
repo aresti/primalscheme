@@ -24,7 +24,7 @@ from collections import namedtuple
 
 PrimerSizeRange = namedtuple("PrimerSizeRange", "min max opt")
 PRIMER_SIZE_RANGES = {
-    "DEFAULT": PrimerSizeRange(22, 30, 22),
+    "DEFAULT": PrimerSizeRange(19, 34, 22),
     "HIGH_GC": PrimerSizeRange(17, 30, 20),
 }
 
