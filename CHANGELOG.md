@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Warn user if high-GC detected (without --high-gc option)
 - Include ref counts in run report
 
+### Changed
+
+- Widen default primer size range (min 19, max 34 bp)
+
 ### Fixed
 
 - Fix bug where last region could be a duplicate amplicon in opposite pool (no progress)
