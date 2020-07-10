@@ -328,7 +328,7 @@ class MultiplexReporter(MultiplexScheme):
                 "amplicon_size_min": self.amplicon_size_min,
                 "amplicon_size_max": self.amplicon_size_max,
                 "target_overlap": self.target_overlap,
-                "high_gc_mode": self.high_gc,
+                "high_gc": self.high_gc,
                 "step_distance": config.STEP_DISTANCE,
                 "primer_size_range": {
                     "min": config.PRIMER_SIZE_RANGE.min,
