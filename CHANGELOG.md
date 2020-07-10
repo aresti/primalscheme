@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2020-07-10
+
+### Fixed
+
+- Fix unintended high-gc mode persistance when run as Celery task
+- Fix incorrect parameter name in run report json
+
 ## [1.3.0] - 2020-07-10
 
 ### Added
