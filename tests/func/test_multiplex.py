@@ -2,6 +2,7 @@ import pytest
 
 from Bio import SeqIO
 
+from primalscheme import config
 from primalscheme.cli import process_fasta
 from primalscheme.multiplex import MultiplexScheme
 from primalscheme.primer import Direction
@@ -168,5 +169,16 @@ def test_first_only_option_has_no_mistmatches_against_primary(chikv_input):
             map(
                 lambda x: x.seq == x.reference_msa[0].seq,
                 [p for p in scheme.primers if p.direction == dir],
+            )
+        )
+
+
+def test_candidate_primers_do_not_include_ambiguity_codes(chikv_ambig_input):
+    scheme = get_scheme(chikv_ambig_input)
+    for region in scheme.regions:
+        assert all(
+            map(
+                lambda x: all(base in config.UNAMBIGUOUS_DNA for base in x.seq),
+                [p for p in region.left_candidates + region.right_candidates],
             )
         )

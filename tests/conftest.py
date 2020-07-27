@@ -46,7 +46,7 @@ def input_fasta_empty(temp_inputs_path):
 def input_fasta_invalid_alphabet(temp_inputs_path):
     """Generate a fasta file with one valid record and one with an invalid alphabet"""
     fh = temp_inputs_path / "invalid_alphabet.fa"
-    records = [seq_record_factory(), seq_record_factory(alphabet="acgtRN")]
+    records = [seq_record_factory(), seq_record_factory(alphabet="acgtXZ")]
     SeqIO.write(records, fh, "fasta")
     return fh
 
@@ -97,6 +97,7 @@ STORED_INPUTS = [
     "Ebov-10-Pan.fasta",
     "nCov-2019.fasta",
     "embB_high_gc.fasta",
+    "CHIKV_ambig.fa",
 ]
 
 
@@ -108,26 +109,32 @@ def all_stored_inputs(request, stored_inputs_path):
 
 @pytest.fixture(scope="session")
 def chikv_input(stored_inputs_path):
-    """Return all stored input paths"""
+    """Return path to chikv input"""
     return stored_inputs_path / STORED_INPUTS[0]
 
 
 @pytest.fixture(scope="session")
 def ebola_input(stored_inputs_path):
-    """Return ebola input path"""
+    """Return path to ebola input"""
     return stored_inputs_path / STORED_INPUTS[1]
 
 
 @pytest.fixture(scope="session")
 def ncov_single_ref_input(stored_inputs_path):
-    """Return ebola input path"""
+    """Return path to ncov input"""
     return stored_inputs_path / STORED_INPUTS[2]
 
 
 @pytest.fixture(scope="session")
 def high_gc_input(stored_inputs_path):
-    """Return ebola input path"""
+    """Return path to high-gc input"""
     return stored_inputs_path / STORED_INPUTS[3]
+
+
+@pytest.fixture(scope="session")
+def chikv_ambig_input(stored_inputs_path):
+    """Return path to chikv input (with ambiguity codes)"""
+    return stored_inputs_path / STORED_INPUTS[4]
 
 
 @pytest.fixture(scope="session")
