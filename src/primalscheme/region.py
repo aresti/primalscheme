@@ -258,8 +258,8 @@ class Region(Window):
         self.right = self._pick_candidate(self.right_candidates)
 
         if logger.level >= logging.DEBUG:
-            self._log_debug(Direction.LEFT)
-            self._log_debug(Direction.RIGHT)
+            for direction in Direction:
+                self._log_debug(direction)
 
     def _pick_candidate(self, candidates):
         """Pick the best scoring candidate that passes a same-pool heterodimer check"""
