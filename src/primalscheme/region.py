@@ -240,19 +240,20 @@ class Region(Window):
         # Pick best-scoring left and right candidates
         self._pick_pair()
 
-    def _sort_candidates(self, candidates):
+    def _sort_candidates(self):
         """
         Sort candidates by penalty, start (higher), seq.
         seq is necessary to maintain deterministic output.
         """
-        candidates.sort(key=attrgetter("seq"))
-        candidates.sort(key=attrgetter("start"), reverse=True)
-        candidates.sort(key=attrgetter("combined_penalty"))
+        for candidates in [self.left_candidates, self.right_candidates]:
+            candidates.sort(key=attrgetter("seq"))
+            candidates.sort(key=attrgetter("start"), reverse=True)
+            candidates.sort(key=attrgetter("combined_penalty"))
 
     def _pick_pair(self):
         """Pick the best scoring left and right primer for the region"""
-        self._sort_candidates(self.left_candidates)
-        self._sort_candidates(self.right_candidates)
+        self._sort_candidates()
+
         self.left = self._pick_candidate(self.left_candidates)
         self.right = self._pick_candidate(self.right_candidates)
 
