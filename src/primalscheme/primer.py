@@ -255,8 +255,11 @@ def design_primers(msa, direction, pool, offset=0, primary_only=False):
             all_kmers.update(digest_seq(str(seq[:-variation]), kmer_size))
 
     # Generate primers
+    unambiguous_kmers = filter(
+        lambda k: all(b in config.UNAMBIGUOUS_DNA for b in k.seq), all_kmers
+    )
     primers = []
-    for kmer in all_kmers:
+    for kmer in unambiguous_kmers:
         sliced_msa = msa[:, kmer.start : kmer.start + len(kmer.seq)]
         if direction == Direction.LEFT:
             primer_start = offset + kmer.start
