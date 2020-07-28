@@ -4,26 +4,26 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog][1],
+and this project adheres to [Semantic Versioning][2].
 
-## [Unreleased]
+## Unreleased
 
-## [1.3.2] - 2020-07-28
+## v1.3.2 - 2020-07-28
 
 ### Added
 
 - Add primary_only to run report config section
 - Allow inputs with IUPAC ambiguity codes
 
-## [1.3.1] - 2020-07-10
+## v1.3.1 - 2020-07-10
 
 ### Fixed
 
 - Fix unintended high-gc mode persistance when run as Celery task
 - Fix incorrect parameter name in run report json
 
-## [1.3.0] - 2020-07-10
+## v0.3.0 - 2020-07-10
 
 ### Added
 
@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix bug where last region could be a duplicate amplicon in opposite pool (no progress)
 
-## [1.2.1] - 2020-06-27
+## v1.2.1 - 2020-06-27
 
 ### Added
 
@@ -60,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Remove logger name from log file output
 
-## [1.2.0] - 2020-06-26
+## v1.2.0 - 2020-06-26
 
 ### Added
 
@@ -87,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix edge case where last-but-one region steps right, putting last region out of bounds
 - Fix (usually) inconsequential out-by-one error to make Window.slice_end coord inclusive
 
-## [1.1.2] - 2020-06-22
+## v1.1.2 - 2020-06-22
 
 ### Fixed
 
@@ -95,7 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix missing exception message where no suitable pair found
 - Fix incorrect logging of --no-sort
 
-## [1.1.1] - 2020-06-15
+## v1.1.1 - 2020-06-15
 
 ### Added
 
@@ -105,7 +105,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reorganise Region and Window into region.py
 
-## [1.1.0] - 2020-06-14
+## v1.1.0 - 2020-06-14
 
 ### Added
 
@@ -122,7 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - DIY progress bar
 
-## [1.0.0] - Nighthawk - 2020-06-12
+## v1.0.0 - Nighthawk - 2020-06-12
 
 ### Added
 
@@ -152,7 +152,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redundant classes
 - Redundant exceptions
 
-## [0.3.0] - Blackbird - 2020-05-21
+## v0.3.0 - Blackbird - 2020-05-21
 
 ### Added
 
@@ -169,3 +169,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Candidate ranking improvements
 - Various bug fixes
 - Speed improvements
+
+[1]: https://keepachangelog.com/en/1.0.0/ "Keep a Changelog"
+[2]: https://semver.org/spec/v2.0.0.html "Semantic Versioning"
