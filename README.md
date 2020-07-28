@@ -98,7 +98,6 @@ Many parameters are not directly exposed in the CLI as we believe they are neces
 
 1. Download complete genomes from GenBank and concatenate into a single FASTA file.
     * e.g. `cat "sequence (1).fasta" "sequence (2).fasta" > input.fasta`
-    * primalscheme does not currently support inputs with ambiguity codes.
 2. Align all sequences using [Clustal Omega](https://www.ebi.ac.uk/Tools/msa/clustalo/).
 3. The genomes should be complete and roughly the same length.
     * Primers are only designed within the limits of the alignment.
