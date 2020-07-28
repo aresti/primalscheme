@@ -178,7 +178,7 @@ class MultiplexScheme:
         is_last = False
         while not is_last:
             is_last = self._is_last_region
-            region = Region(self._region_num, self, self._left_limit, self._slice_start)
+            region = Region(self, self._region_num, self._left_limit, self._slice_start)
             try:
                 region.find_primers()
             except NoSuitablePrimersError as exc:
