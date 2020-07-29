@@ -210,9 +210,7 @@ def process_fasta(file_path, min_ref_size=None):
     # Remove gaps
     for record in records:
         ref = SeqRecord(
-            Seq(str(record.seq).replace("-", "").upper()),
-            id=record.id,
-            description=record.id,
+            Seq(str(record.seq).upper()), id=record.id, description=record.id,
         )
         references.append(ref)
 
