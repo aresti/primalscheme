@@ -226,7 +226,7 @@ def process_fasta(file_path, min_ref_size=None):
         )
 
     # Check for too many references
-    if len(references) > 100:
+    if len(references) > 200:
         raise ValueError("A maximum of 100 reference genomes is currently supported.")
 
     # Check for max difference in size between references
