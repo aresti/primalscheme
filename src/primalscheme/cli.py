@@ -52,7 +52,7 @@ def cli():
 
 
 @cli.command()
-@click.argument("fasta", type=click.Path(exists=True, dir_okay=False))
+@click.argument("fastas", nargs=-1, type=click.Path(exists=True, dir_okay=False))
 @click.option(
     "--amplicon-size",
     "-a",
@@ -113,7 +113,7 @@ def cli():
     default=False,
 )
 def multiplex(
-    fasta, amplicon_size, outpath, name, target_overlap, debug, force, pinned, high_gc
+    fastas, amplicon_size, outpath, name, target_overlap, debug, force, pinned, high_gc
 ):
     """Design a multiplex PCR scheme."""
     # Handle args
@@ -136,41 +136,51 @@ def multiplex(
     # Setup logging
     setup_logging(outpath, debug=debug, prefix=name)
 
-    # Process FASTA input
-    try:
-        references = process_fasta(fasta, min_ref_size=amplicon_size_max)
-    except ValueError as e:
-        logger.error(f"Error: {e}")
-        sys.exit(2)
+    # Process FASTA input file(s)
+    reference_collections = []
+    for fasta in fastas:
+        try:
+            references = process_fasta(fasta, min_ref_size=amplicon_size_max)
+            reference_collections.append(references)
+        except ValueError as e:
+            logger.error(f"Error: {e}")
+            sys.exit(2)
 
     # High GC warning
-    if not high_gc and any(
-        calc_gc(str(ref.seq)) > config.HIGH_GC_WARN_THRESHOLD for ref in references
-    ):
-        click.echo(
-            click.style(
-                "WARNING: High-GC reference detected. Consider using --high-gc mode.",
-                fg="red",
-            )
-        )
+    if not high_gc:
+        for collection in reference_collections:
+            if any(
+                calc_gc(str(ref.seq)) > config.HIGH_GC_WARN_THRESHOLD
+                for ref in collection
+            ):
+                click.echo(
+                    click.style(
+                        "WARNING: High-GC reference detected. Consider using --high-gc"
+                        "mode.",
+                        fg="red",
+                    )
+                )
+                break
 
     # Progress bar
     progress_bar = ProgressBar()
 
     # Log references
-    ref_ids = [f" - {ref.id}" for ref in references]
-    logger.info("\n".join(["References:"] + ref_ids))
+    for fasta in fastas:
+        filename = click.format_filename(fasta)
+        ref_ids = [f" - {ref.id}" for ref in references]
+        logger.info("\n".join([f"References in file {filename}:"] + ref_ids))
     logger.info(f"Primary reference for coordinate system: {references[0].id}")
     logger.info(
         "Considering primers from "
         f"{'primary reference only' if pinned else 'all references'}"
     )
 
-    # Create scheme
+    # Create panel
     try:
-        scheme = MultiplexReporter(
+        panel = MultiplexReporter(
             outpath,
-            references,
+            reference_collections,
             prefix=name,
             amplicon_size_min=amplicon_size_min,
             amplicon_size_max=amplicon_size_max,
@@ -179,7 +189,7 @@ def multiplex(
             high_gc=high_gc,
             progress_tracker=progress_bar,
         )
-        scheme.design_scheme()
+        panel.design_panel()
     except NoSuitablePrimersError:
         # Unable to find primers for at least one region
         logger.error("Error: Unable to find suitable primers")
@@ -191,13 +201,13 @@ def multiplex(
 
     # Write outputs
     logger.info(
-        f"All done! Scheme created with {len(scheme.regions)} regions, "
-        f"{scheme.gap_count} gap{'' if scheme.gap_count == 1 else 's'}, "
-        f"{scheme.percent_coverage}% coverage"
+        f"All done! Scheme created with {len(panel.regions)} regions, "
+        # f"{panel.gap_count} gap{'' if panel.gap_count == 1 else 's'}, "
+        # f"{panel.percent_coverage}% coverage"
     )
-    scheme.write_default_outputs()
+    panel.write_default_outputs()
     if debug:
-        scheme.write_pickle()
+        panel.write_pickle()
     sys.exit(0)
 
 

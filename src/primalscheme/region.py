@@ -44,6 +44,7 @@ class Region:
         """Init Region."""
         self.region_num = region_num
         self.scheme = scheme
+        self.panel = scheme.panel  # shortcut
         self.left_limit = left_limit
         self.slice_start = slice_start
         self.right_limit = right_limit or len(scheme.primary_ref.seq)
@@ -72,7 +73,7 @@ class Region:
     @property
     def slice_end(self):
         """Slice end position."""
-        return self.slice_start + self.scheme.amplicon_size_max - 1
+        return self.slice_start + self.panel.amplicon_size_max - 1
 
     @property
     def ref_slice(self):
@@ -83,7 +84,7 @@ class Region:
     def flank_size(self):
         """Size of the slice flanks, where possible primers could be located."""
         return (
-            int((self.scheme.amplicon_size_max - self.scheme.amplicon_size_min) / 2)
+            int((self.panel.amplicon_size_max - self.panel.amplicon_size_min) / 2)
             + config.PRIMER_SIZE_RANGE.max
         )
 
@@ -185,7 +186,7 @@ class Region:
             Direction.LEFT,
             self.pool,
             offset=self.slice_start,
-            primary_only=self.scheme.primary_only,
+            primary_only=self.panel.primary_only,
         )
         candidates.extend(
             design_primers(
@@ -193,7 +194,7 @@ class Region:
                 Direction.RIGHT,
                 self.pool,
                 offset=self.slice_end - self.flank_size + 1,
-                primary_only=self.scheme.primary_only,
+                primary_only=self.panel.primary_only,
             )
         )
 
@@ -264,7 +265,8 @@ class Region:
         Return True if candidate primer forms stable heterodimer with
         an existing primer in the same pool.
         """
-        for existing in self.scheme.primers_in_pool(self.pool):
+        existing_primers = self.panel.primers_in_pool(self.pool)
+        for existing in existing_primers:
             thermo_end = primer3.bindings.calcEndStability(
                 candidate.seq,
                 existing.seq,

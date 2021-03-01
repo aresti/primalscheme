@@ -27,7 +27,6 @@ import logging
 import pickle
 
 from abc import ABC, abstractmethod
-from collections import namedtuple
 
 from Bio import SeqIO
 from Bio.Graphics import GenomeDiagram
@@ -35,16 +34,71 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from reportlab.lib import colors
 
 from primalscheme import config, __version__ as version
-from primalscheme.multiplex import MultiplexScheme
-from primalscheme.primer import Direction
+from primalscheme.multiplex import MultiplexPanel
+from primalscheme.primer import calc_gc, Direction
 
 logger = logging.getLogger("primalscheme")
 
 
-Insert = namedtuple("Insert", "start end pool")
+def apply_to_window(sequence, window_size, function, step=None):
+    """
+        Modified from
+        https://github.com/biopython/biopython/blob/master/Tests/test_GenomeDiagram.py
+        Apply function to windows of the given sequence.
+        Returns a list of (position, value) tuples for fragments of the passed
+        sequence of length window_size (stepped by step), calculated by the
+        passed function.  Returned positions are the midpoint of each window.
+        Arguments:
+        - sequence - Bio.Seq.Seq object.
+        - window_size - an integer describing the length of sequence
+          to consider.
+        - step - an integer describing the step to take between windows
+          (default = window_size//2).
+        - function - Method or function that accepts a Bio.Seq.Seq object
+          as its sole argument and returns a single value.
+        apply_to_window(sequence, window_size, function) ->
+            [(int, float),(int, float),...]
+        """
+    seqlen = len(sequence)  # Total length of sequence to be used
+    if step is None:  # Use half window-width or 1 if larger
+        step = max(window_size // 2, 1)
+    else:  # Use specified step, or 1 if greater
+        step = max(step, 1)
+
+    results = []  # Holds (position, value) results
+
+    # Perform the passed function on as many windows as possible, short of
+    # overrunning the sequence
+    pos = 0
+    while pos < seqlen - window_size + 1:
+        # Obtain sequence fragment
+        start = pos
+        middle = (pos + window_size + pos) // 2
+        end = pos + window_size
+        fragment = sequence[start:end]
+        # Apply function to the sequence fragment
+        value = function(fragment)
+        results.append((middle, value))  # Add results to list
+        # Advance to next fragment
+        pos += step
+
+    # Use the last available window on the sequence, even if it means
+    # re-covering old ground
+    if pos != seqlen - window_size:
+        # Obtain sequence fragment
+        pos = seqlen - window_size
+        start = pos
+        middle = (pos + window_size + pos) // 2
+        end = pos + window_size
+        fragment = sequence[start:end]
+        # Apply function to sequence fragment
+        value = function(fragment)
+        results.append((middle, value))  # Add results to list
+
+    return results  # Return the list of (position, value) results
 
 
-class MultiplexReporter(MultiplexScheme):
+class MultiplexReporter(MultiplexPanel):
     """Reporting methods to extend MultiplexScheme."""
 
     def __init__(self, outpath, *args, **kwargs):
@@ -52,44 +106,14 @@ class MultiplexReporter(MultiplexScheme):
         self.outpath = outpath
         super().__init__(*args, **kwargs)
 
-    @property
-    def inserts(self):
-        """A list of insert (start, end) tuples."""
-        return [Insert(r.left.end + 1, r.right.end - 1, r.pool) for r in self.regions]
-
-    @property
-    def gap_count(self):
-        """The total number of gaps in the scheme."""
-        gaps = 0
-        last_covered = self.inserts[0].end
-        for insert in self.inserts[1:]:
-            if insert.start > last_covered:
-                gaps += 1
-            last_covered = insert.end
-        return gaps
-
-    @property
-    def percent_coverage(self):
-        """Coverage %, with respect to the primary reference."""
-        covered_coords = set(
-            [x for insert in self.inserts for x in range(insert.start, insert.end + 1)]
-        )
-        return round(len(covered_coords) / self.ref_len * 100, 2)
-
-    def calc_gc(self, sequence):
-        """Return gc content for a sequence as fraction."""
-        g = sequence.count("G") + sequence.count("g")
-        c = sequence.count("C") + sequence.count("c")
-        return (g + c) / len(sequence)
-
     def write_default_outputs(self):
         """Write all default output files."""
         self.write_primer_bed()
         self.write_insert_bed()
         self.write_primer_tsv()
         self.write_refs()
-        self.write_schemadelica_plot()
-        self.write_run_report_json()
+        # self.write_schemadelica_plot()
+        # self.write_run_report_json()
 
     def write_primer_bed(self):
         """Write primer BED file."""
@@ -97,23 +121,25 @@ class MultiplexReporter(MultiplexScheme):
         logger.info(f"Writing {filepath}")
 
         rows = []
-        ref_id = self.primary_ref.id
 
-        for i, p in enumerate(self.primers):
-            region_num = int(i / 2) + 1
-            start = p.start if p.direction == Direction.LEFT else p.end
-            end = p.end if p.direction == Direction.LEFT else p.start
-            name = f"{self.prefix}_{region_num}_{p.direction.name}"
-            rows.append(
-                [
-                    ref_id,
-                    start,
-                    end + 1,  # BED end is 1-based
-                    name,
-                    p.pool,
-                    p.direction.value,
-                ]
-            )
+        for scheme in self.schemes:
+            ref_id = scheme.primary_ref.id
+
+            for i, p in enumerate(scheme.primers):
+                region_num = int(i / 2) + 1
+                start = p.start if p.direction == Direction.LEFT else p.end
+                end = p.end if p.direction == Direction.LEFT else p.start
+                name = f"{self.prefix}_{region_num}_{p.direction.name}"
+                rows.append(
+                    [
+                        ref_id,
+                        start,
+                        end + 1,  # BED end is 1-based
+                        name,
+                        p.pool,
+                        p.direction.value,
+                    ]
+                )
 
         with open(filepath, "w") as fh:
             cw = csv.writer(fh, delimiter="\t")
@@ -125,19 +151,21 @@ class MultiplexReporter(MultiplexScheme):
         logger.info(f"Writing {filepath}")
 
         rows = []
-        ref_id = self.primary_ref.id
 
-        for insert_num, insert in enumerate(self.inserts):
-            rows.append(
-                [
-                    ref_id,
-                    insert.start,
-                    insert.end + 1,  # BED end is 1-based
-                    f"{self.prefix}_INSERT_{insert_num + 1}",
-                    insert.pool,
-                    "+",
-                ]
-            )
+        for scheme in self.schemes:
+            ref_id = scheme.primary_ref.id
+
+            for insert_num, insert in enumerate(scheme.inserts):
+                rows.append(
+                    [
+                        ref_id,
+                        insert.start,
+                        insert.end + 1,  # BED end is 1-based
+                        f"{self.prefix}_INSERT_{insert_num + 1}",
+                        insert.pool,
+                        "+",
+                    ]
+                )
 
         with open(filepath, "w") as fh:
             cw = csv.writer(fh, delimiter="\t")
@@ -179,64 +207,8 @@ class MultiplexReporter(MultiplexScheme):
         filepath = self.outpath / f"{self.prefix}.reference.fasta"
         logger.info(f"Writing {filepath}")
         with open(filepath, "w"):
-            SeqIO.write(self.references, filepath, "fasta")
-
-    def apply_to_window(self, sequence, window_size, function, step=None):
-        """
-        Modified from
-        https://github.com/biopython/biopython/blob/master/Tests/test_GenomeDiagram.py
-        Apply function to windows of the given sequence.
-        Returns a list of (position, value) tuples for fragments of the passed
-        sequence of length window_size (stepped by step), calculated by the
-        passed function.  Returned positions are the midpoint of each window.
-        Arguments:
-        - sequence - Bio.Seq.Seq object.
-        - window_size - an integer describing the length of sequence
-          to consider.
-        - step - an integer describing the step to take between windows
-          (default = window_size//2).
-        - function - Method or function that accepts a Bio.Seq.Seq object
-          as its sole argument and returns a single value.
-        apply_to_window(sequence, window_size, function) ->
-            [(int, float),(int, float),...]
-        """
-        seqlen = len(sequence)  # Total length of sequence to be used
-        if step is None:  # Use half window-width or 1 if larger
-            step = max(window_size // 2, 1)
-        else:  # Use specified step, or 1 if greater
-            step = max(step, 1)
-
-        results = []  # Holds (position, value) results
-
-        # Perform the passed function on as many windows as possible, short of
-        # overrunning the sequence
-        pos = 0
-        while pos < seqlen - window_size + 1:
-            # Obtain sequence fragment
-            start = pos
-            middle = (pos + window_size + pos) // 2
-            end = pos + window_size
-            fragment = sequence[start:end]
-            # Apply function to the sequence fragment
-            value = function(fragment)
-            results.append((middle, value))  # Add results to list
-            # Advance to next fragment
-            pos += step
-
-        # Use the last available window on the sequence, even if it means
-        # re-covering old ground
-        if pos != seqlen - window_size:
-            # Obtain sequence fragment
-            pos = seqlen - window_size
-            start = pos
-            middle = (pos + window_size + pos) // 2
-            end = pos + window_size
-            fragment = sequence[start:end]
-            # Apply function to sequence fragment
-            value = function(fragment)
-            results.append((middle, value))  # Add results to list
-
-        return results  # Return the list of (position, value) results
+            for scheme in self.schemes:
+                SeqIO.write(scheme.references[0], filepath, "fasta")
 
     def write_schemadelica_plot(self):
         """Write schemadelica plot as SVG and PDF."""
@@ -246,7 +218,7 @@ class MultiplexReporter(MultiplexScheme):
         # make the gc track
         window = 50
         gc_set = GenomeDiagram.GraphSet("GC content")
-        graphdata1 = self.apply_to_window(self.primary_ref.seq, window, self.calc_gc)
+        graphdata1 = self.apply_to_window(self.primary_ref.seq, window, calc_gc)
         gc_set.new_graph(
             graphdata1,
             "GC content",
@@ -315,7 +287,7 @@ class MultiplexReporter(MultiplexScheme):
         filepath = self.outpath / f"{self.prefix}.report.json"
         logger.info(f"Writing {filepath}")
         data = {
-            "references": [ref.id for ref in self.references],
+            "references": [ref.id for ref in self.reference_collections],
             "primary_ref": self.references[0].id,
             "secondary_refs": [ref.id for ref in self.secondary_refs],
             "secondary_ref_count": len(self.secondary_refs),
