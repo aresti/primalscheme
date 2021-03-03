@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning][2].
 
 ## Unreleased
 
+### Added
+
+- The fastas argument now takes one or more input files, creating a panel of schemes (one for each input file), where candidate primers are checeked for interactions against previously selected primers in the same pool across the entire panel.
+
 ## v1.3.2 - 2020-07-28
 
 ### Added
