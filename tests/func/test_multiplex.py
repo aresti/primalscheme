@@ -4,25 +4,26 @@ from Bio import SeqIO
 
 from primalscheme import config
 from primalscheme.cli import process_fasta
-from primalscheme.multiplex import MultiplexScheme
+from primalscheme.multiplex import MultiplexPanel
 from primalscheme.primer import Direction
 
 
 @pytest.fixture(scope="session")
 def chikv_scheme(chikv_input):
-    return get_scheme(chikv_input)
+    return get_panel(chikv_input).schemes[0]
 
 
 @pytest.fixture(scope="session")
 def ebola_scheme(ebola_input):
-    return get_scheme(ebola_input)
+    return get_panel(ebola_input).schemes[0]
 
 
-def get_scheme(fasta, **kwargs):
+def get_panel(fasta, **kwargs):
     references = process_fasta(fasta)
-    scheme = MultiplexScheme(references, **kwargs)
-    scheme.design_scheme()
-    return scheme
+    reference_collections = [references]
+    panel = MultiplexPanel(reference_collections, **kwargs)
+    panel.design_panel()
+    return panel
 
 
 def no_collisions(regions):
@@ -47,7 +48,8 @@ def test_chikv_scheme_has_no_gaps(chikv_scheme):
 
 
 def test_no_collisions_in_any_test_scheme(all_stored_inputs):
-    scheme = get_scheme(all_stored_inputs)
+    panel = get_panel(all_stored_inputs)
+    scheme = panel.schemes[0]
     assert no_collisions(scheme.regions)
 
 
@@ -56,13 +58,13 @@ def test_scheme_varying_amplicon_sizes(amplicon_size, chikv_input):
     variation = int(0.1 * amplicon_size / 2)
     amplicon_size_min = amplicon_size - variation
     amplicon_size_max = amplicon_size + variation
-    scheme = get_scheme(
+    panel = get_panel(
         chikv_input,
         amplicon_size_min=amplicon_size_min,
         amplicon_size_max=amplicon_size_max,
     )
 
-    regions = scheme.regions
+    regions = panel.regions
     for region in regions[:4]:
         product_size = region.product_size
         assert product_size <= amplicon_size_max
@@ -70,8 +72,8 @@ def test_scheme_varying_amplicon_sizes(amplicon_size, chikv_input):
 
 
 def test_large_target_overlap_does_not_result_in_collision(chikv_input):
-    scheme = get_scheme(chikv_input, target_overlap=300)
-
+    panel = get_panel(chikv_input, target_overlap=300)
+    scheme = panel.schemes[0]
     assert no_collisions(scheme.regions)
 
 
@@ -150,11 +152,11 @@ def test_multiple_references_used_for_primer_design(chikv_scheme):
 
 
 def test_scheme_runs_with_single_reference(ncov_single_ref_input):
-    references = process_fasta(ncov_single_ref_input)
-    scheme = MultiplexScheme(references)
-    scheme.design_scheme()
+    ref = process_fasta(ncov_single_ref_input)
+    panel = MultiplexPanel([ref])
+    panel.design_panel()
 
-    assert len(scheme.regions) > 30
+    assert len(panel.schemes[0].regions) > 30
 
 
 def test_first_reference_is_primary(ebola_input, ebola_scheme):
@@ -163,7 +165,8 @@ def test_first_reference_is_primary(ebola_input, ebola_scheme):
 
 
 def test_first_only_option_has_no_mistmatches_against_primary(chikv_input):
-    scheme = get_scheme(chikv_input, primary_only=True)
+    panel = get_panel(chikv_input, primary_only=True)
+    scheme = panel.schemes[0]
     for dir in Direction:
         assert all(
             map(
@@ -173,9 +176,9 @@ def test_first_only_option_has_no_mistmatches_against_primary(chikv_input):
         )
 
 
-def test_candidate_primers_do_not_include_ambiguity_codes(chikv_ambig_input):
-    scheme = get_scheme(chikv_ambig_input)
-    for region in scheme.regions:
+def test_candidate_primers_consist_entirely_of_unambiguous_dna(chikv_ambig_input):
+    panel = get_panel(chikv_ambig_input)
+    for region in panel.regions:
         assert all(
             map(
                 lambda x: all(base in config.UNAMBIGUOUS_DNA for base in x.seq),

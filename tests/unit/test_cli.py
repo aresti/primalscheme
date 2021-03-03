@@ -43,11 +43,11 @@ def test_cli_without_command_shows_help(cli_runner):
     assert "--help" in result.output
 
 
-def test_multiplex_command_without_fasta_returns_exit_code_2(cli_runner):
-    """Does CLI stop execution w/o a positional fasta arg, returning exit code 2?"""
+def test_multiplex_command_without_fasta_degrades_to_noop(cli_runner):
+    """Does CLI gracefully degrade to noop for empty variadic argument?"""
     result = cli_runner.invoke(cli, ["multiplex"])
 
-    assert result.exit_code == 2
+    assert result.exit_code == 0
 
 
 @pytest.mark.parametrize(
@@ -240,10 +240,10 @@ def test_process_fasta_chikv_demo(chikv_input):
     assert len(references) == 2
 
 
-def test_process_fasta_gaps_removed(input_fasta_valid_with_gaps):
-    """Does process_fasta remove gaps?"""
+def test_process_fasta_gaps_remain(input_fasta_valid_with_gaps):
+    """Does process_fasta retain gaps?"""
     references = process_fasta(input_fasta_valid_with_gaps)
-    assert "-" not in references[0]
+    assert "-" in references[0]
 
 
 def test_process_fasta_too_short_input(input_fasta_short_500):

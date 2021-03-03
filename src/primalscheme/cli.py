@@ -117,6 +117,11 @@ def multiplex(
 ):
     """Design a multiplex PCR scheme."""
     # Handle args
+    if not len(fastas):
+        # noop  - see note in click docs
+        # https://click.palletsprojects.com/en/7.x/arguments/?highlight=nargs#variadic-arguments
+        sys.exit()
+
     if len(amplicon_size) == 1:
         target_amplicon_size = amplicon_size[0]
         half_range = int(target_amplicon_size * config.SIZE_RANGE_AUTO / 2)
@@ -205,6 +210,12 @@ def multiplex(
         # f"{panel.gap_count} gap{'' if panel.gap_count == 1 else 's'}, "
         # f"{panel.percent_coverage}% coverage"
     )
+    for i, scheme in enumerate(panel.schemes):
+        if scheme.no_suitable_primers:
+            logger.error(
+                "Unable to find suitable primers for file "
+                f"{click.format_filename(fastas[i])}"
+            )
     panel.write_default_outputs()
     if debug:
         panel.write_pickle()
@@ -236,7 +247,7 @@ def process_fasta(file_path, min_ref_size=None):
         )
 
     # Check for too many references
-    if len(references) > 200:
+    if len(references) > 100:
         raise ValueError("A maximum of 100 reference genomes is currently supported.")
 
     # Check for max difference in size between references

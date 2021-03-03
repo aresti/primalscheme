@@ -128,7 +128,9 @@ class MultiplexPanel:
                 if len(self.reference_collections) == 1:
                     raise e
             self.schemes.append(scheme)
-            self.combined_progress += scheme.ref_len
+
+            if self.progress_tracker:
+                self.combined_progress += scheme.ref_len
 
         if self.progress_tracker:
             self.progress_tracker.goto(self.progress_tracker.end)
