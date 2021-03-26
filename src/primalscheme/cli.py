@@ -156,7 +156,7 @@ def multiplex(
         all_record_ids = []
         for collection in reference_collections:
             all_record_ids.extend(record.id for record in collection)
-        if len(all_record_ids) != set(all_record_ids):
+        if len(all_record_ids) != len(set(all_record_ids)):
             logger.error("Error: Duplicate FASTA record id found across input files")
             sys.exit(2)
 
@@ -180,11 +180,10 @@ def multiplex(
     progress_bar = ProgressBar()
 
     # Log references
-    for fasta in fastas:
+    for i, fasta in enumerate(fastas):
         filename = click.format_filename(fasta)
-        ref_ids = [f" - {ref.id}" for ref in references]
+        ref_ids = [f" - {ref.id}" for ref in reference_collections[i]]
         logger.info("\n".join([f"References in file {filename}:"] + ref_ids))
-    logger.info(f"Primary reference for coordinate system: {references[0].id}")
     logger.info(
         "Considering primers from "
         f"{'primary reference only' if pinned else 'all references'}"

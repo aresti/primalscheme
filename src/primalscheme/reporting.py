@@ -207,8 +207,7 @@ class MultiplexReporter(MultiplexPanel):
         filepath = self.outpath / f"{self.prefix}.reference.fasta"
         logger.info(f"Writing {filepath}")
         with open(filepath, "w"):
-            for scheme in self.schemes:
-                SeqIO.write(scheme.references[0], filepath, "fasta")
+            SeqIO.write(self.primary_references, filepath, "fasta")
 
     def write_schemadelica_plot(self):
         """Write schemadelica plot as SVG and PDF."""

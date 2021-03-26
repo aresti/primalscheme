@@ -118,6 +118,10 @@ class MultiplexPanel:
     def percent_coverage(self):
         return 100
 
+    @property
+    def primary_references(self):
+        return [scheme.primary_ref for scheme in self.schemes]
+
     def design_panel(self):
         """Design a panel of multiplex primer schemes."""
         for references in self.reference_collections:
