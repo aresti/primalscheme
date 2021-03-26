@@ -151,6 +151,15 @@ def multiplex(
             logger.error(f"Error: {e}")
             sys.exit(2)
 
+    # Check for duplicate FASTA record ids between files
+    if len(fastas) > 1:
+        all_record_ids = []
+        for collection in reference_collections:
+            all_record_ids.extend(record.id for record in collection)
+        if len(all_record_ids) != set(all_record_ids):
+            logger.error("Error: Duplicate FASTA record id found across input files")
+            sys.exit(2)
+
     # High GC warning
     if not high_gc:
         for collection in reference_collections:
@@ -204,7 +213,7 @@ def multiplex(
         logger.error(f"Error: {e}")
         raise e
 
-    # Write outputs
+    # Report
     logger.info(
         f"All done! Scheme created with {len(panel.regions)} regions, "
         # f"{panel.gap_count} gap{'' if panel.gap_count == 1 else 's'}, "
@@ -212,10 +221,15 @@ def multiplex(
     )
     for i, scheme in enumerate(panel.schemes):
         if scheme.no_suitable_primers:
-            logger.error(
-                "Unable to find suitable primers for file "
-                f"{click.format_filename(fastas[i])}"
+            click.echo(
+                click.style(
+                    "Unable to find suitable primers for file "
+                    f"{click.format_filename(fastas[i])}",
+                    fg="orange",
+                )
             )
+
+    # Wite outputs
     panel.write_default_outputs()
     if debug:
         panel.write_pickle()
@@ -238,6 +252,11 @@ def process_fasta(file_path, min_ref_size=None):
     # Check for no references
     if not references:
         raise ValueError("The input FASTA file does not contain any valid references.")
+
+    # Check for duplicate record ids
+    ids = [record.id for record in references]
+    if len(ids) != len(set(ids)):
+        raise ValueError(f"FASTA record ids are not unique within file {file_path}")
 
     # Check for too short references
     if min_ref_size and any(len(ref) < min_ref_size for ref in references):
