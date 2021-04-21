@@ -41,7 +41,10 @@ from primalscheme.reporting import MultiplexReporter, ProgressTracker
 logger = logging.getLogger("primalscheme")
 
 
-CLI_CONTEXT = dict(auto_envvar_prefix="PRIMAL", help_option_names=["-h", "--help"],)
+CLI_CONTEXT = dict(
+    auto_envvar_prefix="PRIMAL",
+    help_option_names=["-h", "--help"],
+)
 
 
 @click.group(context_settings=CLI_CONTEXT)
@@ -130,7 +133,12 @@ def multiplex(
     try:
         outpath = get_output_path(outpath, force=force)
     except IOError as e:
-        click.echo(click.style(f"Error: {e}", fg="red",))
+        click.echo(
+            click.style(
+                f"Error: {e}",
+                fg="red",
+            )
+        )
         sys.exit(1)
 
     # Setup logging
@@ -210,7 +218,9 @@ def process_fasta(file_path, min_ref_size=None):
     # Remove gaps
     for record in records:
         ref = SeqRecord(
-            Seq(str(record.seq).upper()), id=record.id, description=record.id,
+            Seq(str(record.seq).upper()),
+            id=record.id,
+            description=record.id,
         )
         references.append(ref)
 
