@@ -41,7 +41,10 @@ from primalscheme.reporting import MultiplexReporter, ProgressTracker
 logger = logging.getLogger("primalscheme")
 
 
-CLI_CONTEXT = dict(auto_envvar_prefix="PRIMAL", help_option_names=["-h", "--help"],)
+CLI_CONTEXT = dict(
+    auto_envvar_prefix="PRIMAL",
+    help_option_names=["-h", "--help"],
+)
 
 
 @click.group(context_settings=CLI_CONTEXT)
@@ -130,7 +133,12 @@ def multiplex(
     try:
         outpath = get_output_path(outpath, force=force)
     except IOError as e:
-        click.echo(click.style(f"Error: {e}", fg="red",))
+        click.echo(
+            click.style(
+                f"Error: {e}",
+                fg="red",
+            )
+        )
         sys.exit(1)
 
     # Setup logging
@@ -192,7 +200,7 @@ def multiplex(
     # Write outputs
     logger.info(
         f"All done! Scheme created with {len(scheme.regions)} regions, "
-        f"{scheme.gap_count } gap{'' if scheme.gap_count == 1 else 's'}, "
+        f"{scheme.gap_count} gap{'' if scheme.gap_count == 1 else 's'}, "
         f"{scheme.percent_coverage}% coverage"
     )
     scheme.write_default_outputs()
@@ -210,7 +218,7 @@ def process_fasta(file_path, min_ref_size=None):
     # Remove gaps
     for record in records:
         ref = SeqRecord(
-            Seq(str(record.seq).replace("-", "").upper()),
+            Seq(str(record.seq).upper()),
             id=record.id,
             description=record.id,
         )
@@ -228,8 +236,10 @@ def process_fasta(file_path, min_ref_size=None):
         )
 
     # Check for too many references
-    if len(references) > 100:
-        raise ValueError("A maximum of 100 reference genomes is currently supported.")
+    if len(references) > config.MAX_REFERENCES:
+        raise ValueError(
+            f"A maximum of {config.MAX_REFERENCES} reference genomes is supported."
+        )
 
     # Check for max difference in size between references
     primary_ref = references[0]

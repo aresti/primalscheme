@@ -24,6 +24,7 @@ import logging
 import primer3
 
 from operator import attrgetter
+
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
 
@@ -34,34 +35,77 @@ from primalscheme.primer import design_primers, primer_thermo_filter, Direction
 logger = logging.getLogger("primalscheme")
 
 
-class Window:
+class Region:
     """
-    A sliding window representing slice coordinates
-    against the primary reference.
+    A region forming part of a tiling amplicon scheme.
     """
 
-    def __init__(self, scheme, left_limit, slice_start, right_limit=None):
-        """Init Window."""
+    def __init__(self, scheme, region_num, left_limit, slice_start, right_limit=None):
+        """Init Region."""
+        self.region_num = region_num
         self.scheme = scheme
         self.left_limit = left_limit
         self.slice_start = slice_start
         self.right_limit = right_limit or len(scheme.primary_ref.seq)
 
-        self._initial_slice_start = self.slice_start
+        self.initial_slice_start = self.slice_start
+        self.pool = 1 if self.region_num % 2 == 1 else 2
+
+        self.left = None
+        self.right = None
         self.left_flank_msa = None
         self.right_flank_msa = None
+        self.left_candidates = []
+        self.right_candidates = []
+        self.exhausted_left_stepping = False
+        self.failed_alignment_count = 0
 
         logger.debug(
-            f"Window: left_limit {left_limit}, slice_start {slice_start}, "
-            f"right_limit {self.right_limit}"
+            f"Region {region_num}, pool {self.pool}, left_limit {left_limit}, "
+            f"slice_start {slice_start}, right_limit {self.right_limit}"
         )
 
         # check bounds
         if slice_start < left_limit or self.slice_end > self.right_limit:
             raise SliceOutOfBoundsError("The window slice is out of bounds.")
 
+    @property
+    def slice_end(self):
+        """Slice end position."""
+        return self.slice_start + self.scheme.amplicon_size_max - 1
+
+    @property
+    def ref_slice(self):
+        """Primary reference sequence for the slice."""
+        return self.scheme.primary_ref[self.slice_start : self.slice_end + 1]
+
+    @property
+    def flank_size(self):
+        """Size of the slice flanks, where possible primers could be located."""
+        return (
+            int((self.scheme.amplicon_size_max - self.scheme.amplicon_size_min) / 2)
+            + config.PRIMER_SIZE_RANGE.max
+        )
+
+    @property
+    def left_flank(self):
+        """Primary reference sequence for the left flank."""
+        return self.ref_slice[: self.flank_size]
+
+    @property
+    def right_flank(self):
+        """Primary reference sequence for the right flank."""
+        return self.ref_slice[-self.flank_size :]
+
+    @property
+    def product_size(self):
+        """Product size for the picked left/right primers."""
+        if self.left and self.right:
+            return self.right.start - self.left.start + 1
+        return None
+
     def step_left(self):
-        """Step the slice start position left, raise if limit reached"""
+        """Step the slice start position left; raise if limit reached."""
         distance = config.STEP_DISTANCE
         if (self.slice_start - distance) < self.left_limit:
             logger.debug("Left limit reached")
@@ -71,7 +115,7 @@ class Window:
         logger.debug(f"Stepping left to {self.slice_start}")
 
     def step_right(self):
-        """Step the slice start position right, raise if limit reached"""
+        """Step the slice start position right; raise if limit reached."""
         distance = config.STEP_DISTANCE
         if (self.slice_end + distance) > self.right_limit:
             logger.debug("Right limit reached")
@@ -81,36 +125,8 @@ class Window:
         logger.debug(f"Stepping right to {self.slice_start}")
 
     def reset_slice(self):
-        """Reset the slice start position to its initial value"""
-        self.slice_start = self._initial_slice_start
-
-    @property
-    def slice_end(self):
-        """The slice end position"""
-        return self.slice_start + self.scheme.amplicon_size_max - 1
-
-    @property
-    def ref_slice(self):
-        """The reference sequence for the slice"""
-        return self.scheme.primary_ref[self.slice_start : self.slice_end + 1]
-
-    @property
-    def flank_size(self):
-        """The size of the slice flanks, where possible primers could be located"""
-        return (
-            int((self.scheme.amplicon_size_max - self.scheme.amplicon_size_min) / 2)
-            + config.PRIMER_SIZE_RANGE.max
-        )
-
-    @property
-    def left_flank(self):
-        """The reference sequence for the left flank"""
-        return self.ref_slice[: self.flank_size]
-
-    @property
-    def right_flank(self):
-        """The reference sequence for the right flank"""
-        return self.ref_slice[-self.flank_size :]
+        """Reset the slice start position to its initial value."""
+        self.slice_start = self.initial_slice_start
 
     def align_flanks(self):
         """Perform multiple seq alignment of all refs for flanks."""
@@ -126,36 +142,8 @@ class Window:
                 SeqRecord(ra.reverse_complement().seq, id=ra.id)
             )
 
-
-class Region(Window):
-    """
-    A region forming part of a tiling amplicon scheme.
-    """
-
-    def __init__(self, region_num, *args, **kwargs):
-        """Init Region."""
-        self.region_num = region_num
-        self.pool = 1 if self.region_num % 2 == 1 else 2
-        super().__init__(*args, **kwargs)
-
-        self.left = None
-        self.right = None
-        self.left_candidates = []
-        self.right_candidates = []
-        self.exhausted_left_stepping = False
-        self.failed_alignment_count = 0
-
-        logger.debug(f"Region {region_num}, pool {self.pool}")
-
-    @property
-    def product_size(self):
-        """The product size for the picked left/right primers"""
-        if self.left and self.right:
-            return self.right.start - self.left.start + 1
-        return None
-
     def find_primers(self):
-        """Find primers for this region"""
+        """Find primers for this region."""
         while True:
             try:
                 self._find_primers_for_slice()
@@ -169,7 +157,7 @@ class Region(Window):
                 self._try_stepping()
 
     def _try_stepping(self):
-        """Step region left, or right (from initial start) once left limit reached"""
+        """Step region left, or right (from initial) on reaching left limit."""
         if self.exhausted_left_stepping:
             try:
                 self.step_right()
@@ -183,7 +171,7 @@ class Region(Window):
                 self.exhausted_left_stepping = True
 
     def _find_primers_for_slice(self):
-        """Try to find suitable primers for the current slice"""
+        """Try to find suitable primers for the current slice."""
         logger.debug(
             f"Finding primers for slice {self.slice_start} to {self.slice_end}"
         )
@@ -240,28 +228,29 @@ class Region(Window):
         # Pick best-scoring left and right candidates
         self._pick_pair()
 
-    def _sort_candidates(self, candidates):
+    def _sort_candidates(self):
         """
         Sort candidates by penalty, start (higher), seq.
         seq is necessary to maintain deterministic output.
         """
-        candidates.sort(key=attrgetter("seq"))
-        candidates.sort(key=attrgetter("start"), reverse=True)
-        candidates.sort(key=attrgetter("combined_penalty"))
+        for candidates in [self.left_candidates, self.right_candidates]:
+            candidates.sort(key=attrgetter("seq"))
+            candidates.sort(key=attrgetter("start"), reverse=True)
+            candidates.sort(key=attrgetter("combined_penalty"))
 
     def _pick_pair(self):
-        """Pick the best scoring left and right primer for the region"""
-        self._sort_candidates(self.left_candidates)
-        self._sort_candidates(self.right_candidates)
+        """Pick the best scoring left and right primer for this region."""
+        self._sort_candidates()
+
         self.left = self._pick_candidate(self.left_candidates)
         self.right = self._pick_candidate(self.right_candidates)
 
         if logger.level >= logging.DEBUG:
-            self._log_debug(Direction.LEFT)
-            self._log_debug(Direction.RIGHT)
+            for direction in Direction:
+                self._log_debug(direction)
 
     def _pick_candidate(self, candidates):
-        """Pick the best scoring candidate that passes a same-pool heterodimer check"""
+        """Pick the best scoring candidate that passes a same-pool heterodimer check."""
         for candidate in candidates:
             if not self._check_for_heterodimers(candidate):
                 return candidate
@@ -295,7 +284,7 @@ class Region(Window):
         return False
 
     def _log_debug(self, direction):
-        """Log detailed debug info for the region"""
+        """Log detailed debug info for this region."""
         if direction == Direction.LEFT:
             logger.debug(f"Left region flank MSA: {self.left_flank_msa}")
             candidates = self.left_candidates

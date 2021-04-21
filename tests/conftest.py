@@ -9,6 +9,8 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from click.testing import CliRunner
 
+from primalscheme import config
+
 
 def seq_record_factory(seq_len=5000, alphabet="acgt", id=""):
     """Generate a random SeqRecord for testing purposes"""
@@ -60,10 +62,10 @@ def input_fasta_5_random_valid(temp_inputs_path):
 
 
 @pytest.fixture(scope="session")
-def input_fasta_101_random_valid(temp_inputs_path):
-    """Generate a random multi-FASTA with 101 records"""
-    fh = temp_inputs_path / "valid_random_101_fasta.fa"
-    SeqIO.write(multi_seq_generator(101), fh, "fasta")
+def input_fasta_too_many_refs_random_valid(temp_inputs_path):
+    """Generate a random multi-FASTA with too many records"""
+    fh = temp_inputs_path / "valid_random_too_many_refs_fasta.fa"
+    SeqIO.write(multi_seq_generator(config.MAX_REFERENCES + 1), fh, "fasta")
     return fh
 
 
@@ -103,46 +105,48 @@ STORED_INPUTS = [
 
 @pytest.fixture(params=STORED_INPUTS)
 def all_stored_inputs(request, stored_inputs_path):
-    """Return all stored input paths"""
+    """All stored input paths."""
     return stored_inputs_path / request.param
 
 
 @pytest.fixture(scope="session")
 def chikv_input(stored_inputs_path):
-    """Return path to chikv input"""
+    """Path to chikv input."""
     return stored_inputs_path / STORED_INPUTS[0]
 
 
 @pytest.fixture(scope="session")
 def ebola_input(stored_inputs_path):
-    """Return path to ebola input"""
+    """Path to ebola input."""
     return stored_inputs_path / STORED_INPUTS[1]
 
 
 @pytest.fixture(scope="session")
 def ncov_single_ref_input(stored_inputs_path):
-    """Return path to ncov input"""
+    """Path to ncov input."""
     return stored_inputs_path / STORED_INPUTS[2]
 
 
 @pytest.fixture(scope="session")
 def high_gc_input(stored_inputs_path):
-    """Return path to high-gc input"""
+    """Path to high-gc input."""
     return stored_inputs_path / STORED_INPUTS[3]
 
 
 @pytest.fixture(scope="session")
 def chikv_ambig_input(stored_inputs_path):
-    """Return path to chikv input (with ambiguity codes)"""
+    """Path to chikv input (with ambiguity codes)."""
     return stored_inputs_path / STORED_INPUTS[4]
 
 
 @pytest.fixture(scope="session")
 def random_reference_slice():
+    """Generate a random reference slice."""
     record = seq_record_factory(seq_len=500)
     return record
 
 
 @pytest.fixture(scope="session")
 def cli_runner():
+    """CliRunner instance."""
     return CliRunner()
