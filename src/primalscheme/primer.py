@@ -22,7 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 from collections import namedtuple
 from enum import Enum
-from itertools import groupby
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -221,9 +220,20 @@ def calc_tm(seq):
     )
 
 
-def calc_max_homo(seq):
+def calc_max_homo(seq: str) -> int:
     """Calculate max homopolymer length for a sequence."""
-    return sorted([(len(list(g))) for k, g in groupby(seq)], reverse=True)[0]
+    running_homo = 0
+    max_homo = 0
+    prev_base = None
+    for base in seq:
+        if base == prev_base:
+            running_homo += 1
+        else:
+            prev_base = base
+            running_homo = 1
+        if running_homo > max_homo:
+            max_homo = running_homo
+    return max_homo
 
 
 def calc_hairpin(seq):

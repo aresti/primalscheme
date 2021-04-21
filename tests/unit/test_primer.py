@@ -2,7 +2,7 @@ import primer3
 
 from Bio.Align import MultipleSeqAlignment
 from primalscheme import config
-from primalscheme.primer import Primer, Direction
+from primalscheme.primer import Primer, Direction, calc_max_homo
 
 
 def test_base_penalty_matches_primer3_penalty(random_reference_slice):
@@ -47,3 +47,11 @@ def test_base_penalty_matches_primer3_penalty(random_reference_slice):
             primer = Primer(seq, 0, direction, 1, mock_msa)
 
             assert primer.base_penalty == p3_penalty
+
+
+def test_calc_max_homo():
+    assert calc_max_homo("G") == 1
+    assert calc_max_homo("GCAT") == 1
+    assert calc_max_homo("AAAAA") == 5
+    assert calc_max_homo("AAGGGTTAAAAAA") == 6
+    assert calc_max_homo("GTCAGGGGAAAAC") == 4
