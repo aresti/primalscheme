@@ -8,6 +8,8 @@ import re
 import warnings
 
 from Bio.SeqRecord import SeqRecord
+
+from primalscheme import config
 from primalscheme.cli import cli
 
 with warnings.catch_warnings():
@@ -93,14 +95,16 @@ def test_cli_fails_with_invalid_option(chikv_input, cli_runner):
 
 
 @pytest.mark.parametrize(
-    "option", ["-V", "--version"],
+    "option",
+    ["-V", "--version"],
 )
 def test_cli_version_output(option, cli_runner):
     """Does CLI output a sensible version number for -V and --version?"""
     result = cli_runner.invoke(cli, option)
 
     assert re.match(
-        r"^cli, version \d{1,2}.\d{1,2}.\d{1,2}[a-zA-Z]{0,3}\d*$", result.output,
+        r"^cli, version \d{1,2}.\d{1,2}.\d{1,2}[a-zA-Z]{0,3}\d*$",
+        result.output,
     )
 
 
@@ -215,13 +219,15 @@ def test_process_fasta_invalid_alphabet(input_fasta_invalid_alphabet):
         process_fasta(input_fasta_invalid_alphabet)
 
 
-def test_process_fasta_too_many_records(input_fasta_101_random_valid):
+def test_process_fasta_too_many_records(input_fasta_too_many_refs_random_valid):
     """Does process_fasta raise for too many references?"""
-    with pytest.raises(ValueError, match="A maximum of 100"):
-        process_fasta(input_fasta_101_random_valid)
+    with pytest.raises(ValueError, match=f"A maximum of {config.MAX_REFERENCES}"):
+        process_fasta(input_fasta_too_many_refs_random_valid)
 
 
-def test_process_fasta_size_difference_over_500(input_fasta_size_difference_over_500,):
+def test_process_fasta_size_difference_over_500(
+    input_fasta_size_difference_over_500,
+):
     """Does process_fasta raise for size difference over 500?"""
     with pytest.raises(ValueError, match="too different in size"):
         process_fasta(input_fasta_size_difference_over_500)
@@ -240,10 +246,10 @@ def test_process_fasta_chikv_demo(chikv_input):
     assert len(references) == 2
 
 
-def test_process_fasta_gaps_removed(input_fasta_valid_with_gaps):
+def test_process_fasta_maintains_gaps(input_fasta_valid_with_gaps):
     """Does process_fasta remove gaps?"""
     references = process_fasta(input_fasta_valid_with_gaps)
-    assert "-" not in references[0]
+    assert "-" in references[0]
 
 
 def test_process_fasta_too_short_input(input_fasta_short_500):

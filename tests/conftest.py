@@ -9,6 +9,8 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from click.testing import CliRunner
 
+from primalscheme import config
+
 
 def seq_record_factory(seq_len=5000, alphabet="acgt", id=""):
     """Generate a random SeqRecord for testing purposes"""
@@ -60,10 +62,10 @@ def input_fasta_5_random_valid(temp_inputs_path):
 
 
 @pytest.fixture(scope="session")
-def input_fasta_101_random_valid(temp_inputs_path):
-    """Generate a random multi-FASTA with 101 records"""
-    fh = temp_inputs_path / "valid_random_101_fasta.fa"
-    SeqIO.write(multi_seq_generator(101), fh, "fasta")
+def input_fasta_too_many_refs_random_valid(temp_inputs_path):
+    """Generate a random multi-FASTA with too many records"""
+    fh = temp_inputs_path / "valid_random_too_many_refs_fasta.fa"
+    SeqIO.write(multi_seq_generator(config.MAX_REFERENCES + 1), fh, "fasta")
     return fh
 
 
