@@ -25,7 +25,7 @@ from enum import Enum
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from primer3 import calcTm as p3_calcTm, calcHairpin as p3_calcHairpin
+from primer3 import calcTm as p3_calcTm, calcHairpin as p3_calcHairpin, calcHomodimer as p3_calcHomodimer
 from primalscheme import config
 
 Kmer = namedtuple("Kmer", "seq start")
@@ -79,6 +79,7 @@ class Primer:
         self.gc = calc_gc(self.seq)
         self.tm = calc_tm(self.seq)
         self.hairpin = calc_hairpin(self.seq)
+        self.homodimer = calc_homodimer(self.seq)
         self.max_homo = calc_max_homo(self.seq)
         self.__base_penalty = None
 
@@ -247,6 +248,17 @@ def calc_hairpin(seq):
     ).tm
 
 
+def calc_homodimer(seq):
+    """Calculate homodimer Tm for a sequence."""
+    return p3_calcHomodimer(
+        seq,
+        mv_conc=config.MV_CONC,
+        dv_conc=config.DV_CONC,
+        dntp_conc=config.DNTP_CONC,
+        dna_conc=config.DNA_CONC,
+    ).tm
+
+
 def design_primers(msa, direction, pool, offset=0, primary_only=False):
     """Design primers against a reference MSA."""
     min_size = config.PRIMER_SIZE_RANGE.min
@@ -286,6 +298,7 @@ def primer_thermo_filter(primer):
         (config.PRIMER_GC_RANGE.min <= primer.gc <= config.PRIMER_GC_RANGE.max)
         and (config.PRIMER_MIN_TM <= primer.tm <= config.PRIMER_MAX_TM)
         and (primer.hairpin <= config.PRIMER_MAX_HAIRPIN_TH)
+        and (primer.homodimer <= config.PRIMER_MAX_HOMODIMER_TH)
         and (primer.max_homo <= config.PRIMER_MAX_HOMO)
     )
 
