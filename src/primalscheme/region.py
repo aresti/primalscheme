@@ -278,12 +278,18 @@ class Region:
             )
 
             if thermo_het.structure_found:
-                #Only exact 3' matches
-                if (len(thermo_het.ascii_structure_lines[0].rstrip('-').split()) == 2) or (len(thermo_het.ascii_structure_lines[3].rstrip('-').split()) == 2):
-                    #Slice overlap sequence
+                # Only exact 3' matches
+                if (
+                    len(thermo_het.ascii_structure_lines[0].rstrip("-").split()) == 2
+                ) or (
+                    len(thermo_het.ascii_structure_lines[3].rstrip("-").split()) == 2
+                ):
+                    # Slice overlap sequence
                     ol = thermo_het.ascii_structure_lines[1].split()[1]
-                    ol_tm = primer3.bindings.calcTm(ol, mv_conc=100.0, dv_conc=2.0, dna_conc=15.0, dntp_conc=0.8)
-                    if ol_tm > config.PRIMER_MAX_HETERODIMER_TH :
+                    ol_tm = primer3.bindings.calcTm(
+                        ol, mv_conc=100.0, dv_conc=2.0, dna_conc=15.0, dntp_conc=0.8
+                    )
+                    if ol_tm > config.PRIMER_MAX_HETERODIMER_TH:
                         logger.debug(
                             f"Primer interaction between {candidate.seq} and {existing.seq} "
                             f"predicted with a Tm of {ol_tm:.2f} and overlap length {len(ol)}"
@@ -291,7 +297,6 @@ class Region:
                         candidate.interacts_with = existing
                         return True
         return False
-
 
     def _log_debug(self, direction):
         """Log detailed debug info for this region."""

@@ -25,7 +25,11 @@ from enum import Enum
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from primer3 import calcTm as p3_calcTm, calcHairpin as p3_calcHairpin, calcHomodimer as p3_calcHomodimer
+from primer3 import (
+    calcTm as p3_calcTm,
+    calcHairpin as p3_calcHairpin,
+    calcHomodimer as p3_calcHomodimer,
+)
 from primalscheme import config
 
 Kmer = namedtuple("Kmer", "seq start")
