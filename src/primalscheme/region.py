@@ -58,7 +58,7 @@ class Region:
         self.left_candidates = []
         self.right_candidates = []
         self.exhausted_left_stepping = False
-        self.failed_alignment_count = 0
+        self.failed_aln_ref_ids = []
 
         logger.debug(
             f"Region {region_num}, pool {self.pool}, left_limit {left_limit}, "
@@ -149,12 +149,36 @@ class Region:
                 self._find_primers_for_slice()
                 return
             except FailedAlignmentError as exc:
-                self.failed_alignment_count += 1
-                if self.failed_alignment_count > self.scheme._max_failed_aln:
-                    raise exc
+                if self.exhausted_left_stepping:
+                    self._handle_failed_alignments(exc)
                 self._try_stepping()
             except NoSuitablePrimersError:
                 self._try_stepping()
+
+    def _align_flanks(self):
+        """Perform multiple seq alignment of all refs for flanks."""
+        self.left_flank_msa = MultipleSeqAlignment([self.left_flank])
+        right_rev = SeqRecord(
+            self.right_flank.reverse_complement().seq, id=self.scheme.primary_ref.id
+        )
+        self.right_flank_msa = MultipleSeqAlignment([right_rev])
+        failed_ref_ids = []
+        for ref in self.scheme.secondary_refs:
+            try:
+                self.left_flank_msa.append(
+                    align_secondary_reference(self.left_flank, ref)
+                )
+                ra = align_secondary_reference(self.right_flank, ref)
+                self.right_flank_msa.append(
+                    SeqRecord(ra.reverse_complement().seq, id=ra.id)
+                )
+            except FailedAlignmentError:
+                failed_ref_ids.append(ref.id)
+        if failed_ref_ids:
+            raise FailedAlignmentError(
+                "Failed alignment between primary flank and secondary references.",
+                ref_ids=failed_ref_ids,
+            )
 
     def _try_stepping(self):
         """Step region left, or right (from initial) on reaching left limit."""
@@ -177,7 +201,7 @@ class Region:
         )
 
         # Align flanks at this position
-        self.align_flanks()
+        self._align_flanks()
 
         # Design primers for the left and right flanks
         candidates = design_primers(
@@ -282,6 +306,22 @@ class Region:
                 candidate.interacts_with = existing
                 return True
         return False
+
+    def _handle_failed_alignments(self, exc):
+        self.failed_aln_ref_ids.extend(exc.ref_ids)
+        unique_ids = list(set(self.failed_aln_ref_ids))
+        exclude_ids = list(
+            filter(
+                lambda x: self.failed_aln_ref_ids.count(x)
+                >= self.scheme._max_failed_aln,
+                unique_ids,
+            )
+        )
+        if exclude_ids:
+            self.scheme.exclude_references(exclude_ids)
+            self.reset_slice()
+        else:
+            self._try_stepping()
 
     def _log_debug(self, direction):
         """Log detailed debug info for this region."""

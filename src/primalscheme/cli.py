@@ -218,7 +218,7 @@ def process_fasta(file_path, min_ref_size=None):
     # Remove gaps
     for record in records:
         ref = SeqRecord(
-            Seq(str(record.seq).upper()),
+            Seq(str(record.seq).replace("-", "").upper()),
             id=record.id,
             description=record.id,
         )
@@ -357,6 +357,7 @@ class ProgressBar(ShadyBar, ProgressTracker):
         """Prepare to be interrupted by a log message."""
         if self.index:
             self.finish()
+            self.index = 0
 
 
 if __name__ == "__main__":

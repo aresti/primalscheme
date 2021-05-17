@@ -32,12 +32,12 @@ Alignment = namedtuple("Alignment", "mismatches formatted_alignment")
 
 
 class FailedAlignmentError(Exception):
-    """No aligment between the primer and the refernce"""
+    """Failed aligment between primary and secondary reference(s)."""
 
-    def __init__(self, message, reference=None):
+    def __init__(self, message, ref_ids=None):
         """Init FailedAlignmentError."""
         self.message = message
-        self.reference = reference
+        self.ref_ids = ref_ids
 
     def __str__(self):
         """Exception string representation."""
@@ -61,13 +61,14 @@ def align_secondary_reference(primary_flank, secondary_ref):
     traceback = trace.get_traceback()
     query_end = trace.end_query
     ref_end = trace.end_ref
+    aligned_query = traceback.query[ref_end - query_end : ref_end + 1]
     aligned_ref = traceback.ref[ref_end - query_end : ref_end + 1]
 
     # Alignment failed
-    if len(primary_flank) != len(aligned_ref):
+    if "-" in aligned_query + aligned_ref or len(primary_flank) != len(aligned_ref):
         raise FailedAlignmentError(
-            "Alignment failed between primary and secondary reference.",
-            reference=secondary_ref,
+            "Alignment failed between primary flank and secondary reference.",
+            ref_ids=[secondary_ref.id],
         )
 
     return SeqRecord(Seq(aligned_ref), id=secondary_ref.id)

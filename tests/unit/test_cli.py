@@ -249,7 +249,7 @@ def test_process_fasta_chikv_demo(chikv_input):
 def test_process_fasta_maintains_gaps(input_fasta_valid_with_gaps):
     """Does process_fasta remove gaps?"""
     references = process_fasta(input_fasta_valid_with_gaps)
-    assert "-" in references[0]
+    assert "-" not in references[0]
 
 
 def test_process_fasta_too_short_input(input_fasta_short_500):
