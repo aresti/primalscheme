@@ -299,8 +299,8 @@ class Region:
         """
         Return True if candidate primer forms stable homodimer.
         """
-        candidate.homodimer = calc_homodimer(candidate.seq)
-        if candidate.homodimer.tm > config.PRIMER_MAX_HOMODIMER_TH:
+        hd_thermo = calc_homodimer(candidate.seq)
+        if hd_thermo.tm > config.PRIMER_MAX_HOMODIMER_TH:
             logger.debug(f"Homodimer predicted for candidate {candidate.seq}")
             return True
         return False
