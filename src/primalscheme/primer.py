@@ -83,7 +83,6 @@ class Primer:
         self.gc = calc_gc(self.seq)
         self.tm = calc_tm(self.seq)
         self.hairpin = calc_hairpin(self.seq)
-        self.homodimer = calc_homodimer(self.seq)
         self.max_homo = calc_max_homo(self.seq)
         self.__base_penalty = None
 
@@ -302,7 +301,6 @@ def primer_thermo_filter(primer):
         (config.PRIMER_GC_RANGE.min <= primer.gc <= config.PRIMER_GC_RANGE.max)
         and (config.PRIMER_MIN_TM <= primer.tm <= config.PRIMER_MAX_TM)
         and (primer.hairpin <= config.PRIMER_MAX_HAIRPIN_TH)
-        and (primer.homodimer <= config.PRIMER_MAX_HOMODIMER_TH)
         and (primer.max_homo <= config.PRIMER_MAX_HOMO)
     )
 

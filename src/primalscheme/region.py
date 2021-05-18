@@ -30,7 +30,12 @@ from Bio.Align import MultipleSeqAlignment
 
 from primalscheme import config
 from primalscheme.align import align_secondary_reference, FailedAlignmentError
-from primalscheme.primer import design_primers, primer_thermo_filter, Direction
+from primalscheme.primer import (
+    calc_homodimer,
+    design_primers,
+    primer_thermo_filter,
+    Direction,
+)
 
 logger = logging.getLogger("primalscheme")
 
@@ -274,14 +279,32 @@ class Region:
                 self._log_debug(direction)
 
     def _pick_candidate(self, candidates):
-        """Pick the best scoring candidate that passes a same-pool heterodimer check."""
+        """
+        Pick the best scoring candidate that passes homodimer &
+        same-pool heterodimer check.
+        """
         for candidate in candidates:
-            if not self._check_for_heterodimers(candidate):
+            if not (
+                self._check_for_heterodimers(candidate)
+                and self._check_for_homodimer(candidate)
+            ):
                 return candidate
         raise NoSuitablePrimersError(
             "All candidates form stable heterodimers with existing primers "
             "in this pool."
         )
+
+    def _check_for_homodimer(self, candidate):
+        """
+        Return True if candidate primer forms stable homodimer.
+        """
+        candidate.homodimer = calc_homodimer(candidate.seq)
+        if candidate.homodimer > config.PRIMER_MAX_HOMODIMER_TH:
+            logger.debug(
+                f"Homodimer predicted for candidate {candidate.seq} ({candidate.tm})"
+            )
+            return True
+        return False
 
     def _check_for_heterodimers(self, candidate):
         """
@@ -311,12 +334,17 @@ class Region:
                     # Slice overlap sequence
                     ol = thermo_het.ascii_structure_lines[1].split()[1]
                     ol_tm = primer3.bindings.calcTm(
-                        ol, mv_conc=100.0, dv_conc=2.0, dna_conc=15.0, dntp_conc=0.8
+                        ol,
+                        mv_conc=config.MV_CONC,
+                        dv_conc=config.DV_CONC,
+                        dntp_conc=config.DNTP_CONC,
+                        dna_conc=config.DNA_CONC,
                     )
                     if ol_tm > config.PRIMER_MAX_HETERODIMER_TH:
                         logger.debug(
-                            f"Primer interaction between {candidate.seq} and {existing.seq} "
-                            f"predicted with a Tm of {ol_tm:.2f} and overlap length {len(ol)}"
+                            f"Primer interaction between {candidate.seq} and "
+                            f"{existing.seq} predicted with a Tm of {ol_tm:.2f} "
+                            f"and overlap length {len(ol)}"
                         )
                         candidate.interacts_with = existing
                         return True
