@@ -287,7 +287,7 @@ class Region:
         for candidate in candidates:
             if not (
                 self._check_for_heterodimers(candidate)
-                and self._check_for_homodimer(candidate)
+                or self._check_for_homodimer(candidate)
             ):
                 return candidate
         raise NoSuitablePrimersError(
