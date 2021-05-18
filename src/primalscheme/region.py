@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
 import logging
-import primer3
 
 from operator import attrgetter
 
@@ -32,6 +31,8 @@ from primalscheme import config
 from primalscheme.align import align_secondary_reference, FailedAlignmentError
 from primalscheme.primer import (
     calc_homodimer,
+    calc_heterdodimer,
+    calc_tm,
     design_primers,
     primer_thermo_filter,
     Direction,
@@ -299,10 +300,8 @@ class Region:
         Return True if candidate primer forms stable homodimer.
         """
         candidate.homodimer = calc_homodimer(candidate.seq)
-        if candidate.homodimer > config.PRIMER_MAX_HOMODIMER_TH:
-            logger.debug(
-                f"Homodimer predicted for candidate {candidate.seq} ({candidate.tm})"
-            )
+        if candidate.homodimer.tm > config.PRIMER_MAX_HOMODIMER_TH:
+            logger.debug(f"Homodimer predicted for candidate {candidate.seq}")
             return True
         return False
 
@@ -313,16 +312,7 @@ class Region:
         """
 
         for existing in self.scheme.primers_in_pool(self.pool):
-            thermo_het = primer3.bindings.calcHeterodimer(
-                candidate.seq,
-                existing.seq,
-                mv_conc=config.MV_CONC,
-                dv_conc=config.DV_CONC,
-                dna_conc=config.DNA_CONC,
-                dntp_conc=config.DNTP_CONC,
-                temp_c=config.TEMP_C,
-                output_structure=True,
-            )
+            thermo_het = calc_heterdodimer(candidate.seq, existing.seq)
 
             if thermo_het.structure_found:
                 # Only exact 3' matches
@@ -333,13 +323,7 @@ class Region:
                 ):
                     # Slice overlap sequence
                     ol = thermo_het.ascii_structure_lines[1].split()[1]
-                    ol_tm = primer3.bindings.calcTm(
-                        ol,
-                        mv_conc=config.MV_CONC,
-                        dv_conc=config.DV_CONC,
-                        dntp_conc=config.DNTP_CONC,
-                        dna_conc=config.DNA_CONC,
-                    )
+                    ol_tm = calc_tm(ol)
                     if ol_tm > config.PRIMER_MAX_HETERODIMER_TH:
                         logger.debug(
                             f"Primer interaction between {candidate.seq} and "

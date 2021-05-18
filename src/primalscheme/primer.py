@@ -28,6 +28,7 @@ from Bio.SeqRecord import SeqRecord
 from primer3 import (
     calcTm as p3_calcTm,
     calcHairpin as p3_calcHairpin,
+    calcHeterodimer as p3_calcHeterodimer,
     calcHomodimer as p3_calcHomodimer,
 )
 from primalscheme import config
@@ -82,7 +83,7 @@ class Primer:
         self.__seq = seq
         self.gc = calc_gc(self.seq)
         self.tm = calc_tm(self.seq)
-        self.hairpin = calc_hairpin(self.seq)
+        self.hairpin = calc_hairpin(self.seq).tm
         self.max_homo = calc_max_homo(self.seq)
         self.__base_penalty = None
 
@@ -241,25 +242,48 @@ def calc_max_homo(seq: str) -> int:
 
 
 def calc_hairpin(seq):
-    """Calculate hairpin Tm for a sequence."""
+    """
+    Calculate the hairpin formation thermodynamics of a DNA sequence.
+    Return primer3 thermo object.
+    """
     return p3_calcHairpin(
         seq,
         mv_conc=config.MV_CONC,
         dv_conc=config.DV_CONC,
         dntp_conc=config.DNTP_CONC,
         dna_conc=config.DNA_CONC,
-    ).tm
+    )
 
 
 def calc_homodimer(seq):
-    """Calculate homodimer Tm for a sequence."""
+    """
+    Calculate the homodimerization thermodynamics of a DNA sequence.
+    Return primer3 thermo object.
+    """
     return p3_calcHomodimer(
         seq,
         mv_conc=config.MV_CONC,
         dv_conc=config.DV_CONC,
         dntp_conc=config.DNTP_CONC,
         dna_conc=config.DNA_CONC,
-    ).tm
+    )
+
+
+def calc_heterdodimer(seq1, seq2):
+    """
+    Calculate the heterodimerization thermodynamics of two DNA sequences.
+    Return primer3 thermo object.
+    """
+    return p3_calcHeterodimer(
+        seq1,
+        seq2,
+        mv_conc=config.MV_CONC,
+        dv_conc=config.DV_CONC,
+        dna_conc=config.DNA_CONC,
+        dntp_conc=config.DNTP_CONC,
+        temp_c=config.TEMP_C,
+        output_structure=True,
+    )
 
 
 def design_primers(msa, direction, pool, offset=0, primary_only=False):
