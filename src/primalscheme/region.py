@@ -30,7 +30,6 @@ from Bio.Align import MultipleSeqAlignment
 from primalscheme import config
 from primalscheme.align import align_secondary_reference, FailedAlignmentError
 from primalscheme.primer import (
-    calc_homodimer,
     calc_heterdodimer,
     calc_tm,
     design_primers,
@@ -281,37 +280,25 @@ class Region:
 
     def _pick_candidate(self, candidates):
         """
-        Pick the best scoring candidate that passes homodimer &
-        same-pool heterodimer check.
+        Pick the best scoring candidate that passes interaction check.
         """
         for candidate in candidates:
-            if not (
-                self._check_for_heterodimers(candidate)
-                or self._check_for_homodimer(candidate)
-            ):
+            if not self._check_for_heterodimers(candidate):
                 return candidate
         raise NoSuitablePrimersError(
             "All candidates form stable heterodimers with existing primers "
             "in this pool."
         )
 
-    def _check_for_homodimer(self, candidate):
-        """
-        Return True if candidate primer forms stable homodimer.
-        """
-        hd_thermo = calc_homodimer(candidate.seq)
-        if hd_thermo.tm > config.PRIMER_MAX_HOMODIMER_TH:
-            logger.debug(f"Homodimer predicted for candidate {candidate.seq}")
-            return True
-        return False
-
     def _check_for_heterodimers(self, candidate):
         """
         Return True if candidate primer forms stable heterodimer with
-        an existing primer in the same pool.
+        an existing primer in the same pool (or itself).
         """
 
-        for existing in self.scheme.primers_in_pool(self.pool):
+        same_pool_primers = self.scheme.primers_in_pool(self.pool)
+
+        for existing in same_pool_primers + [candidate]:  # also check for self-dimer
             thermo_het = calc_heterdodimer(candidate.seq, existing.seq)
 
             if thermo_het.structure_found:
@@ -328,7 +315,8 @@ class Region:
                         logger.debug(
                             f"Primer interaction between {candidate.seq} and "
                             f"{existing.seq} predicted with a Tm of {ol_tm:.2f} "
-                            f"and overlap length {len(ol)}"
+                            f"and overlap length {len(ol)} "
+                            f"({'homo' if existing == candidate else 'hetero'}dimer)"
                         )
                         candidate.interacts_with = existing
                         return True

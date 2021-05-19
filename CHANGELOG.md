@@ -9,8 +9,7 @@ and this project adheres to [Semantic Versioning][2].
 
 ## Unreleased
 
-- Added check for homodimer forming sequences at the hard filtering stage
-- Refactored the heterodimer prediction to look for exact 3' matches (as per Itokawa et al., 2020) with a Tm > 0.
+- Refactored dimer prediction to look for exact 3' matches (as per Itokawa et al., 2020) with a Tm > 0.
 
 ## v1.3.2 - 2020-07-28
 

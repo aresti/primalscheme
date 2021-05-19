@@ -29,7 +29,6 @@ from primer3 import (
     calcTm as p3_calcTm,
     calcHairpin as p3_calcHairpin,
     calcHeterodimer as p3_calcHeterodimer,
-    calcHomodimer as p3_calcHomodimer,
 )
 from primalscheme import config
 
@@ -247,20 +246,6 @@ def calc_hairpin(seq):
     Return primer3 thermo object.
     """
     return p3_calcHairpin(
-        seq,
-        mv_conc=config.MV_CONC,
-        dv_conc=config.DV_CONC,
-        dntp_conc=config.DNTP_CONC,
-        dna_conc=config.DNA_CONC,
-    )
-
-
-def calc_homodimer(seq):
-    """
-    Calculate the homodimerization thermodynamics of a DNA sequence.
-    Return primer3 thermo object.
-    """
-    return p3_calcHomodimer(
         seq,
         mv_conc=config.MV_CONC,
         dv_conc=config.DV_CONC,
