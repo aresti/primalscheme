@@ -112,6 +112,7 @@ class MultiplexReporter(MultiplexScheme):
                     name,
                     p.pool,
                     p.direction.value,
+                    p.seq,
                 ]
             )
 
