@@ -33,6 +33,7 @@ from primer3 import (
 from primalscheme import config
 
 Kmer = namedtuple("Kmer", "seq start")
+Dimer = namedtuple("Dimer", "existing tm")
 
 
 class Direction(Enum):
@@ -52,7 +53,7 @@ class Primer:
         self.direction = direction
         self.pool = pool
         self.reference_msa = reference_msa
-        self.interacts_with = None
+        self.flagged_dimer = None
 
     def __str__(self):
         """Primer string representation."""

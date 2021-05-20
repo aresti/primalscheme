@@ -34,6 +34,7 @@ from primalscheme.primer import (
     calc_tm,
     design_primers,
     primer_thermo_filter,
+    Dimer,
     Direction,
 )
 
@@ -109,7 +110,7 @@ class Region:
             return self.right.start - self.left.start + 1
         return None
 
-    def step_left(self):
+    def step_left(self, reason=None):
         """Step the slice start position left; raise if limit reached."""
         distance = config.STEP_DISTANCE
         if (self.slice_start - distance) < self.left_limit:
@@ -117,9 +118,12 @@ class Region:
             raise SliceOutOfBoundsError("Left window limit reached.")
         self.slice_start -= distance
         self.left_flank_msa, self.right_flank_msa = None, None
-        logger.debug(f"Stepping left to {self.slice_start}")
+        logger.debug(
+            f"Stepping left to {self.slice_start}"
+            f"{' due to ' + reason if reason else ''}"
+        )
 
-    def step_right(self):
+    def step_right(self, reason=None):
         """Step the slice start position right; raise if limit reached."""
         distance = config.STEP_DISTANCE
         if (self.slice_end + distance) > self.right_limit:
@@ -127,7 +131,10 @@ class Region:
             raise SliceOutOfBoundsError("Right window limit reached.")
         self.slice_start += distance
         self.left_flank_msa, self.right_flank_msa = None, None
-        logger.debug(f"Stepping right to {self.slice_start}")
+        logger.debug(
+            f"Stepping right to {self.slice_start}"
+            f"{' due to ' + reason if reason else ''}"
+        )
 
     def reset_slice(self):
         """Reset the slice start position to its initial value."""
@@ -156,9 +163,9 @@ class Region:
             except FailedAlignmentError as exc:
                 if self.exhausted_left_stepping:
                     self._handle_failed_alignments(exc)
-                self._try_stepping()
+                self._try_stepping(reason="failed alignment")
             except NoSuitablePrimersError:
-                self._try_stepping()
+                self._try_stepping(reason="no suitable primers")
 
     def _align_flanks(self):
         """Perform multiple seq alignment of all refs for flanks."""
@@ -185,16 +192,16 @@ class Region:
                 ref_ids=failed_ref_ids,
             )
 
-    def _try_stepping(self):
+    def _try_stepping(self, reason=None):
         """Step region left, or right (from initial) on reaching left limit."""
         if self.exhausted_left_stepping:
             try:
-                self.step_right()
+                self.step_right(reason=reason)
             except SliceOutOfBoundsError:
                 raise NoSuitablePrimersError("Right limit reached.")
         else:
             try:
-                self.step_left()
+                self.step_left(reason=reason)
             except SliceOutOfBoundsError:
                 self.reset_slice()
                 self.exhausted_left_stepping = True
@@ -234,10 +241,13 @@ class Region:
             primer for primer in candidates if primer_thermo_filter(primer)
         ]
 
-        # Check mismatch threshold
+        # Check mismatch threshold & max penalty
         passing_candidates = []
         for primer in filtered_candidates:
-            if max(primer.mismatch_counts) <= config.PRIMER_MAX_MISMATCHES:
+            if (
+                max(primer.mismatch_counts) <= config.PRIMER_MAX_MISMATCHES
+                and primer.base_penalty <= config.PRIMER_MAX_BASE_PENALTY
+            ):
                 passing_candidates.append(primer)
         candidates = passing_candidates
 
@@ -271,12 +281,19 @@ class Region:
         """Pick the best scoring left and right primer for this region."""
         self._sort_candidates()
 
-        self.left = self._pick_candidate(self.left_candidates)
-        self.right = self._pick_candidate(self.right_candidates)
+        no_suitable_exc = None
+        try:
+            self.left = self._pick_candidate(self.left_candidates)
+            self.right = self._pick_candidate(self.right_candidates)
+        except NoSuitablePrimersError as e:
+            no_suitable_exc = e
 
         if logger.level >= logging.DEBUG:
             for direction in Direction:
                 self._log_debug(direction)
+
+        if no_suitable_exc:
+            raise no_suitable_exc
 
     def _pick_candidate(self, candidates):
         """
@@ -312,13 +329,7 @@ class Region:
                     ol = thermo_het.ascii_structure_lines[1].split()[1]
                     ol_tm = calc_tm(ol)
                     if ol_tm > config.PRIMER_MAX_HETERODIMER_TH:
-                        logger.debug(
-                            f"Primer interaction between {candidate.seq} and "
-                            f"{existing.seq} predicted with a Tm of {ol_tm:.2f} "
-                            f"and overlap length {len(ol)} "
-                            f"({'homo' if existing == candidate else 'hetero'}dimer)"
-                        )
-                        candidate.interacts_with = existing
+                        candidate.flagged_dimer = Dimer(existing, ol_tm)
                         return True
         return False
 
@@ -341,22 +352,27 @@ class Region:
     def _log_debug(self, direction):
         """Log detailed debug info for this region."""
         if direction == Direction.LEFT:
-            logger.debug(f"Left region flank MSA: {self.left_flank_msa}")
             candidates = self.left_candidates
             picked = self.left
         else:
-            logger.debug(f"Right region flank MSA: {self.right_flank_msa}")
             candidates = self.right_candidates
             picked = self.right
 
-        logger.debug(f"Picked primer {picked}")
-        logger.debug(f"Picked MSA slice: {picked.annotated_msa}")
-        for i, primer in enumerate(candidates[:10]):
+        if picked:
+            logger.debug(f"Picked MSA slice: {picked.annotated_msa}")
+        for i, primer in enumerate(candidates):
             max_mis = max(primer.mismatch_counts)
             total_mis = sum(primer.mismatch_counts)
+            dimer_str = ""
+            if primer.flagged_dimer:
+                tm_str = f"{primer.flagged_dimer[1]:.2f}"
+                if primer.flagged_dimer.existing == primer:
+                    dimer_str = f"*homodimer tm {tm_str}, "
+                else:
+                    dimer_str = f"*heterodimer tm {tm_str}, "
             logger.debug(
-                f"{direction.name} candidate {i}: "
-                f"{'*interaction, ' if primer.interacts_with else ''}"
+                f"{direction.name} candidate {i}: {dimer_str}"
+                f"{'*picked, ' if primer == picked else ''}"
                 f"base pen {primer.base_penalty:.3f}, "
                 f"combined pen {primer.combined_penalty:.3f}, "
                 f"{max_mis} max mismatch{'' if max_mis == 1 else 'es'}, "
