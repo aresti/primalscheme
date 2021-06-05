@@ -300,22 +300,24 @@ class Region:
         Pick the best scoring candidate that passes interaction check.
         """
         for candidate in candidates:
-            if not self._check_for_heterodimers(candidate):
+            if not self._check_for_dimers(candidate):
                 return candidate
         raise NoSuitablePrimersError(
             "All candidates form stable heterodimers with existing primers "
             "in this pool."
         )
 
-    def _check_for_heterodimers(self, candidate):
+    def _check_for_dimers(self, candidate):
         """
-        Return True if candidate primer forms stable heterodimer with
-        an existing primer in the same pool (or itself).
+        Return True if candidate primer forms a stable dimer with
+        an existing primer in the same pool, itself or its partner.
         """
 
-        same_pool_primers = self.scheme.primers_in_pool(self.pool)
+        same_pool_primers = self.scheme.primers_in_pool(self.pool) + [candidate]
+        if self.left:
+            same_pool_primers.append(self.left)
 
-        for existing in same_pool_primers + [candidate]:  # also check for self-dimer
+        for existing in same_pool_primers:
             thermo_het = calc_heterdodimer(candidate.seq, existing.seq)
 
             if thermo_het.structure_found:
