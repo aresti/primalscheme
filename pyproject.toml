@@ -18,7 +18,7 @@ requires = [
     "progress==1.5",
     "reportlab>=3,<4",
 ]
-requires-python = ">=3.6,<4"
+requires-python = ">=3.7,<4"
 
 description-file = "README.md"
 classifiers = [

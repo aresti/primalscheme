@@ -16,8 +16,8 @@ a web interface is available at [primalscheme.com](https://primalscheme.com/), a
 
 ## requirements
 
-* Linux, macOS or Windows
-* Python 3.6+
+- Linux, macOS or Windows
+- Python 3.7+
 
 ## installation from PyPI using pip
 
