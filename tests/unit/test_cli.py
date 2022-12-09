@@ -82,7 +82,7 @@ def test_availability_of_cli_options(option, value, cli_runner):
         args.append(value)
     result = cli_runner.invoke(cli, args)
 
-    assert "Error: no such option" not in result.output
+    assert "error: no such option" not in result.output.lower()
 
 
 def test_cli_fails_with_invalid_option(chikv_input, cli_runner):
@@ -91,7 +91,7 @@ def test_cli_fails_with_invalid_option(chikv_input, cli_runner):
     result = cli_runner.invoke(cli, args)
 
     assert result.exit_code == 2
-    assert "Error: no such option" in result.output
+    assert "error: no such option" in result.output.lower()
 
 
 @pytest.mark.parametrize(
