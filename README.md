@@ -68,15 +68,15 @@ If you're looking for test inputs you can try [CHIKV_demo.fa](tests/inputs/CHIKV
 
 ### optional arguments
 
-* `--amplicon-size, -a`: Amplicon size target. Pass twice to set an exact range (e.g, -a 220 -a 250), otherwise expect +/- 5% (default 380, 420).
-* `--outpath, -o`: Path to output directory (default: ./output).
-* `--name, -n`: Prefix name for your outputs (default: scheme).
-* `--target-overlap, -t`: Target insert overlap size (default: 0).
-* `--debug, -d`: Set log level DEBUG.
-* `--force, -f`: Force output to an existing directory, overwrite files.
-* `--pinned, -p`: Only consider primers from the first reference.
-* `--high-gc, -g`: Use config suitable for high-GC sequences.
-* `--help, -h`: Show help message and exit.
+- `--amplicon-size, -a`: Amplicon size target. Pass twice to set an exact range (e.g, -a 220 -a 250), otherwise expect +/- 5% (default 380, 420).
+- `--outpath, -o`: Path to output directory (default: ./output).
+- `--name, -n`: Prefix name for your outputs (default: scheme).
+- `--target-overlap, -t`: Target insert overlap size (default: 0).
+- `--debug, -d`: Set log level DEBUG.
+- `--force, -f`: Force output to an existing directory, overwrite files.
+- `--pinned, -p`: Only consider primers from the first reference.
+- `--high-gc, -g`: Use config suitable for high-GC sequences.
+- `--help, -h`: Show help message and exit.
 
 ### modifying config
 
@@ -84,30 +84,30 @@ Many parameters are not directly exposed in the CLI as we believe they are neces
 
 ### output
 
-* `{output_dir}/{prefix}.reference.fasta` - all input references
-* `{output_dir}/{prefix}.primer.bed` - coordinates of primer positions
-* `{output_dir}/{prefix}.insert.bed` - coordinates of trimmed amplicons
-* `{output_dir}/{prefix}.primer.tsv` - primer sequences and information
-* `{output_dir}/{prefix}.plot.pdf` - diagrammatic overview of scheme (PDF)
-* `{output_dir}/{prefix}.plot.svg` - diagrammatic overview of scheme (SVG)
-* `{output_dir}/{prefix}.report.json` - run report (reference ids, regions, gaps, coverage)
-* `{output_dir}/{prefix}.pickle` - pickled Python objects (if --debug)
-* `{output_dir}/{prefix}.log` - run logs (more detail if --debug)
+- `{output_dir}/{prefix}.reference.fasta` - all input references
+- `{output_dir}/{prefix}.primer.bed` - coordinates of primer positions
+- `{output_dir}/{prefix}.insert.bed` - coordinates of trimmed amplicons
+- `{output_dir}/{prefix}.primer.tsv` - primer sequences and information
+- `{output_dir}/{prefix}.plot.pdf` - diagrammatic overview of scheme (PDF)
+- `{output_dir}/{prefix}.plot.svg` - diagrammatic overview of scheme (SVG)
+- `{output_dir}/{prefix}.report.json` - run report (reference ids, regions, gaps, coverage)
+- `{output_dir}/{prefix}.pickle` - pickled Python objects (if --debug)
+- `{output_dir}/{prefix}.log` - run logs (more detail if --debug)
 
 ## how to design a scheme
 
 1. Download complete genomes from GenBank and concatenate into a single FASTA file.
-    * e.g. `cat "sequence (1).fasta" "sequence (2).fasta" > input.fasta`
+   - e.g. `cat "sequence (1).fasta" "sequence (2).fasta" > input.fasta`
 2. Align all sequences using [Clustal Omega](https://www.ebi.ac.uk/Tools/msa/clustalo/).
 3. The genomes should be complete and roughly the same length.
-    * Primers are only designed within the limits of the alignment.
-    * The **first reference** will be used for the coordinate system in the output scheme.
+   - Primers are only designed within the limits of the alignment.
+   - The **first reference** will be used for the coordinate system in the output scheme.
 4. Check the 'Result Summary' tab then the 'Percent Identity Matrix' link to check the identity matrix of all sequences.
-    * Check that the maximum sequence divergence is not more than 5%.
-    * If your sequences are more divergent, it may be necessary to separate them into multiple independent schemes; the 'Phylogenetic Tree' tab may be useful for this.
+   - Check that the maximum sequence divergence is not more than 5%.
+   - If your sequences are more divergent, it may be necessary to separate them into multiple independent schemes; the 'Phylogenetic Tree' tab may be useful for this.
 5. Remove sequences with 99-100% identity to other genomes in the file as these will bias the primer selection
 6. Run primalscheme on your FASTA file.
-    * Optionally, set amplicon min/max length as required by your sequencing technology.
+   - Optionally, set amplicon min/max length as required by your sequencing technology.
 
 ## protocol
 
@@ -115,25 +115,25 @@ We strongly recommend using the PCR conditions outlined in the [Nature Protocols
 
 ## description of the algorithm
 
-* Set the first reference as primary, to be used for the coordinate system.
-* Open a region window of width AMPLICON_SIZE_MAX onto the primary reference.
-* Align the flanks of this reference slice to all other references using parasail.
-* Take all aligned flanks and digest them into K-mers (primers) of length PRIMER_SIZE_MIN to PRIMER_SIZE_MAX.
-* Hard filter the primers to eliminate those with unacceptable GC, Tm, homodimer and homopolymer length.
-* Filter out any primers with > PRIMER_MAX_MISMATCHES against any reference.
-* Sort left and right primers according to base penalty plus weighted mismatch score.
-* Check for heterodimers in same pool using primer3-py; select top scoring, non-interacting pair.
-* Open new window position set to maintain overlap if region is successful.
-* Repeat routine until end of genome is reached.
-* If during the above routine there is a) failed alignment b) no primers after filtering then:
-  * Move window position left by STEP_DISTANCE before retrying.
-  * Continue stepping left until a hard-left limit is reached (start of genome, primer collision or no progress).
-  * Reset window position to initial value.
-  * Move window position right (to open a gap or reduce overlap) before retrying.
-  * Exclude secondary reference on repeated flank alignment failure.
+- Set the first reference as primary, to be used for the coordinate system.
+- Open a region window of width AMPLICON_SIZE_MAX onto the primary reference.
+- Align the flanks of this reference slice to all other references using parasail.
+- Take all aligned flanks and digest them into K-mers (primers) of length PRIMER_SIZE_MIN to PRIMER_SIZE_MAX.
+- Hard filter the primers to eliminate those with unacceptable GC, Tm, hairpin structures & homopolymer length.
+- Filter out any primers with > PRIMER_MAX_MISMATCHES against any reference.
+- Sort left and right primers according to base penalty plus weighted mismatch score.
+- Check for heterodimers in same pool using primer3-py; select top scoring, non-interacting pair.
+- Open new window position set to maintain overlap if region is successful.
+- Repeat routine until end of genome is reached.
+- If during the above routine there is a) failed alignment b) no primers after filtering then:
+  - Move window position left by STEP_DISTANCE before retrying.
+  - Continue stepping left until a hard-left limit is reached (start of genome, primer collision or no progress).
+  - Reset window position to initial value.
+  - Move window position right (to open a gap or reduce overlap) before retrying.
+  - Exclude secondary reference on repeated flank alignment failure.
 
 ## citing
 
 If you use primalscheme please cite:
 
-```Quick J et al. Multiplex PCR method for MinION and Illumina sequencing of Zika and other virus genomes directly from clinical samples. Nat Protoc. 2017 Jun;12(6):1261-1276.```
+`Quick J et al. Multiplex PCR method for MinION and Illumina sequencing of Zika and other virus genomes directly from clinical samples. Nat Protoc. 2017 Jun;12(6):1261-1276.`
